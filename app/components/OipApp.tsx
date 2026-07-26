@@ -2133,14 +2133,6 @@ export function OipApp() {
             </button>
           ))}
         </nav>
-        <div className="side-note">
-          <span className="side-note-mark">5</span>
-          <p>
-            다섯 잎에
-            <br />
-            오늘을 담아요.
-          </p>
-        </div>
       </aside>
 
       <div className="app-main">
