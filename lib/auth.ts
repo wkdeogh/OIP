@@ -12,16 +12,9 @@ function bytesToBase64Url(bytes: Uint8Array) {
     .replaceAll("=", "");
 }
 
-async function sha256(value: string) {
-  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(value));
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 async function hmac(value: string) {
   const secret =
-    process.env.OIP_SESSION_SECRET ??
+    process.env.OIP_PASSWORD ||
     (process.env.NODE_ENV === "development"
       ? "oip-local-development-session-secret"
       : "");
@@ -53,11 +46,11 @@ function safeEqual(left: string, right: string) {
 }
 
 export async function verifyPassword(password: string) {
-  const expectedHash =
-    process.env.OIP_PASSWORD_HASH ??
-    (process.env.NODE_ENV === "development" ? await sha256("oip") : "");
-  if (!expectedHash) return false;
-  return safeEqual(await sha256(password), expectedHash.trim().toLowerCase());
+  const expected =
+    process.env.OIP_PASSWORD ??
+    (process.env.NODE_ENV === "development" ? "oip" : "");
+  if (!expected) return false;
+  return safeEqual(password, expected);
 }
 
 export async function createSessionToken() {
@@ -65,7 +58,7 @@ export async function createSessionToken() {
   const expiresAt = Math.floor(Date.now() / 1000) + SESSION_MAX_AGE;
   const payload = `${version}.${expiresAt}`;
   const signature = await hmac(payload);
-  if (!signature) throw new Error("OIP_SESSION_SECRET is not configured.");
+  if (!signature) throw new Error("OIP_PASSWORD is not configured.");
   return `${payload}.${signature}`;
 }
 
