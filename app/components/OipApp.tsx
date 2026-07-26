@@ -356,6 +356,7 @@ function PasswordGate({
 }: {
   onAuthenticated: () => void;
 }) {
+  const showLocalHint = process.env.NODE_ENV === "development";
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -420,11 +421,11 @@ function PasswordGate({
             <p className="field-error" id="password-error" role="alert">
               {error}
             </p>
-          ) : (
+          ) : showLocalHint ? (
             <p className="local-hint">
               로컬 미리보기 비밀번호는 <strong>oip</strong>입니다.
             </p>
-          )}
+          ) : null}
           <button
             className="button button--primary button--full"
             disabled={isSubmitting}
