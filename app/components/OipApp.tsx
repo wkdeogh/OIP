@@ -217,6 +217,12 @@ function calendarEventColor(event: CalendarEvent) {
   return scope === "personal" ? event.author_id : scope;
 }
 
+function defaultEventColor(scope: CalendarEventScope, user: UserCode) {
+  if (scope === "shared") return "var(--shared-soft)";
+  if (scope === "private") return "var(--private-soft)";
+  return user === "daeho" ? "var(--daeho-soft)" : "var(--sanghee-soft)";
+}
+
 function newId() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 }
@@ -740,10 +746,15 @@ function Modal({
   );
 }
 
-function EventVisibilityControls() {
-  const [isShared, setIsShared] = useState(false);
-  const [isPrivate, setIsPrivate] = useState(false);
-
+function EventVisibilityControls({
+  scope,
+  onChange,
+}: {
+  scope: CalendarEventScope;
+  onChange: (scope: CalendarEventScope) => void;
+}) {
+  const isShared = scope === "shared";
+  const isPrivate = scope === "private";
   return (
     <div className="modal-event-scopes">
       <label
@@ -754,9 +765,9 @@ function EventVisibilityControls() {
         <input
           checked={isShared}
           disabled={isPrivate}
-          form="event-form"
-          name="shared"
-          onChange={(event) => setIsShared(event.target.checked)}
+          onChange={(event) =>
+            onChange(event.target.checked ? "shared" : "personal")
+          }
           type="checkbox"
         />
         <span>공통일정</span>
@@ -764,12 +775,9 @@ function EventVisibilityControls() {
       <label className="modal-scope-toggle modal-scope-toggle--private">
         <input
           checked={isPrivate}
-          form="event-form"
-          name="private"
-          onChange={(event) => {
-            setIsPrivate(event.target.checked);
-            if (event.target.checked) setIsShared(false);
-          }}
+          onChange={(event) =>
+            onChange(event.target.checked ? "private" : "personal")
+          }
           type="checkbox"
         />
         <span>나만보기</span>
@@ -968,19 +976,108 @@ function EventDateRangePicker({
   );
 }
 
+function EventColorPicker({
+  defaultColor,
+  value,
+  onClose,
+  onSelect,
+}: {
+  defaultColor: string;
+  value: string;
+  onClose: () => void;
+  onSelect: (color: string) => void;
+}) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="event-color-picker-backdrop"
+      onMouseDown={onClose}
+      role="presentation"
+    >
+      <section
+        aria-label="일정 컬러 선택"
+        aria-modal="true"
+        className="event-color-picker"
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className="event-color-picker-handle" aria-hidden="true" />
+        <header className="event-color-picker-head">
+          <h3>컬러</h3>
+          <button
+            aria-label="컬러 선택 닫기"
+            className="icon-button"
+            onClick={onClose}
+            type="button"
+          >
+            ×
+          </button>
+        </header>
+        <div className="event-color-picker-options">
+          {EVENT_COLOR_OPTIONS.map((option) => {
+            const previewColor = option.value || defaultColor;
+            const isSelected = option.value === value;
+            return (
+              <button
+                aria-pressed={isSelected}
+                className={isSelected ? "is-selected" : ""}
+                key={option.name}
+                onClick={() => {
+                  onSelect(option.value);
+                  onClose();
+                }}
+                type="button"
+              >
+                <span
+                  className="event-color-picker-swatch"
+                  style={{ backgroundColor: previewColor }}
+                >
+                  {isSelected ? "✓" : ""}
+                </span>
+                <strong>{option.name}</strong>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function EventForm({
+  currentUser,
   initialRange,
+  scope,
   onSubmit,
 }: {
+  currentUser: UserCode;
   initialRange: DateRange;
+  scope: CalendarEventScope;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const [range, setRange] = useState(initialRange);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [hasTime, setHasTime] = useState(false);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
   const [color, setColor] = useState("");
+  const baseColor = defaultEventColor(scope, currentUser);
+  const selectedColorName =
+    EVENT_COLOR_OPTIONS.find((option) => option.value === color)?.name ??
+    "기본색";
 
   function blurActiveInput() {
     if (document.activeElement instanceof HTMLElement) {
@@ -1098,34 +1195,24 @@ function EventForm({
           ) : null}
         </div>
 
-        <fieldset className="event-color-fieldset">
-          <legend>컬러</legend>
-          <div className="event-color-options">
-            {EVENT_COLOR_OPTIONS.map((option) => (
-              <button
-                aria-label={option.name}
-                aria-pressed={color === option.value}
-                className={`event-color-button${
-                  option.value ? "" : " event-color-button--default"
-                }${color === option.value ? " is-selected" : ""}`}
-                key={option.name}
-                onClick={() => {
-                  blurActiveInput();
-                  setColor(option.value);
-                }}
-                style={
-                  option.value
-                    ? { backgroundColor: option.value }
-                    : undefined
-                }
-                title={option.name}
-                type="button"
-              >
-                {color === option.value ? <span>✓</span> : null}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        <div className="event-color-summary">
+          <span>컬러</span>
+          <button
+            aria-label={`컬러 선택, 현재 ${selectedColorName}`}
+            className="event-color-trigger"
+            onClick={() => {
+              blurActiveInput();
+              setIsColorPickerOpen(true);
+            }}
+            style={{
+              backgroundColor: color || baseColor,
+              color: color ? "#25302a" : "var(--ink)",
+            }}
+            type="button"
+          >
+            컬러
+          </button>
+        </div>
 
         <button
           className="button button--primary button--full event-submit"
@@ -1143,6 +1230,14 @@ function EventForm({
           }}
           onClose={() => setIsDatePickerOpen(false)}
           value={range}
+        />
+      ) : null}
+      {isColorPickerOpen ? (
+        <EventColorPicker
+          defaultColor={baseColor}
+          onClose={() => setIsColorPickerOpen(false)}
+          onSelect={setColor}
+          value={color}
         />
       ) : null}
     </>
@@ -1394,16 +1489,12 @@ function CalendarView({
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(selected.getFullYear(), selected.getMonth(), 1),
   );
-  const [dragRange, setDragRange] = useState<DateRange | null>(null);
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
   const gestureRef = useRef<{
     startX: number;
     startY: number;
-    startDate: string;
     pointerId: number;
   } | null>(null);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressActiveRef = useRef(false);
   const suppressClickRef = useRef(false);
 
   const systemEvents = useMemo<CalendarEvent[]>(() => {
@@ -1460,21 +1551,6 @@ function CalendarView({
     const next = new Date(year, month + offset, 1);
     setVisibleMonth(next);
     setSelectedDate(toDateKey(next));
-    setDragRange(null);
-  }
-
-  function clearLongPressTimer() {
-    if (longPressTimerRef.current) {
-      globalThis.clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }
-
-  function dateFromPointer(event: ReactPointerEvent<HTMLDivElement>) {
-    const target = document.elementFromPoint(event.clientX, event.clientY);
-    return target
-      ?.closest<HTMLElement>("[data-calendar-date]")
-      ?.dataset.calendarDate;
   }
 
   function startGesture(event: ReactPointerEvent<HTMLDivElement>) {
@@ -1482,59 +1558,22 @@ function CalendarView({
     const target = (event.target as Element | null)?.closest<HTMLElement>(
       "[data-calendar-date]",
     );
-    const startDate = target?.dataset.calendarDate;
-    if (!startDate) return;
+    if (!target) return;
 
     gestureRef.current = {
       startX: event.clientX,
       startY: event.clientY,
-      startDate,
       pointerId: event.pointerId,
     };
-    longPressActiveRef.current = false;
-    clearLongPressTimer();
-    longPressTimerRef.current = globalThis.setTimeout(() => {
-      longPressActiveRef.current = true;
-      setDragRange({ start: startDate, end: startDate });
-    }, 430);
-  }
-
-  function moveGesture(event: ReactPointerEvent<HTMLDivElement>) {
-    const gesture = gestureRef.current;
-    if (!gesture || gesture.pointerId !== event.pointerId) return;
-    const deltaX = event.clientX - gesture.startX;
-    const deltaY = event.clientY - gesture.startY;
-
-    if (!longPressActiveRef.current) {
-      if (Math.abs(deltaX) > 12 || Math.abs(deltaY) > 12) {
-        clearLongPressTimer();
-      }
-      return;
-    }
-
-    event.preventDefault();
-    const currentDate = dateFromPointer(event);
-    if (currentDate) {
-      setDragRange(normalizeRange(gesture.startDate, currentDate));
-    }
   }
 
   function finishGesture(event: ReactPointerEvent<HTMLDivElement>) {
     const gesture = gestureRef.current;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
-    clearLongPressTimer();
 
     const deltaX = event.clientX - gesture.startX;
     const deltaY = event.clientY - gesture.startY;
-    if (longPressActiveRef.current) {
-      const currentDate = dateFromPointer(event) ?? gesture.startDate;
-      const range = normalizeRange(gesture.startDate, currentDate);
-      setDragRange(range);
-      setIsDaySheetOpen(false);
-      setSelectedDate(range.start);
-      suppressClickRef.current = true;
-      onAddEvent(range);
-    } else if (
+    if (
       Math.abs(deltaX) >= 56 &&
       Math.abs(deltaX) > Math.abs(deltaY) * 1.2
     ) {
@@ -1543,16 +1582,13 @@ function CalendarView({
     }
 
     gestureRef.current = null;
-    longPressActiveRef.current = false;
     globalThis.setTimeout(() => {
       suppressClickRef.current = false;
     }, 0);
   }
 
   function cancelGesture() {
-    clearLongPressTimer();
     gestureRef.current = null;
-    longPressActiveRef.current = false;
   }
 
   return (
@@ -1601,7 +1637,6 @@ function CalendarView({
           className="calendar-grid"
           onPointerCancel={cancelGesture}
           onPointerDown={startGesture}
-          onPointerMove={moveGesture}
           onPointerUp={finishGesture}
         >
           {days.map((date, dayIndex) => {
@@ -1646,8 +1681,6 @@ function CalendarView({
                     : undefined;
             const isOutside = date.getMonth() !== month;
             const isToday = key === toDateKey(new Date());
-            const isRangeSelected =
-              dragRange && key >= dragRange.start && key <= dragRange.end;
             return (
               <button
                 aria-label={`${formatKoreanDate(key, true)}${
@@ -1661,7 +1694,6 @@ function CalendarView({
                   "calendar-day",
                   isOutside ? "calendar-day--outside" : "",
                   isToday ? "calendar-day--today" : "",
-                  isRangeSelected ? "calendar-day--range" : "",
                   dateHolidays.length ? "calendar-day--holiday" : "",
                 ]
                   .filter(Boolean)
@@ -1670,7 +1702,6 @@ function CalendarView({
                 key={key}
                 onClick={() => {
                   if (suppressClickRef.current) return;
-                  setDragRange(null);
                   setSelectedDate(key);
                   setIsDaySheetOpen(true);
                 }}
@@ -3760,6 +3791,8 @@ export function OipApp({
     start: toDateKey(new Date()),
     end: toDateKey(new Date()),
   });
+  const [eventScope, setEventScope] =
+    useState<CalendarEventScope>("personal");
   const [editingFridge, setEditingFridge] = useState<FridgeItem | null>(null);
   const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
   const [toast, setToast] = useState<string | null>(null);
@@ -3996,6 +4029,7 @@ export function OipApp({
   function openEventModal(range?: DateRange) {
     const nextRange = range ?? { start: selectedDate, end: selectedDate };
     setEventRange(nextRange);
+    setEventScope("personal");
     setSelectedDate(nextRange.start);
     setModal("event");
   }
@@ -4014,8 +4048,8 @@ export function OipApp({
     )
       ? requestedColor
       : null;
-    const isShared = form.get("shared") === "on";
-    const isPrivate = form.get("private") === "on";
+    const isShared = eventScope === "shared";
+    const isPrivate = eventScope === "private";
     if (!title || !startDate || !endDate || endDate < startDate) return;
     const isAllDay = !startTime && !endTime;
     const next: CalendarEvent = {
@@ -4697,11 +4731,21 @@ export function OipApp({
 
       {modal === "event" ? (
         <Modal
-          headerAction={<EventVisibilityControls />}
+          headerAction={
+            <EventVisibilityControls
+              onChange={setEventScope}
+              scope={eventScope}
+            />
+          }
           onClose={() => setModal(null)}
           title="일정 추가"
         >
-          <EventForm initialRange={eventRange} onSubmit={addEvent} />
+          <EventForm
+            currentUser={currentUser}
+            initialRange={eventRange}
+            onSubmit={addEvent}
+            scope={eventScope}
+          />
         </Modal>
       ) : null}
 
