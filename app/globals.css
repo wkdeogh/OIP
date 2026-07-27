@@ -561,10 +561,10 @@ p {
   z-index: 10;
   top: 0;
   display: flex;
-  min-height: 82px;
+  min-height: 68px;
   align-items: center;
   gap: 12px;
-  padding: 14px 18px;
+  padding: 8px 14px;
   border-bottom: 1px solid rgba(221, 228, 220, 0.7);
   background: rgba(247, 248, 250, 0.92);
   backdrop-filter: blur(18px);
@@ -664,7 +664,7 @@ p {
 
 .content {
   width: min(100%, 1260px);
-  min-height: calc(100vh - 82px);
+  min-height: calc(100vh - 68px);
   margin-inline: auto;
   padding: 18px 14px 108px;
 }
@@ -3359,6 +3359,7 @@ p {
   }
 
   .content {
+    min-height: calc(100vh - 90px);
     padding: 28px 30px 56px;
   }
 
