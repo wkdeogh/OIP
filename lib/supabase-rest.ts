@@ -33,6 +33,11 @@ export const resourceConfigs = {
     ],
     order: "date.asc",
   },
+  calendar_day_backgrounds: {
+    table: "calendar_day_backgrounds",
+    fields: ["date", "background_color", "updated_by"],
+    order: "date.asc",
+  },
   public_holidays: {
     table: "public_holidays",
     fields: ["date", "name", "is_holiday", "source", "synced_at"],

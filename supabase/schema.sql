@@ -65,6 +65,19 @@ create table if not exists public.calendar_days_off (
 create index if not exists calendar_days_off_date_owner_idx
   on public.calendar_days_off (date, owner_id);
 
+create table if not exists public.calendar_day_backgrounds (
+  id uuid primary key default gen_random_uuid(),
+  date date not null unique,
+  background_color text not null
+    check (background_color ~ '^#[0-9A-Fa-f]{6}$'),
+  updated_by text not null references public.profiles(code),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists calendar_day_backgrounds_date_idx
+  on public.calendar_day_backgrounds (date);
+
 create table if not exists public.public_holidays (
   date date primary key,
   name text not null,
@@ -295,6 +308,7 @@ begin
   foreach table_name in array array[
     'calendar_events',
     'calendar_days_off',
+    'calendar_day_backgrounds',
     'todos',
     'shopping_items',
     'trips',
@@ -324,6 +338,7 @@ begin
     'profiles',
     'calendar_events',
     'calendar_days_off',
+    'calendar_day_backgrounds',
     'public_holidays',
     'todos',
     'shopping_items',

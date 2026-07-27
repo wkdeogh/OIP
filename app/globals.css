@@ -995,7 +995,7 @@ p {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   border-top: 1px solid var(--line);
-  touch-action: pan-y;
+  touch-action: none;
   user-select: none;
 }
 
@@ -1034,6 +1034,21 @@ p {
 
 .calendar-day:focus:not(:focus-visible) {
   outline: none;
+}
+
+.calendar-day:active {
+  transform: none;
+}
+
+.calendar-day--range-selected::after {
+  position: absolute;
+  z-index: 6;
+  inset: 2px;
+  border: 2px solid var(--green);
+  border-radius: 7px;
+  background: rgba(77, 118, 103, 0.13);
+  content: "";
+  pointer-events: none;
 }
 
 .day-heading {
@@ -1235,7 +1250,7 @@ p {
 
 .day-sheet-actions {
   display: grid;
-  grid-template-columns: minmax(90px, 0.72fr) minmax(150px, 1.28fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 9px;
   padding: 14px 0 16px;
 }
@@ -1254,7 +1269,53 @@ p {
 }
 
 .day-sheet .detail-row {
+  grid-template-columns: 22px minmax(0, 1fr) auto;
   padding-block: 14px;
+}
+
+.detail-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.row-edit {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--green);
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.row-edit:hover {
+  background: var(--green-soft);
+}
+
+.range-action-sheet {
+  padding-bottom: max(22px, env(safe-area-inset-bottom));
+}
+
+.range-action-sheet .day-sheet-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.range-action-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  padding-top: 16px;
+}
+
+.range-action-buttons .button {
+  min-width: 0;
+  padding-inline: 8px;
 }
 
 .day-sheet-empty {
@@ -1628,6 +1689,66 @@ p {
 .row-delete:hover {
   background: #fae9e7;
   color: var(--danger);
+}
+
+.day-background-range {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.day-background-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px 8px;
+}
+
+.day-background-option {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.day-background-option > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 3px solid transparent;
+  border-radius: 14px;
+  color: #25302a;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.day-background-option > span.is-default {
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(135deg, transparent 46%, var(--danger) 47% 53%, transparent 54%),
+    var(--surface-soft);
+}
+
+.day-background-option small {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.day-background-option.is-selected {
+  color: var(--ink);
+}
+
+.day-background-option.is-selected > span {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 .check-row--completed .round-check,
@@ -3286,6 +3407,14 @@ p {
 
 [data-theme="dark"] .row-delete:hover {
   background: #3b2426;
+}
+
+[data-theme="dark"] .row-edit:hover {
+  background: var(--green-soft);
+}
+
+[data-theme="dark"] .calendar-day--range-selected::after {
+  background: rgba(129, 179, 161, 0.17);
 }
 
 [data-theme="dark"] .trip-card:hover,

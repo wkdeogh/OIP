@@ -32,6 +32,13 @@ export type DayOff = {
   memo?: string | null;
 };
 
+export type CalendarDayBackground = {
+  id: string;
+  date: string;
+  background_color: string;
+  updated_by: UserCode;
+};
+
 export type Todo = {
   id: string;
   title: string;

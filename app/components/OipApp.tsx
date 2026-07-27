@@ -12,6 +12,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import type {
+  CalendarDayBackground,
   CalendarEvent,
   DayOff,
   FridgeItem,
@@ -39,7 +40,13 @@ type MainTab =
   | "etc";
 type TaskTab = "todo" | "shopping";
 type ThemeMode = "light" | "dark";
-type ModalName = "event" | "dayoff" | "trip" | "fridge" | null;
+type ModalName =
+  | "event"
+  | "dayoff"
+  | "day-background"
+  | "trip"
+  | "fridge"
+  | null;
 type DateRange = { start: string; end: string };
 type CalendarEventScope = "shared" | "personal" | "private";
 type DateRangeSelection = "start" | "end";
@@ -75,6 +82,18 @@ const EVENT_COLOR_OPTIONS = [
   { name: "분홍", value: "#EC91A5" },
   { name: "주황", value: "#EFA966" },
   { name: "코랄", value: "#EB7F78" },
+  { name: "회색", value: "#AEB8C4" },
+] as const;
+
+const DAY_BACKGROUND_OPTIONS = [
+  { name: "기본", value: "" },
+  { name: "노랑", value: "#F3D96B" },
+  { name: "초록", value: "#83CFA0" },
+  { name: "민트", value: "#75CFC2" },
+  { name: "파랑", value: "#82BCE7" },
+  { name: "보라", value: "#B49ADA" },
+  { name: "분홍", value: "#ECA0B1" },
+  { name: "주황", value: "#EFA66E" },
   { name: "회색", value: "#AEB8C4" },
 ] as const;
 
@@ -154,6 +173,18 @@ function toSeoulTimestamp(value: string) {
 
 function normalizeRange(start: string, end: string): DateRange {
   return start <= end ? { start, end } : { start: end, end: start };
+}
+
+function dateKeysInRange(range: DateRange) {
+  const normalized = normalizeRange(range.start, range.end);
+  const cursor = parseDateKey(normalized.start);
+  const end = parseDateKey(normalized.end);
+  const dates: string[] = [];
+  while (cursor <= end) {
+    dates.push(toDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
 }
 
 function monthCalendarDays(month: Date) {
@@ -1082,22 +1113,36 @@ function EventColorPicker({
 
 function EventForm({
   currentUser,
+  initialEvent,
   initialRange,
   scope,
   onSubmit,
 }: {
   currentUser: UserCode;
+  initialEvent?: CalendarEvent | null;
   initialRange: DateRange;
   scope: CalendarEventScope;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  const [range, setRange] = useState(initialRange);
+  const [range, setRange] = useState(
+    initialEvent ? eventDateRange(initialEvent) : initialRange,
+  );
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
-  const [hasTime, setHasTime] = useState(false);
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
-  const [color, setColor] = useState("");
+  const [hasTime, setHasTime] = useState(
+    initialEvent ? !initialEvent.is_all_day : false,
+  );
+  const initialStartTime =
+    initialEvent && !initialEvent.is_all_day
+      ? timeInSeoul(initialEvent.start_at)
+      : "09:00";
+  const [startTime, setStartTime] = useState(initialStartTime);
+  const [endTime, setEndTime] = useState(
+    initialEvent?.end_at && !initialEvent.is_all_day
+      ? timeInSeoul(initialEvent.end_at)
+      : addOneHour(initialStartTime),
+  );
+  const [color, setColor] = useState(initialEvent?.custom_color ?? "");
   const baseColor = defaultEventColor(scope, currentUser);
   const selectedColorName =
     EVENT_COLOR_OPTIONS.find((option) => option.value === color)?.name ??
@@ -1125,6 +1170,7 @@ function EventForm({
           <input
             aria-label="일정 제목"
             autoFocus
+            defaultValue={initialEvent?.title ?? ""}
             name="title"
             placeholder="일정 제목"
             required
@@ -1246,7 +1292,7 @@ function EventForm({
           className="button button--primary button--full event-submit"
           type="submit"
         >
-          일정 저장
+          {initialEvent ? "수정 저장" : "일정 저장"}
         </button>
       </form>
 
@@ -1269,6 +1315,54 @@ function EventForm({
         />
       ) : null}
     </>
+  );
+}
+
+function DayBackgroundForm({
+  initialColor,
+  onSubmit,
+  range,
+}: {
+  initialColor: string;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  range: DateRange;
+}) {
+  const [color, setColor] = useState(initialColor);
+  return (
+    <form className="modal-form" onSubmit={onSubmit}>
+      <p className="day-background-range">{formatEventDateSummary(range)}</p>
+      <input name="background_color" readOnly type="hidden" value={color} />
+      <div className="day-background-options">
+        {DAY_BACKGROUND_OPTIONS.map((option) => {
+          const selected = color === option.value;
+          return (
+            <button
+              aria-label={`${option.name} 배경${selected ? ", 선택됨" : ""}`}
+              aria-pressed={selected}
+              className={`day-background-option${selected ? " is-selected" : ""}`}
+              key={option.name}
+              onClick={() => setColor(option.value)}
+              type="button"
+            >
+              <span
+                className={option.value ? "" : "is-default"}
+                style={
+                  option.value
+                    ? { backgroundColor: option.value }
+                    : undefined
+                }
+              >
+                {selected ? "✓" : ""}
+              </span>
+              <small>{option.name}</small>
+            </button>
+          );
+        })}
+      </div>
+      <button className="button button--primary button--full" type="submit">
+        배경 저장
+      </button>
+    </form>
   );
 }
 
@@ -1312,6 +1406,8 @@ function CalendarDaySheet({
   onClose,
   onDeleteDayOff,
   onDeleteEvent,
+  onEditEvent,
+  onSetBackground,
 }: {
   date: string;
   events: CalendarEvent[];
@@ -1322,6 +1418,8 @@ function CalendarDaySheet({
   onClose: () => void;
   onDeleteDayOff: (item: DayOff) => void;
   onDeleteEvent: (event: CalendarEvent) => void;
+  onEditEvent: (event: CalendarEvent) => void;
+  onSetBackground: () => void;
 }) {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -1367,6 +1465,16 @@ function CalendarDaySheet({
         </header>
 
         <div className="day-sheet-actions">
+          <button
+            className="button button--soft"
+            onClick={() => {
+              onClose();
+              onSetBackground();
+            }}
+            type="button"
+          >
+            배경색
+          </button>
           <button
             className="button button--soft"
             onClick={() => {
@@ -1468,14 +1576,27 @@ function CalendarDaySheet({
                     </p>
                   </div>
                   {event.event_type !== "anniversary" ? (
-                    <button
-                      aria-label={`${event.title} 일정 삭제`}
-                      className="row-delete"
-                      onClick={() => onDeleteEvent(event)}
-                      type="button"
-                    >
-                      ×
-                    </button>
+                    <div className="detail-row-actions">
+                      <button
+                        aria-label={`${event.title} 일정 수정`}
+                        className="row-edit"
+                        onClick={() => {
+                          onClose();
+                          onEditEvent(event);
+                        }}
+                        type="button"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        aria-label={`${event.title} 일정 삭제`}
+                        className="row-delete"
+                        onClick={() => onDeleteEvent(event)}
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    </div>
                   ) : null}
                 </article>
               ))}
@@ -1494,7 +1615,91 @@ function CalendarDaySheet({
   );
 }
 
+function CalendarRangeSheet({
+  onAddDayOff,
+  onAddEvent,
+  onClose,
+  onSetBackground,
+  range,
+}: {
+  onAddDayOff: () => void;
+  onAddEvent: () => void;
+  onClose: () => void;
+  onSetBackground: () => void;
+  range: DateRange;
+}) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [onClose]);
+
+  const count = dateKeysInRange(range).length;
+  return (
+    <div
+      className="day-sheet-backdrop"
+      onMouseDown={onClose}
+      role="presentation"
+    >
+      <section
+        aria-labelledby="range-sheet-title"
+        aria-modal="true"
+        className="day-sheet range-action-sheet"
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className="day-sheet-handle" aria-hidden="true" />
+        <header className="day-sheet-head">
+          <div>
+            <h2 id="range-sheet-title">{count}일 선택</h2>
+            <p>{formatEventDateSummary(range)}</p>
+          </div>
+          <button
+            aria-label="여러 날짜 선택 닫기"
+            className="icon-button"
+            onClick={onClose}
+            type="button"
+          >
+            ×
+          </button>
+        </header>
+        <div className="range-action-buttons">
+          <button
+            className="button button--primary"
+            onClick={onAddEvent}
+            type="button"
+          >
+            + 일정
+          </button>
+          <button
+            className="button button--soft"
+            onClick={onAddDayOff}
+            type="button"
+          >
+            휴무
+          </button>
+          <button
+            className="button button--soft"
+            onClick={onSetBackground}
+            type="button"
+          >
+            배경색
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function CalendarView({
+  backgrounds,
   events,
   daysOff,
   holidays,
@@ -1505,17 +1710,22 @@ function CalendarView({
   onDeleteEvent,
   onDeleteDayOff,
   onVisibleYearChange,
+  onEditEvent,
+  onSetBackground,
 }: {
+  backgrounds: CalendarDayBackground[];
   events: CalendarEvent[];
   daysOff: DayOff[];
   holidays: PublicHoliday[];
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   onAddEvent: (range?: DateRange) => void;
-  onAddDayOff: () => void;
+  onAddDayOff: (range?: DateRange) => void;
   onDeleteEvent: (event: CalendarEvent) => void;
   onDeleteDayOff: (item: DayOff) => void;
   onVisibleYearChange: (year: number) => void;
+  onEditEvent: (event: CalendarEvent) => void;
+  onSetBackground: (range: DateRange) => void;
 }) {
   const selected = parseDateKey(selectedDate);
   const [visibleMonth, setVisibleMonth] = useState(
@@ -1525,10 +1735,17 @@ function CalendarView({
     null,
   );
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
+  const [dragRange, setDragRange] = useState<DateRange | null>(null);
+  const [rangeSheet, setRangeSheet] = useState<DateRange | null>(null);
   const gestureRef = useRef<{
     startX: number;
     startY: number;
+    startDate: string;
+    currentDate: string;
     pointerId: number;
+    longPressTimer: number | null;
+    selecting: boolean;
+    target: HTMLDivElement;
   } | null>(null);
   const suppressClickRef = useRef(false);
 
@@ -1569,6 +1786,10 @@ function CalendarView({
     () => buildCalendarEventLanes(allEvents, days),
     [allEvents, days],
   );
+  const backgroundByDate = useMemo(
+    () => new Map(backgrounds.map((item) => [item.date, item])),
+    [backgrounds],
+  );
   const holidayWeekIndexes = useMemo(() => {
     const dayIndexes = new Map(
       days.map((date, index) => [toDateKey(date), index]),
@@ -1594,11 +1815,22 @@ function CalendarView({
     onVisibleYearChange(visibleMonth.getFullYear());
   }, [onVisibleYearChange, visibleMonth]);
 
+  useEffect(
+    () => () => {
+      if (gestureRef.current?.longPressTimer) {
+        window.clearTimeout(gestureRef.current.longPressTimer);
+      }
+    },
+    [],
+  );
+
   function moveMonth(offset: number) {
     const next = new Date(year, month + offset, 1);
     setMonthMotion(offset > 0 ? "next" : "previous");
     setVisibleMonth(next);
     setSelectedDate(toDateKey(next));
+    setDragRange(null);
+    setRangeSheet(null);
   }
 
   function startGesture(event: ReactPointerEvent<HTMLDivElement>) {
@@ -1608,16 +1840,78 @@ function CalendarView({
     );
     if (!target) return;
 
-    gestureRef.current = {
+    const startDate = target.dataset.calendarDate;
+    if (!startDate) return;
+    const gesture = {
       startX: event.clientX,
       startY: event.clientY,
+      startDate,
+      currentDate: startDate,
       pointerId: event.pointerId,
+      longPressTimer: null as number | null,
+      selecting: false,
+      target: event.currentTarget,
     };
+    gesture.longPressTimer = window.setTimeout(() => {
+      if (gestureRef.current !== gesture) return;
+      gesture.selecting = true;
+      gesture.longPressTimer = null;
+      suppressClickRef.current = true;
+      setIsDaySheetOpen(false);
+      setDragRange({ start: startDate, end: startDate });
+      gesture.target.setPointerCapture?.(gesture.pointerId);
+      globalThis.navigator?.vibrate?.(18);
+    }, 430);
+    gestureRef.current = gesture;
+  }
+
+  function moveGesture(event: ReactPointerEvent<HTMLDivElement>) {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+
+    if (gesture.selecting) {
+      event.preventDefault();
+      const target = document
+        .elementFromPoint(event.clientX, event.clientY)
+        ?.closest<HTMLElement>("[data-calendar-date]");
+      const date = target?.dataset.calendarDate;
+      if (date && date !== gesture.currentDate) {
+        gesture.currentDate = date;
+        setDragRange(normalizeRange(gesture.startDate, date));
+      }
+      return;
+    }
+
+    const moved = Math.hypot(
+      event.clientX - gesture.startX,
+      event.clientY - gesture.startY,
+    );
+    if (moved > 10 && gesture.longPressTimer) {
+      window.clearTimeout(gesture.longPressTimer);
+      gesture.longPressTimer = null;
+    }
   }
 
   function finishGesture(event: ReactPointerEvent<HTMLDivElement>) {
     const gesture = gestureRef.current;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
+    if (gesture.longPressTimer) {
+      window.clearTimeout(gesture.longPressTimer);
+      gesture.longPressTimer = null;
+    }
+
+    if (gesture.selecting) {
+      const range = normalizeRange(gesture.startDate, gesture.currentDate);
+      setSelectedDate(range.start);
+      setDragRange(null);
+      setRangeSheet(range);
+      gesture.target.releasePointerCapture?.(gesture.pointerId);
+      gestureRef.current = null;
+      globalThis.setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 0);
+      return;
+    }
 
     const deltaX = event.clientX - gesture.startX;
     const deltaY = event.clientY - gesture.startY;
@@ -1636,7 +1930,11 @@ function CalendarView({
   }
 
   function cancelGesture() {
+    if (gestureRef.current?.longPressTimer) {
+      window.clearTimeout(gestureRef.current.longPressTimer);
+    }
     gestureRef.current = null;
+    setDragRange(null);
   }
 
   return (
@@ -1696,7 +1994,9 @@ function CalendarView({
           key={`${year}-${month}`}
           onPointerCancel={cancelGesture}
           onPointerDown={startGesture}
+          onPointerMove={moveGesture}
           onPointerUp={finishGesture}
+          onContextMenu={(event) => event.preventDefault()}
         >
           {days.map((date, dayIndex) => {
             const key = toDateKey(date);
@@ -1730,8 +2030,9 @@ function CalendarView({
               (holiday) => holiday.is_holiday && holiday.date === key,
             );
             const dateDaysOff = daysOff.filter((item) => item.date === key);
+            const dateBackground = backgroundByDate.get(key);
             const owners = new Set(dateDaysOff.map((item) => item.owner_id));
-            const background =
+            const dayOffBackground =
               owners.size === 2
                 ? "linear-gradient(135deg, rgba(127,169,155,.16) 0 50%, rgba(233,166,173,.16) 50%)"
                 : owners.has("daeho")
@@ -1739,6 +2040,11 @@ function CalendarView({
                   : owners.has("sanghee")
                     ? "rgba(233,166,173,.15)"
                     : undefined;
+            const background = dateBackground
+              ? `color-mix(in srgb, ${dateBackground.background_color} 42%, var(--surface))`
+              : dayOffBackground;
+            const isRangeSelected =
+              dragRange && key >= dragRange.start && key <= dragRange.end;
             const isOutside = date.getMonth() !== month;
             const isToday = key === toDateKey(new Date());
             return (
@@ -1755,6 +2061,7 @@ function CalendarView({
                   isOutside ? "calendar-day--outside" : "",
                   isToday ? "calendar-day--today" : "",
                   dateHolidays.length ? "calendar-day--holiday" : "",
+                  isRangeSelected ? "calendar-day--range-selected" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -1869,6 +2176,28 @@ function CalendarView({
           onClose={() => setIsDaySheetOpen(false)}
           onDeleteDayOff={onDeleteDayOff}
           onDeleteEvent={onDeleteEvent}
+          onEditEvent={onEditEvent}
+          onSetBackground={() =>
+            onSetBackground({ start: selectedDate, end: selectedDate })
+          }
+        />
+      ) : null}
+      {rangeSheet ? (
+        <CalendarRangeSheet
+          onAddDayOff={() => {
+            setRangeSheet(null);
+            onAddDayOff(rangeSheet);
+          }}
+          onAddEvent={() => {
+            setRangeSheet(null);
+            onAddEvent(rangeSheet);
+          }}
+          onClose={() => setRangeSheet(null)}
+          onSetBackground={() => {
+            setRangeSheet(null);
+            onSetBackground(rangeSheet);
+          }}
+          range={rangeSheet}
         />
       ) : null}
     </div>
@@ -3855,8 +4184,17 @@ export function OipApp({
     start: toDateKey(new Date()),
     end: toDateKey(new Date()),
   });
+  const [dayOffRange, setDayOffRange] = useState<DateRange>({
+    start: toDateKey(new Date()),
+    end: toDateKey(new Date()),
+  });
+  const [backgroundRange, setBackgroundRange] = useState<DateRange>({
+    start: toDateKey(new Date()),
+    end: toDateKey(new Date()),
+  });
   const [eventScope, setEventScope] =
     useState<CalendarEventScope>("personal");
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [editingFridge, setEditingFridge] = useState<FridgeItem | null>(null);
   const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
   const [toast, setToast] = useState<string | null>(null);
@@ -3864,6 +4202,9 @@ export function OipApp({
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [daysOff, setDaysOff] = useState<DayOff[]>([]);
+  const [dayBackgrounds, setDayBackgrounds] = useState<
+    CalendarDayBackground[]
+  >([]);
   const [holidays, setHolidays] = useState<PublicHoliday[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [shopping, setShopping] = useState<ShoppingItem[]>([]);
@@ -4032,6 +4373,27 @@ export function OipApp({
   }, [authState, currentUser, showToast]);
 
   useEffect(() => {
+    if (authState !== "ready") return;
+    let active = true;
+    fetch(
+      `/api/records?resource=calendar_day_backgrounds&user=${currentUser}`,
+    )
+      .then(async (response) => {
+        if (!response.ok) return [];
+        return (await response.json()) as CalendarDayBackground[];
+      })
+      .then((items) => {
+        if (active) setDayBackgrounds(items);
+      })
+      .catch(() => {
+        if (active) setDayBackgrounds([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [authState, currentUser]);
+
+  useEffect(() => {
     if (
       authState !== "ready" ||
       loadedHolidayYears.current.has(holidayYear)
@@ -4065,6 +4427,7 @@ export function OipApp({
     resource: string,
     payload?: Record<string, unknown>,
     id?: string,
+    quiet = false,
   ) {
     const query = new URLSearchParams({ resource });
     if (id) query.set("id", id);
@@ -4080,15 +4443,17 @@ export function OipApp({
         };
         if (error.code === "SUPABASE_NOT_CONFIGURED") {
           setDemoMode(true);
-          showToast("미리보기 데이터에 반영했어요.");
+          if (!quiet) showToast("미리보기 데이터에 반영했어요.");
           return true;
         }
         throw new Error("WRITE_FAILED");
       }
-      showToast("저장했어요.");
+      if (!quiet) showToast("저장했어요.");
       return true;
     } catch {
-      showToast("저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      if (!quiet) {
+        showToast("저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      }
       return false;
     }
   }
@@ -4110,13 +4475,23 @@ export function OipApp({
 
   function openEventModal(range?: DateRange) {
     const nextRange = range ?? { start: selectedDate, end: selectedDate };
+    setEditingEvent(null);
     setEventRange(nextRange);
     setEventScope("personal");
     setSelectedDate(nextRange.start);
     setModal("event");
   }
 
-  function addEvent(event: FormEvent<HTMLFormElement>) {
+  function openEditEvent(item: CalendarEvent) {
+    const range = eventDateRange(item);
+    setEditingEvent(item);
+    setEventRange(range);
+    setEventScope(calendarEventScope(item));
+    setSelectedDate(range.start);
+    setModal("event");
+  }
+
+  function saveEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const title = String(form.get("title") ?? "").trim();
@@ -4125,17 +4500,17 @@ export function OipApp({
     const startTime = String(form.get("start_time") ?? "");
     const endTime = String(form.get("end_time") ?? "");
     const requestedColor = String(form.get("custom_color") ?? "");
-    const customColor = EVENT_COLOR_OPTIONS.some(
-      (option) => option.value && option.value === requestedColor,
-    )
+    const customColor = /^#[0-9A-Fa-f]{6}$/.test(requestedColor)
       ? requestedColor
       : null;
     const isShared = eventScope === "shared";
     const isPrivate = eventScope === "private";
     if (!title || !startDate || !endDate || endDate < startDate) return;
     const isAllDay = !startTime && !endTime;
+    const previous = editingEvent;
     const next: CalendarEvent = {
-      id: newId(),
+      ...(previous ?? {}),
+      id: previous?.id ?? newId(),
       title,
       start_at: `${startDate}T${startTime || (isAllDay ? "12:00" : "00:00")}:00+09:00`,
       end_at:
@@ -4144,35 +4519,160 @@ export function OipApp({
           : null,
       is_all_day: isAllDay,
       visibility: isPrivate ? "private" : "shared",
-      author_id: currentUser,
+      author_id: previous?.author_id ?? currentUser,
       event_type: "normal",
       color_mode: !isPrivate && !isShared ? "custom" : "default",
       custom_color: customColor,
     };
-    setEvents((items) => [...items, next]);
+    setEvents((items) =>
+      previous
+        ? items.map((item) => (item.id === previous.id ? next : item))
+        : [...items, next],
+    );
     setSelectedDate(startDate);
     setModal(null);
-    void writeRecord("POST", "calendar_events", next);
+    setEditingEvent(null);
+    void writeRecord(
+      previous ? "PATCH" : "POST",
+      "calendar_events",
+      next,
+      previous?.id,
+    ).then((saved) => {
+      if (!saved) {
+        setEvents((items) =>
+          previous
+            ? items.map((item) => (item.id === previous.id ? previous : item))
+            : items.filter((item) => item.id !== next.id),
+        );
+      }
+    });
+  }
+
+  function openDayOffModal(range?: DateRange) {
+    const nextRange = range ?? { start: selectedDate, end: selectedDate };
+    setDayOffRange(nextRange);
+    setSelectedDate(nextRange.start);
+    setModal("dayoff");
+  }
+
+  function openBackgroundModal(range: DateRange) {
+    setBackgroundRange(range);
+    setSelectedDate(range.start);
+    setModal("day-background");
   }
 
   function addDayOff(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const date = String(form.get("date") ?? "");
+    const startDate = String(form.get("start_date") ?? "");
+    const endDate = String(form.get("end_date") ?? startDate);
     const owner = String(form.get("owner") ?? currentUser) as UserCode;
     const type = String(form.get("type") ?? "");
-    if (!date || !type) return;
-    const next: DayOff = {
-      id: newId(),
-      date,
-      owner_id: owner,
-      day_off_type: type,
-      half_day_period: null,
-    };
-    setDaysOff((items) => [...items, next]);
-    setSelectedDate(date);
+    if (!startDate || !endDate || endDate < startDate || !type) return;
+    const existing = new Set(
+      daysOff
+        .filter((item) => item.owner_id === owner)
+        .map((item) => item.date),
+    );
+    const nextItems: DayOff[] = dateKeysInRange({
+      start: startDate,
+      end: endDate,
+    })
+      .filter((date) => !existing.has(date))
+      .map((date) => ({
+        id: newId(),
+        date,
+        owner_id: owner,
+        day_off_type: type,
+        half_day_period: null,
+      }));
+    if (!nextItems.length) {
+      showToast("이미 같은 날짜에 휴무가 있어요.");
+      return;
+    }
+    setDaysOff((items) => [...items, ...nextItems]);
+    setSelectedDate(startDate);
     setModal(null);
-    void writeRecord("POST", "calendar_days_off", next);
+    void Promise.all(
+      nextItems.map((item) =>
+        writeRecord("POST", "calendar_days_off", item, undefined, true),
+      ),
+    ).then((results) => {
+      if (results.every(Boolean)) {
+        showToast(
+          nextItems.length === 1
+            ? "휴무를 저장했어요."
+            : `${nextItems.length}일의 휴무를 저장했어요.`,
+        );
+      } else {
+        const ids = new Set(nextItems.map((item) => item.id));
+        setDaysOff((items) => items.filter((item) => !ids.has(item.id)));
+        showToast("휴무를 모두 저장하지 못했어요.");
+      }
+    });
+  }
+
+  function saveDayBackground(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const color = String(form.get("background_color") ?? "");
+    if (
+      color &&
+      !DAY_BACKGROUND_OPTIONS.some((option) => option.value === color)
+    ) {
+      return;
+    }
+    const dates = dateKeysInRange(backgroundRange);
+    const dateSet = new Set(dates);
+    const previous = dayBackgrounds;
+    const existing = new Map(
+      dayBackgrounds.map((item) => [item.date, item]),
+    );
+    const nextItems = color
+      ? dates.map<CalendarDayBackground>((date) => ({
+          id: existing.get(date)?.id ?? newId(),
+          date,
+          background_color: color,
+          updated_by: currentUser,
+        }))
+      : [];
+    setDayBackgrounds((items) => [
+      ...items.filter((item) => !dateSet.has(item.date)),
+      ...nextItems,
+    ]);
+    setModal(null);
+
+    const requests = color
+      ? nextItems.map((item) =>
+          writeRecord(
+            existing.has(item.date) ? "PATCH" : "POST",
+            "calendar_day_backgrounds",
+            item,
+            existing.get(item.date)?.id,
+            true,
+          ),
+        )
+      : dates
+          .map((date) => existing.get(date))
+          .filter((item): item is CalendarDayBackground => Boolean(item))
+          .map((item) =>
+            writeRecord(
+              "DELETE",
+              "calendar_day_backgrounds",
+              undefined,
+              item.id,
+              true,
+            ),
+          );
+
+    void Promise.all(requests).then((results) => {
+      if (results.every(Boolean)) {
+        showToast(color ? "배경색을 저장했어요." : "기본 배경으로 되돌렸어요.");
+      } else {
+        setDayBackgrounds(previous);
+        showToast("배경색을 저장하지 못했어요. Supabase 설정을 확인해 주세요.");
+      }
+    });
   }
 
   function deleteEvent(item: CalendarEvent) {
@@ -4683,13 +5183,16 @@ export function OipApp({
             <>
           {mainTab === "schedule" ? (
             <CalendarView
+              backgrounds={dayBackgrounds}
               daysOff={daysOff}
               events={events}
               holidays={holidays}
-              onAddDayOff={() => setModal("dayoff")}
+              onAddDayOff={openDayOffModal}
               onAddEvent={openEventModal}
               onDeleteDayOff={deleteDayOff}
               onDeleteEvent={deleteEvent}
+              onEditEvent={openEditEvent}
+              onSetBackground={openBackgroundModal}
               onVisibleYearChange={setHolidayYear}
               selectedDate={selectedDate}
               setSelectedDate={setSelectedDate}
@@ -4826,13 +5329,23 @@ export function OipApp({
               scope={eventScope}
             />
           }
-          onClose={() => setModal(null)}
-          title="일정 추가"
+          onClose={() => {
+            setModal(null);
+            setEditingEvent(null);
+          }}
+          title={editingEvent ? "일정 수정" : "일정 추가"}
         >
           <EventForm
-            currentUser={currentUser}
+            currentUser={
+              editingEvent?.author_id === "daeho" ||
+              editingEvent?.author_id === "sanghee"
+                ? editingEvent.author_id
+                : currentUser
+            }
+            initialEvent={editingEvent}
             initialRange={eventRange}
-            onSubmit={addEvent}
+            key={editingEvent?.id ?? "new-event"}
+            onSubmit={saveEvent}
             scope={eventScope}
           />
         </Modal>
@@ -4847,14 +5360,26 @@ export function OipApp({
           <form className="modal-form" onSubmit={addDayOff}>
             <div className="field-row">
               <label className="field">
-                <span>날짜 *</span>
+                <span>시작 날짜 *</span>
                 <input
-                  defaultValue={selectedDate}
-                  name="date"
+                  defaultValue={dayOffRange.start}
+                  name="start_date"
                   required
                   type="date"
                 />
               </label>
+              <label className="field">
+                <span>종료 날짜 *</span>
+                <input
+                  defaultValue={dayOffRange.end}
+                  min={dayOffRange.start}
+                  name="end_date"
+                  required
+                  type="date"
+                />
+              </label>
+            </div>
+            <div className="field-row">
               <label className="field">
                 <span>사용자</span>
                 <select defaultValue={currentUser} name="owner">
@@ -4876,6 +5401,25 @@ export function OipApp({
               휴무 저장
             </button>
           </form>
+        </Modal>
+      ) : null}
+
+      {modal === "day-background" ? (
+        <Modal
+          onClose={() => setModal(null)}
+          title="배경색 설정"
+        >
+          <DayBackgroundForm
+            initialColor={
+              backgroundRange.start === backgroundRange.end
+                ? dayBackgrounds.find(
+                    (item) => item.date === backgroundRange.start,
+                  )?.background_color ?? ""
+                : ""
+            }
+            onSubmit={saveDayBackground}
+            range={backgroundRange}
+          />
         </Modal>
       ) : null}
 
