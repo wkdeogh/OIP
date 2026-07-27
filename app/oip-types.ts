@@ -11,6 +11,7 @@ export type CalendarEvent = {
   visibility: Visibility;
   author_id: UserCode | "system";
   event_type: "normal" | "anniversary" | "holiday";
+  color_mode?: "default" | "custom";
   custom_color?: string | null;
 };
 

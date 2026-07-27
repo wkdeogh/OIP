@@ -33,6 +33,7 @@ type MainTab = "schedule" | "travel" | "fridge" | "parking" | "etc";
 type ScheduleTab = "calendar" | "todo" | "shopping";
 type ModalName = "event" | "dayoff" | "trip" | "fridge" | null;
 type DateRange = { start: string; end: string };
+type CalendarEventScope = "shared" | "personal" | "private";
 type TripSection =
   | "overview"
   | "trip_flights"
@@ -140,6 +141,16 @@ function anniversaryEmoji(title: string) {
   return "🎂";
 }
 
+function calendarEventScope(event: CalendarEvent): CalendarEventScope {
+  if (event.visibility === "private") return "private";
+  return event.color_mode === "custom" ? "personal" : "shared";
+}
+
+function calendarEventColor(event: CalendarEvent) {
+  const scope = calendarEventScope(event);
+  return scope === "personal" ? event.author_id : scope;
+}
+
 function newId() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 }
@@ -188,9 +199,10 @@ const seedEvents: CalendarEvent[] = [
     title: "건강검진",
     start_at: `${addDays(2)}T09:30:00+09:00`,
     is_all_day: false,
-    visibility: "private",
+    visibility: "shared",
     author_id: "daeho",
     event_type: "normal",
+    color_mode: "custom",
   },
   {
     id: "event-dinner",
@@ -424,6 +436,47 @@ function LoadingScreen() {
   );
 }
 
+function DataLoadingSkeleton() {
+  return (
+    <div className="data-loading" aria-busy="true" aria-label="데이터 불러오는 중">
+      <div className="sub-tabs data-loading-tabs" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="calendar-layout">
+        <section className="card calendar-card data-loading-calendar">
+          <div className="data-loading-toolbar">
+            <span />
+            <strong />
+            <span />
+          </div>
+          <div className="calendar-weekdays" aria-hidden="true">
+            {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+              <span key={day}>{day}</span>
+            ))}
+          </div>
+          <div className="data-loading-grid" aria-hidden="true">
+            {Array.from({ length: 42 }, (_, index) => (
+              <span className="data-loading-day" key={index}>
+                <i />
+                {index % 4 === 0 ? <b /> : null}
+              </span>
+            ))}
+          </div>
+        </section>
+        <aside className="card day-detail data-loading-detail" aria-hidden="true">
+          <span />
+          <i />
+          <i />
+          <i />
+        </aside>
+      </div>
+      <span className="sr-only">일정과 생활 데이터를 불러오고 있습니다.</span>
+    </div>
+  );
+}
+
 function PasswordGate({
   onAuthenticated,
 }: {
@@ -577,6 +630,44 @@ function Modal({
         </div>
         {children}
       </section>
+    </div>
+  );
+}
+
+function EventVisibilityControls() {
+  const [isShared, setIsShared] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
+
+  return (
+    <div className="modal-event-scopes">
+      <label
+        className={`modal-scope-toggle modal-scope-toggle--shared${
+          isPrivate ? " is-disabled" : ""
+        }`}
+      >
+        <input
+          checked={isShared}
+          disabled={isPrivate}
+          form="event-form"
+          name="shared"
+          onChange={(event) => setIsShared(event.target.checked)}
+          type="checkbox"
+        />
+        <span>공통일정</span>
+      </label>
+      <label className="modal-scope-toggle modal-scope-toggle--private">
+        <input
+          checked={isPrivate}
+          form="event-form"
+          name="private"
+          onChange={(event) => {
+            setIsPrivate(event.target.checked);
+            if (event.target.checked) setIsShared(false);
+          }}
+          type="checkbox"
+        />
+        <span>나만보기</span>
+      </label>
     </div>
   );
 }
@@ -916,11 +1007,7 @@ function CalendarView({
                     <span
                       className={[
                         "event-chip",
-                        `event-chip--${
-                          event.visibility === "shared"
-                            ? "shared"
-                            : event.author_id
-                        }`,
+                        `event-chip--${calendarEventColor(event)}`,
                         eventDateRange(event).start !==
                         eventDateRange(event).end
                           ? "event-chip--range"
@@ -1015,11 +1102,7 @@ function CalendarView({
                   </span>
                 ) : (
                   <span
-                    className={`detail-dot detail-dot--${
-                      event.visibility === "shared"
-                        ? "shared"
-                        : event.author_id
-                    }`}
+                    className={`detail-dot detail-dot--${calendarEventColor(event)}`}
                   />
                 )}
                 <div className="detail-row-copy">
@@ -1035,9 +1118,11 @@ function CalendarView({
                     {" · "}
                     {event.event_type === "anniversary"
                       ? "기념일"
-                      : event.visibility === "shared"
-                        ? "공동 일정"
-                        : `${USER_META[event.author_id as UserCode].name} 개인`}
+                      : calendarEventScope(event) === "shared"
+                        ? "공통일정"
+                        : calendarEventScope(event) === "personal"
+                          ? `${USER_META[event.author_id as UserCode].name} 개인일정`
+                          : "나만보기"}
                   </p>
                 </div>
                 {event.event_type !== "anniversary" ? (
@@ -3003,12 +3088,13 @@ export function OipApp() {
   const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
   const [toast, setToast] = useState<string | null>(null);
   const [demoMode, setDemoMode] = useState(false);
-  const [events, setEvents] = useState(seedEvents);
-  const [daysOff, setDaysOff] = useState(seedDaysOff);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [daysOff, setDaysOff] = useState<DayOff[]>([]);
   const [holidays, setHolidays] = useState<PublicHoliday[]>([]);
-  const [todos, setTodos] = useState(seedTodos);
-  const [shopping, setShopping] = useState(seedShopping);
-  const [trips, setTrips] = useState(seedTrips);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [shopping, setShopping] = useState<ShoppingItem[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [tripFlights, setTripFlights] = useState<TripFlight[]>([]);
   const [tripAccommodations, setTripAccommodations] = useState<
     TripAccommodation[]
@@ -3018,9 +3104,9 @@ export function OipApp() {
   >([]);
   const [tripFoods, setTripFoods] = useState<TripFood[]>([]);
   const [tripPlaces, setTripPlaces] = useState<TripPlace[]>([]);
-  const [fridge, setFridge] = useState(seedFridge);
-  const [parking, setParking] = useState<ParkingRecord | null>(seedParking);
-  const [candidates, setCandidates] = useState(seedCandidates);
+  const [fridge, setFridge] = useState<FridgeItem[]>([]);
+  const [parking, setParking] = useState<ParkingRecord | null>(null);
+  const [candidates, setCandidates] = useState<RandomCandidate[]>([]);
   const loadedHolidayYears = useRef(new Set<number>());
 
   const showToast = useCallback((message: string) => {
@@ -3115,10 +3201,25 @@ export function OipApp() {
           (loaded.random_candidates as RandomCandidate[]) ?? [],
         );
         setDemoMode(false);
+        setIsDataLoading(false);
       })
       .catch((error: Error) => {
         if (!active) return;
+        setEvents(seedEvents);
+        setDaysOff(seedDaysOff);
+        setTodos(seedTodos);
+        setShopping(seedShopping);
+        setTrips(seedTrips);
+        setTripFlights([]);
+        setTripAccommodations([]);
+        setTripTransportations([]);
+        setTripFoods([]);
+        setTripPlaces([]);
+        setFridge(seedFridge);
+        setParking(seedParking);
+        setCandidates(seedCandidates);
         setDemoMode(true);
+        setIsDataLoading(false);
         if (error.message !== "SUPABASE_NOT_CONFIGURED") {
           showToast("데이터를 불러오지 못해 미리보기로 열었어요.");
         }
@@ -3193,6 +3294,8 @@ export function OipApp() {
 
   function chooseUser(user: UserCode) {
     localStorage.setItem("oip.currentUser", user);
+    setIsDataLoading(true);
+    setDemoMode(false);
     setCurrentUser(user);
     setAuthState("ready");
   }
@@ -3200,6 +3303,7 @@ export function OipApp() {
   async function signOutDevice() {
     await fetch("/api/auth", { method: "DELETE" }).catch(() => undefined);
     localStorage.removeItem("oip.currentUser");
+    setIsDataLoading(true);
     setAuthState("locked");
   }
 
@@ -3218,6 +3322,7 @@ export function OipApp() {
     const endDate = String(form.get("end_date") ?? startDate);
     const startTime = String(form.get("start_time") ?? "");
     const endTime = String(form.get("end_time") ?? "");
+    const isShared = form.get("shared") === "on";
     const isPrivate = form.get("private") === "on";
     if (!title || !startDate || !endDate || endDate < startDate) return;
     const isAllDay = !startTime && !endTime;
@@ -3233,6 +3338,8 @@ export function OipApp() {
       visibility: isPrivate ? "private" : "shared",
       author_id: currentUser,
       event_type: "normal",
+      color_mode: !isPrivate && !isShared ? "custom" : "default",
+      custom_color: null,
     };
     setEvents((items) => [...items, next]);
     setSelectedDate(startDate);
@@ -3668,6 +3775,8 @@ export function OipApp() {
         onAuthenticated={() => {
           const stored = localStorage.getItem("oip.currentUser");
           if (stored === "daeho" || stored === "sanghee") {
+            setIsDataLoading(true);
+            setDemoMode(false);
             setCurrentUser(stored);
             setAuthState("ready");
           } else {
@@ -3749,6 +3858,10 @@ export function OipApp() {
               : ""
           }`}
         >
+          {isDataLoading ? (
+            <DataLoadingSkeleton />
+          ) : (
+            <>
           {mainTab === "schedule" ? (
             <>
               <div className="sub-tabs" role="tablist" aria-label="일정 메뉴">
@@ -3859,6 +3972,8 @@ export function OipApp() {
               onToggle={toggleCandidate}
             />
           ) : null}
+            </>
+          )}
         </main>
 
         <nav className="mobile-nav" aria-label="주 메뉴">
@@ -3879,12 +3994,7 @@ export function OipApp() {
 
       {modal === "event" ? (
         <Modal
-          headerAction={
-            <label className="modal-private-toggle">
-              <input form="event-form" name="private" type="checkbox" />
-              <span>개인</span>
-            </label>
-          }
+          headerAction={<EventVisibilityControls />}
           onClose={() => setModal(null)}
           title="일정 추가"
         >

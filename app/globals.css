@@ -17,8 +17,10 @@
   --daeho-soft: #e1eeea;
   --sanghee: #e9a6ad;
   --sanghee-soft: #fae4e6;
-  --shared: #e9b568;
-  --shared-soft: #f8ecd5;
+  --shared: #d8ad36;
+  --shared-soft: #faedbd;
+  --private: #7d6a96;
+  --private-soft: #eee9f5;
   --system: #9a91b7;
   --system-soft: #ebe8f4;
   --danger: #c75d58;
@@ -683,6 +685,95 @@ p {
   box-shadow: 0 5px 14px rgba(77, 118, 103, 0.17);
 }
 
+.data-loading {
+  pointer-events: none;
+}
+
+.data-loading-tabs span,
+.data-loading-toolbar > *,
+.data-loading-day i,
+.data-loading-day b,
+.data-loading-detail > * {
+  display: block;
+  border-radius: 9px;
+  background: linear-gradient(90deg, #e9ece8 25%, #f7f9f6 45%, #e9ece8 65%);
+  background-size: 220% 100%;
+  animation: skeleton 1.5s infinite linear;
+}
+
+.data-loading-tabs span {
+  min-height: 42px;
+}
+
+.data-loading-calendar {
+  overflow: hidden;
+}
+
+.data-loading-toolbar {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 12px;
+}
+
+.data-loading-toolbar span {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.data-loading-toolbar strong {
+  width: 112px;
+  height: 22px;
+}
+
+.data-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+}
+
+.data-loading-day {
+  min-width: 0;
+  min-height: 88px;
+  padding: 8px 5px;
+  border-right: 1px solid #e9ebee;
+  border-bottom: 1px solid #e9ebee;
+}
+
+.data-loading-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.data-loading-day i {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.data-loading-day b {
+  width: 78%;
+  height: 13px;
+  margin-top: 10px;
+}
+
+.data-loading-detail {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.data-loading-detail > span {
+  width: 55%;
+  height: 24px;
+}
+
+.data-loading-detail > i {
+  width: 100%;
+  height: 42px;
+}
+
 .calendar-layout {
   display: grid;
   gap: 14px;
@@ -902,6 +993,11 @@ p {
   background: var(--shared-soft);
 }
 
+.event-chip--private {
+  background: var(--private-soft);
+  color: #584968;
+}
+
 .event-chip--system {
   background: var(--system-soft);
 }
@@ -1034,6 +1130,10 @@ p {
 
 .detail-dot--shared {
   background: var(--shared);
+}
+
+.detail-dot--private {
+  background: var(--private);
 }
 
 .detail-dot--system {
@@ -2227,25 +2327,46 @@ p {
   margin: 0;
 }
 
-.modal-private-toggle {
+.modal-event-scopes {
   display: flex;
-  min-height: 36px;
   align-items: center;
-  gap: 6px;
-  padding: 0 9px;
+  gap: 4px;
+}
+
+.modal-scope-toggle {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
   border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--ink);
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 800;
   cursor: pointer;
 }
 
-.modal-private-toggle input {
-  width: 17px;
-  height: 17px;
+.modal-scope-toggle input {
+  width: 15px;
+  height: 15px;
   margin: 0;
-  accent-color: var(--green);
+}
+
+.modal-scope-toggle--shared input {
+  accent-color: var(--shared);
+}
+
+.modal-scope-toggle--private input {
+  accent-color: var(--private);
+}
+
+.modal-scope-toggle.is-disabled {
+  border-color: #eceef1;
+  background: #f6f7f8;
+  color: #adb2ba;
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .check-field input {
@@ -2458,7 +2579,8 @@ p {
     border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   }
 
-  .calendar-day {
+  .calendar-day,
+  .data-loading-day {
     min-height: clamp(122px, 13.5vh, 146px);
   }
 
@@ -2519,6 +2641,17 @@ p {
   .event-chip {
     padding-inline: 2px;
     font-size: 0.47rem;
+  }
+
+  .modal-head-actions,
+  .modal-event-scopes {
+    gap: 2px;
+  }
+
+  .modal-scope-toggle {
+    gap: 3px;
+    padding-inline: 4px;
+    font-size: 0.6rem;
   }
 
   .fridge-grid {
