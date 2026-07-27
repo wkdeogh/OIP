@@ -4230,14 +4230,38 @@ export function OipApp({
     const className = "calendar-scroll-locked";
     document.documentElement.classList.toggle(className, isCalendarPage);
     document.body.classList.toggle(className, isCalendarPage);
+    let lastTap: { time: number; x: number; y: number } | null = null;
+
+    function preventCalendarDoubleTapZoom(event: TouchEvent) {
+      const touch = event.changedTouches.item(0);
+      if (!touch || event.changedTouches.length !== 1) {
+        lastTap = null;
+        return;
+      }
+
+      const now = Date.now();
+      const isSamePosition =
+        lastTap !== null &&
+        Math.hypot(touch.clientX - lastTap.x, touch.clientY - lastTap.y) < 28;
+      if (lastTap && now - lastTap.time < 360 && isSamePosition) {
+        event.preventDefault();
+        lastTap = null;
+        return;
+      }
+      lastTap = { time: now, x: touch.clientX, y: touch.clientY };
+    }
 
     if (isCalendarPage) {
       window.scrollTo({ top: 0 });
+      document.addEventListener("touchend", preventCalendarDoubleTapZoom, {
+        passive: false,
+      });
     }
 
     return () => {
       document.documentElement.classList.remove(className);
       document.body.classList.remove(className);
+      document.removeEventListener("touchend", preventCalendarDoubleTapZoom);
     };
   }, [isCalendarPage]);
 
