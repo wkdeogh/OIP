@@ -193,70 +193,17 @@ p {
 }
 
 .clover-logo {
-  position: relative;
   display: inline-block;
   width: 40px;
   height: 40px;
   flex: 0 0 40px;
-  transform: rotate(-8deg);
-}
-
-.clover-logo > span {
-  position: absolute;
-  width: 17px;
-  height: 17px;
-  border-radius: 60% 55% 58% 44%;
-  background: var(--green);
-  box-shadow: inset -2px -2px 4px rgba(20, 58, 44, 0.15);
-}
-
-.clover-logo > span:nth-child(1) {
-  top: 1px;
-  left: 11px;
-  transform: rotate(45deg);
-}
-
-.clover-logo > span:nth-child(2) {
-  top: 10px;
-  right: 0;
-  transform: rotate(120deg);
-}
-
-.clover-logo > span:nth-child(3) {
-  right: 4px;
-  bottom: 1px;
-  transform: rotate(185deg);
-}
-
-.clover-logo > span:nth-child(4) {
-  bottom: 1px;
-  left: 3px;
-  transform: rotate(230deg);
-}
-
-.clover-logo > span:nth-child(5) {
-  top: 10px;
-  left: 0;
-  transform: rotate(300deg);
-}
-
-.clover-logo > i {
-  position: absolute;
-  right: 2px;
-  bottom: -3px;
-  width: 15px;
-  height: 5px;
-  border-bottom: 3px solid var(--green);
-  border-radius: 50%;
-  transform: rotate(55deg);
+  background: url("/oip_logo.png") center / 185% no-repeat;
 }
 
 .clover-logo--large {
-  width: 62px;
-  height: 62px;
-  transform: scale(1.45) rotate(-8deg);
-  transform-origin: center;
-  margin: 10px;
+  width: 84px;
+  height: 84px;
+  flex-basis: 84px;
 }
 
 .gate-screen {
@@ -566,8 +513,9 @@ p {
 }
 
 .mobile-brand .clover-logo {
-  transform: scale(0.72) rotate(-8deg);
-  margin-inline: -5px;
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
 }
 
 .mobile-brand strong {

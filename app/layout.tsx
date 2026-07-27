@@ -22,8 +22,15 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     applicationName: "OIP",
     icons: {
-      icon: "/og.png",
-      shortcut: "/og.png",
+      icon: [
+        {
+          url: "/oip_logo.png",
+          type: "image/png",
+          sizes: "1024x1024",
+        },
+      ],
+      shortcut: "/oip_logo.png",
+      apple: "/oip_logo.png",
     },
     openGraph: {
       type: "website",

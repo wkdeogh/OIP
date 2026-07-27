@@ -406,14 +406,7 @@ function CloverLogo({ large = false }: { large?: boolean }) {
     <span
       className={`clover-logo${large ? " clover-logo--large" : ""}`}
       aria-hidden="true"
-    >
-      <span />
-      <span />
-      <span />
-      <span />
-      <span />
-      <i />
-    </span>
+    />
   );
 }
 
