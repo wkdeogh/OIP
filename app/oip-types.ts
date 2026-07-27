@@ -14,6 +14,14 @@ export type CalendarEvent = {
   custom_color?: string | null;
 };
 
+export type PublicHoliday = {
+  date: string;
+  name: string;
+  is_holiday: boolean;
+  source: string;
+  synced_at?: string;
+};
+
 export type DayOff = {
   id: string;
   date: string;
@@ -59,6 +67,78 @@ export type Trip = {
   author_id: UserCode;
 };
 
+export type TripFlight = {
+  id: string;
+  trip_id: string;
+  direction: "가는 편" | "오는 편" | "기타";
+  departure_city?: string | null;
+  departure_airport?: string | null;
+  departure_at?: string | null;
+  arrival_city?: string | null;
+  arrival_airport?: string | null;
+  arrival_at?: string | null;
+  airline?: string | null;
+  flight_number?: string | null;
+  reservation_number?: string | null;
+  seat_info?: string | null;
+  baggage_info?: string | null;
+  price?: number | null;
+  memo?: string | null;
+};
+
+export type TripAccommodation = {
+  id: string;
+  trip_id: string;
+  name: string;
+  address?: string | null;
+  map_url?: string | null;
+  check_in_at?: string | null;
+  check_out_at?: string | null;
+  reservation_number?: string | null;
+  price?: number | null;
+  contact?: string | null;
+  memo?: string | null;
+};
+
+export type TripTransportation = {
+  id: string;
+  trip_id: string;
+  transport_type: string;
+  title: string;
+  departure_location?: string | null;
+  departure_at?: string | null;
+  arrival_location?: string | null;
+  arrival_at?: string | null;
+  reservation_info?: string | null;
+  price?: number | null;
+  link?: string | null;
+  memo?: string | null;
+};
+
+export type TripFood = {
+  id: string;
+  trip_id: string;
+  name: string;
+  item_type: "음식" | "식당";
+  location?: string | null;
+  link?: string | null;
+  price_range?: string | null;
+  is_visited: boolean;
+  memo?: string | null;
+};
+
+export type TripPlace = {
+  id: string;
+  trip_id: string;
+  name: string;
+  category: string;
+  location?: string | null;
+  link?: string | null;
+  desired_date?: string | null;
+  is_visited: boolean;
+  memo?: string | null;
+};
+
 export type FridgeItem = {
   id: string;
   name: string;
@@ -67,6 +147,7 @@ export type FridgeItem = {
   expiration_date: string;
   storage_type: string;
   category?: string | null;
+  purchased_at?: string | null;
   memo?: string | null;
   author_id: UserCode;
   consumed_at?: string | null;

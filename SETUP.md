@@ -14,9 +14,11 @@
 - `SUPABASE_SERVICE_ROLE_KEY`: Supabase `service_role` 키
 - `OIP_PASSWORD`: 앱에서 그대로 사용할 공통 비밀번호
 - `OIP_SESSION_VERSION`: 기본값 `1`
-- `PUBLIC_HOLIDAY_API_KEY`: 공공데이터포털 특일 정보 API 키(공휴일 동기화 구현 시 사용)
+- `PUBLIC_HOLIDAY_API_KEY`: 공공데이터포털 한국천문연구원 특일 정보 API 키
 
 `service_role` 키와 비밀번호는 GitHub에 올리지 마세요. 환경 변수 이름에 `NEXT_PUBLIC_`을 붙이면 브라우저에 노출되므로 사용하지 않습니다.
+
+캘린더를 처음 열면 해당 연도의 대한민국 공휴일을 자동으로 Supabase에 저장합니다. 공휴일이 보이지 않으면 `PUBLIC_HOLIDAY_API_KEY`가 Vercel의 Production 환경에 들어 있는지 확인하고 다시 배포합니다.
 
 ## 3. 로컬 실행
 

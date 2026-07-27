@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f7f8f2;
+  --paper: #f5f6f8;
   --surface: #ffffff;
-  --surface-soft: #f1f3eb;
-  --ink: #26342d;
-  --muted: #718077;
-  --line: #dde4dc;
+  --surface-soft: #f1f3f6;
+  --ink: #252a31;
+  --muted: #747b86;
+  --line: #e1e4e8;
   --green: #4d7667;
   --green-dark: #365a4d;
   --green-soft: #dce9df;
+  --blue: #3478f6;
+  --blue-dark: #235fc7;
+  --blue-soft: #eaf2ff;
   --daeho: #7fa99b;
   --daeho-soft: #e1eeea;
   --sanghee: #e9a6ad;
@@ -18,11 +21,9 @@
   --shared-soft: #f8ecd5;
   --system: #9a91b7;
   --system-soft: #ebe8f4;
-  --orange: #e99352;
-  --orange-soft: #fff0df;
   --danger: #c75d58;
-  --shadow: 0 14px 34px rgba(48, 74, 61, 0.08);
-  --shadow-soft: 0 7px 20px rgba(48, 74, 61, 0.06);
+  --shadow: 0 14px 34px rgba(28, 34, 43, 0.08);
+  --shadow-soft: 0 7px 20px rgba(28, 34, 43, 0.055);
   --radius-lg: 28px;
   --radius-md: 20px;
   --radius-sm: 14px;
@@ -44,9 +45,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 14% 0%, rgba(219, 235, 219, 0.6), transparent 28rem),
-    var(--paper);
+  background: var(--paper);
   color: var(--ink);
 }
 
@@ -128,7 +127,7 @@ p {
 }
 
 .card {
-  border: 1px solid rgba(221, 228, 220, 0.88);
+  border: 1px solid rgba(225, 228, 232, 0.94);
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: var(--shadow-soft);
@@ -270,7 +269,7 @@ p {
 .gate-card {
   width: min(100%, 430px);
   padding: clamp(26px, 7vw, 44px);
-  border: 1px solid rgba(221, 228, 220, 0.94);
+  border: 1px solid rgba(225, 228, 232, 0.96);
   border-radius: 34px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: var(--shadow);
@@ -326,7 +325,7 @@ p {
   padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 13px;
-  background: #fbfcf9;
+  background: #fbfcfd;
   outline: 0;
 }
 
@@ -343,7 +342,7 @@ p {
 .candidate-form select:hover,
 .inline-input input:hover,
 .quick-form input:hover {
-  border-color: #b9c8bd;
+  border-color: #bfc5ce;
 }
 
 .field input:focus,
@@ -473,7 +472,7 @@ p {
   width: 228px;
   padding: 28px 22px;
   border-right: 1px solid rgba(221, 228, 220, 0.8);
-  background: rgba(250, 251, 246, 0.9);
+  background: rgba(252, 252, 253, 0.94);
   backdrop-filter: blur(18px);
 }
 
@@ -550,7 +549,7 @@ p {
   gap: 12px;
   padding: 14px 18px;
   border-bottom: 1px solid rgba(221, 228, 220, 0.7);
-  background: rgba(247, 248, 242, 0.89);
+  background: rgba(247, 248, 250, 0.92);
   backdrop-filter: blur(18px);
 }
 
@@ -558,10 +557,6 @@ p {
   margin: 0;
   font-size: 1.25rem;
   letter-spacing: -0.035em;
-}
-
-.app-header .eyebrow {
-  font-size: 0.66rem;
 }
 
 .mobile-brand {
@@ -586,44 +581,26 @@ p {
   margin-left: auto;
 }
 
-.user-select {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 8px 4px 5px;
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  background: white;
+.user-pill {
+  min-width: 62px;
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 850;
 }
 
-.user-select .avatar {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  place-items: center;
-  border-radius: 50%;
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 900;
+.user-pill--daeho {
+  border-color: #c9ddd6;
+  background: var(--daeho-soft);
+  color: #365f53;
 }
 
-.avatar--daeho {
-  background: var(--daeho);
-}
-
-.avatar--sanghee {
-  background: var(--sanghee);
-}
-
-.user-select select {
-  min-width: 49px;
-  border: 0;
-  background: transparent;
-  font-size: 0.78rem;
-  font-weight: 800;
-  outline: 0;
+.user-pill--sanghee {
+  border-color: #f0cdd1;
+  background: var(--sanghee-soft);
+  color: #92535b;
 }
 
 .logout-button {
@@ -647,6 +624,16 @@ p {
   min-height: calc(100vh - 82px);
   margin-inline: auto;
   padding: 18px 14px 108px;
+}
+
+.content--calendar {
+  width: 100%;
+  max-width: none;
+  padding-inline: 0;
+}
+
+.content--calendar .sub-tabs {
+  margin-inline: 14px;
 }
 
 .demo-banner {
@@ -755,7 +742,9 @@ p {
 
 .calendar-card {
   overflow: hidden;
-  border-radius: 22px;
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
 }
 
 .calendar-toolbar {
@@ -763,6 +752,14 @@ p {
   align-items: center;
   justify-content: space-between;
   padding: 13px 12px;
+}
+
+.calendar-gesture-hint {
+  margin: -6px 0 10px;
+  color: var(--muted);
+  font-size: 0.61rem;
+  font-weight: 650;
+  text-align: center;
 }
 
 .calendar-toolbar .icon-button {
@@ -792,7 +789,7 @@ p {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   border-top: 1px solid var(--line);
-  background: #fafbf8;
+  background: #fafbfc;
 }
 
 .calendar-weekdays span {
@@ -811,18 +808,20 @@ p {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   border-top: 1px solid var(--line);
+  touch-action: pan-y;
+  user-select: none;
 }
 
 .calendar-day {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 74px;
+  min-height: 88px;
   flex-direction: column;
   align-items: stretch;
   padding: 5px 3px;
-  border-right: 1px solid #e9ede7;
-  border-bottom: 1px solid #e9ede7;
+  border-right: 1px solid #e9ebee;
+  border-bottom: 1px solid #e9ebee;
   background-color: white;
   text-align: left;
 }
@@ -838,11 +837,29 @@ p {
 
 .calendar-day--outside {
   color: #bbc2bc;
-  background-color: #fbfcfa;
+  background-color: #fafbfc;
 }
 
 .calendar-day--selected {
   box-shadow: inset 0 0 0 2px var(--green);
+}
+
+.calendar-day--range {
+  box-shadow: inset 0 0 0 999px rgba(77, 118, 103, 0.08);
+}
+
+.calendar-day--selected.calendar-day--range {
+  box-shadow:
+    inset 0 0 0 2px var(--green),
+    inset 0 0 0 999px rgba(77, 118, 103, 0.08);
+}
+
+.day-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1px;
 }
 
 .day-number {
@@ -860,15 +877,64 @@ p {
   color: #d16863;
 }
 
+.calendar-day--holiday .day-number {
+  color: #d16863;
+}
+
 .calendar-day--today .day-number {
   background: var(--green);
   color: white !important;
+}
+
+.anniversary-icons {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  padding-right: 1px;
+  font-size: 0.65rem;
+  letter-spacing: -0.28em;
+  line-height: 1;
+}
+
+.anniversary-icons span {
+  filter: saturate(0.9);
+}
+
+.holiday-label {
+  overflow: hidden;
+  margin: -1px 2px 3px;
+  color: #c15c57;
+  font-size: 0.49rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .day-events {
   display: grid;
   gap: 2px;
   overflow: hidden;
+}
+
+.event-chip--range {
+  margin-inline: -3px;
+  border-radius: 0;
+}
+
+.event-chip--range-start {
+  margin-left: 0;
+  border-radius: 5px 0 0 5px;
+}
+
+.event-chip--range-end {
+  margin-right: 0;
+  border-radius: 0 5px 5px 0;
+}
+
+.event-chip--range-start.event-chip--range-end {
+  margin-inline: 0;
+  border-radius: 5px;
 }
 
 .event-chip {
@@ -909,7 +975,45 @@ p {
 
 .day-detail {
   min-height: 220px;
+  margin-inline: 14px;
   padding: 20px;
+}
+
+.holiday-detail-list {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.holiday-detail {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #fff1f0;
+  color: #a94d48;
+}
+
+.holiday-detail span {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: white;
+  font-size: 0.6rem;
+  font-weight: 850;
+}
+
+.holiday-detail strong {
+  font-size: 0.78rem;
+}
+
+.detail-emoji {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  font-size: 0.98rem;
 }
 
 .section-heading {
@@ -1444,57 +1548,163 @@ p {
   color: var(--green-dark);
 }
 
-.trip-summary {
+.trip-overview {
+  display: grid;
+  gap: 12px;
+}
+
+.trip-overview-counts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.trip-overview-counts span {
+  display: grid;
+  min-height: 66px;
+  place-items: center;
+  padding: 9px 5px;
+  border-radius: 14px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.62rem;
+  text-align: center;
+}
+
+.trip-overview-counts strong {
+  color: var(--green-dark);
+  font-size: 1.15rem;
+}
+
+.trip-memo {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: white;
+}
+
+.trip-memo span,
+.trip-memo small {
+  color: var(--muted);
+  font-size: 0.63rem;
+}
+
+.trip-memo p {
+  margin: 6px 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.trip-detail-section {
+  display: grid;
+  gap: 12px;
+}
+
+.trip-detail-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.trip-detail-section-head > strong {
+  font-size: 0.88rem;
+}
+
+.trip-detail-section-head .button {
+  min-height: 36px;
+  padding-inline: 11px;
+  font-size: 0.68rem;
+}
+
+.travel-detail-list {
   display: grid;
   gap: 8px;
 }
 
-.trip-summary > div {
+.travel-detail-item {
   display: grid;
-  min-height: 76px;
-  grid-template-columns: 38px 1fr;
-  align-content: center;
-  column-gap: 10px;
-  padding: 12px;
+  min-width: 0;
+  grid-template-columns: 36px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid var(--line);
   border-radius: 14px;
-  background: #f7f9f4;
+  background: #fbfcfd;
 }
 
-.trip-summary > div > span {
+.travel-detail-item.is-complete {
+  opacity: 0.58;
+}
+
+.travel-detail-item.is-complete strong {
+  text-decoration: line-through;
+}
+
+.travel-detail-item > div {
   display: grid;
-  width: 38px;
-  height: 38px;
-  grid-row: 1 / 4;
+  min-width: 0;
+  gap: 2px;
+}
+
+.travel-detail-item small {
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+.travel-detail-item strong {
+  overflow: hidden;
+  font-size: 0.79rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.travel-detail-item p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.63rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.travel-detail-icon,
+.travel-check {
+  display: grid;
+  width: 34px;
+  height: 34px;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--green-soft);
   color: var(--green-dark);
   font-weight: 900;
 }
 
-.trip-summary p {
-  margin-bottom: 1px;
+.travel-check {
+  border: 1px solid #bed0c8;
+  background: white;
+}
+
+.travel-check[aria-pressed="true"] {
+  border-color: var(--green);
+  background: var(--green);
+  color: white;
+}
+
+.travel-detail-item .icon-button {
+  margin: 0;
+}
+
+.trip-empty-copy {
+  margin: 0;
+  padding: 24px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
   color: var(--muted);
-  font-size: 0.63rem;
-}
-
-.trip-summary strong {
-  font-size: 0.82rem;
-}
-
-.trip-summary small {
-  color: var(--muted);
-  font-size: 0.65rem;
-}
-
-.setup-inline-note {
-  margin: 14px 0 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--shared-soft);
-  color: #745b2d;
-  font-size: 0.68rem;
-  line-height: 1.45;
+  font-size: 0.72rem;
+  text-align: center;
 }
 
 .fridge-grid {
@@ -1505,7 +1715,7 @@ p {
 
 .fridge-card {
   min-width: 0;
-  padding: 15px;
+  padding: 12px;
   animation: rise 350ms ease both;
 }
 
@@ -1524,7 +1734,13 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 5px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
+}
+
+.fridge-card-head > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .storage-pill,
@@ -1568,40 +1784,23 @@ p {
 }
 
 .fridge-card > p {
-  min-height: 30px;
-  margin-bottom: 12px;
+  min-height: 0;
+  margin-bottom: 10px;
   color: var(--muted);
   font-size: 0.64rem;
   line-height: 1.45;
 }
 
-.quantity-control {
+.fridge-edit-button {
   display: grid;
-  grid-template-columns: 38px 1fr 38px;
-  align-items: center;
-  margin-bottom: 10px;
-  padding: 4px;
-  border-radius: 12px;
-  background: var(--surface-soft);
-}
-
-.quantity-control button {
-  display: grid;
-  width: 36px;
-  height: 36px;
+  width: 27px;
+  height: 27px;
   place-items: center;
-  border-radius: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   background: white;
-  font-size: 1.05rem;
-}
-
-.quantity-control strong {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 0.73rem;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .fridge-card .button {
@@ -1623,12 +1822,12 @@ p {
   justify-content: space-between;
   overflow: hidden;
   padding: clamp(24px, 6vw, 38px);
-  border: 1px solid #f0c598;
+  border: 1px solid #d9e5f8;
   border-radius: 30px;
   background:
-    radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.7), transparent 16rem),
-    linear-gradient(140deg, #fff8eb, #ffe5c8);
-  box-shadow: 0 15px 34px rgba(191, 119, 62, 0.12);
+    radial-gradient(circle at 88% 18%, #edf4ff 0, transparent 15rem),
+    white;
+  box-shadow: 0 15px 34px rgba(39, 89, 158, 0.08);
 }
 
 .parking-current-card::before {
@@ -1637,7 +1836,7 @@ p {
   bottom: -100px;
   width: 250px;
   height: 250px;
-  border: 42px solid rgba(255, 255, 255, 0.32);
+  border: 42px solid rgba(52, 120, 246, 0.055);
   border-radius: 50%;
   content: "";
 }
@@ -1649,14 +1848,14 @@ p {
 
 .parking-current-card p {
   margin-bottom: 6px;
-  color: #93643f;
+  color: #58708f;
   font-size: 0.8rem;
   font-weight: 750;
 }
 
 .parking-current-card h2 {
   margin-bottom: 13px;
-  color: #603f2b;
+  color: #173f79;
   font-size: clamp(2.8rem, 12vw, 4.5rem);
   letter-spacing: -0.07em;
   line-height: 1;
@@ -1675,7 +1874,7 @@ p {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  color: #956e50;
+  color: #667890;
   font-size: 0.69rem;
 }
 
@@ -1687,10 +1886,10 @@ p {
   height: 88px;
   flex: 0 0 88px;
   place-items: center;
-  border: 5px solid rgba(233, 147, 82, 0.64);
+  border: 5px solid rgba(52, 120, 246, 0.46);
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.46);
-  color: var(--orange);
+  background: var(--blue-soft);
+  color: var(--blue);
   font-size: 3.2rem;
   font-weight: 950;
 }
@@ -1713,33 +1912,11 @@ p {
 .picker-label {
   display: flex;
   align-items: center;
-  gap: 10px;
   margin-bottom: 11px;
 }
 
-.picker-label > span {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border-radius: 9px;
-  background: var(--orange-soft);
-  color: #9d6538;
-  font-size: 0.7rem;
-  font-weight: 900;
-}
-
-.picker-label > div {
-  display: grid;
-}
-
 .picker-label strong {
-  font-size: 0.84rem;
-}
-
-.picker-label small {
-  color: var(--muted);
-  font-size: 0.62rem;
+  font-size: 0.88rem;
 }
 
 .choice-grid {
@@ -1751,42 +1928,42 @@ p {
   grid-template-columns: repeat(3, 1fr);
 }
 
-.choice-grid--four {
+.choice-grid--pillars {
   grid-template-columns: repeat(4, 1fr);
 }
 
 .choice-grid button {
   min-height: 52px;
-  border: 1px solid #efd4b9;
+  border: 1px solid #dce2ea;
   border-radius: 15px;
-  background: #fffdfa;
-  color: #8a6245;
+  background: white;
+  color: #4c596b;
   font-size: 0.9rem;
   font-weight: 850;
 }
 
 .choice-grid button:hover {
-  background: var(--orange-soft);
+  background: var(--blue-soft);
 }
 
 .choice-grid button.is-selected {
-  border-color: var(--orange);
-  background: #ffd8b4;
-  color: #704329;
-  box-shadow: 0 6px 15px rgba(233, 147, 82, 0.18);
+  border-color: var(--blue);
+  background: var(--blue);
+  color: white;
+  box-shadow: 0 6px 15px rgba(52, 120, 246, 0.2);
 }
 
 .button--parking {
   min-height: 54px;
   margin-top: 26px;
   border-radius: 17px;
-  background: var(--orange);
+  background: var(--blue);
   color: white;
-  box-shadow: 0 9px 20px rgba(233, 147, 82, 0.24);
+  box-shadow: 0 9px 20px rgba(52, 120, 246, 0.22);
 }
 
 .button--parking:hover:not(:disabled) {
-  background: #dc8240;
+  background: var(--blue-dark);
 }
 
 .etc-switch {
@@ -1964,17 +2141,20 @@ p {
   z-index: 100;
   inset: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: center;
-  padding: 18px;
+  padding: max(12px, env(safe-area-inset-top)) 12px
+    max(12px, env(safe-area-inset-bottom));
+  overflow-y: auto;
   background: rgba(30, 42, 36, 0.46);
   backdrop-filter: blur(5px);
   animation: fade-in 180ms ease both;
+  overscroll-behavior: contain;
 }
 
 .modal-card {
   width: min(100%, 540px);
-  max-height: min(88vh, 760px);
+  max-height: calc(100dvh - max(24px, env(safe-area-inset-top)));
   padding: 22px;
   overflow-y: auto;
   border-radius: 28px;
@@ -1984,11 +2164,17 @@ p {
 }
 
 .modal-head {
+  position: sticky;
+  z-index: 2;
+  top: -22px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 22px;
+  margin: -22px 0 8px;
+  padding: 22px 0 14px;
+  border-bottom: 1px solid rgba(225, 228, 232, 0.7);
+  background: white;
 }
 
 .modal-head h2 {
@@ -2019,6 +2205,11 @@ p {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.event-date-grid,
+.event-time-grid {
+  grid-template-columns: 1fr;
+}
+
 .check-field {
   display: flex;
   min-height: 62px;
@@ -2027,7 +2218,11 @@ p {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: #fafbf8;
+  background: #fafbfc;
+}
+
+.modal-head .icon-button {
+  margin: 0;
 }
 
 .check-field input {
@@ -2127,7 +2322,7 @@ p {
   }
 
   .calendar-day {
-    min-height: 100px;
+    min-height: 112px;
     padding: 7px 5px;
   }
 
@@ -2154,7 +2349,12 @@ p {
   }
 
   .modal-backdrop {
-    align-items: center;
+    padding-top: min(6vh, 48px);
+  }
+
+  .event-date-grid,
+  .event-time-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .toast {
@@ -2200,6 +2400,14 @@ p {
     padding: 28px 30px 56px;
   }
 
+  .content--calendar {
+    padding-inline: 0;
+  }
+
+  .content--calendar .sub-tabs {
+    margin-inline: 30px;
+  }
+
   .demo-banner {
     justify-content: flex-start;
     padding-left: 30px;
@@ -2219,19 +2427,22 @@ p {
   .calendar-layout {
     grid-template-columns: minmax(580px, 1.7fr) minmax(250px, 0.7fr);
     align-items: start;
+    gap: 16px;
   }
 
   .calendar-card {
-    border-radius: var(--radius-lg);
+    border-left: 0;
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   }
 
   .calendar-day {
-    min-height: 112px;
+    min-height: clamp(122px, 13.5vh, 146px);
   }
 
   .day-detail {
     position: sticky;
     top: 118px;
+    margin: 0 30px 0 0;
   }
 
   .travel-layout {
@@ -2242,6 +2453,8 @@ p {
   .trip-detail-card {
     position: sticky;
     top: 118px;
+    max-height: calc(100vh - 146px);
+    overflow-y: auto;
   }
 
   .fridge-grid {
@@ -2277,7 +2490,7 @@ p {
   }
 
   .calendar-day {
-    min-height: 69px;
+    min-height: 82px;
   }
 
   .event-chip {

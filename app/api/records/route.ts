@@ -47,6 +47,10 @@ function applyReadFilters(
   }
   if (resource === "fridge_items") search.set("consumed_at", "is.null");
   if (resource === "parking_records") search.set("limit", "1");
+  if (resource.startsWith("trip_")) {
+    const tripId = source.get("trip_id");
+    if (tripId) search.set("trip_id", `eq.${tripId}`);
+  }
 
   const id = source.get("id");
   if (id) search.set("id", `eq.${id}`);
