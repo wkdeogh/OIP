@@ -1812,12 +1812,12 @@ p {
   justify-content: space-between;
   overflow: hidden;
   padding: clamp(20px, 4vw, 30px);
-  border: 1px solid #d9e5f8;
+  border: 1px solid #d9e5df;
   border-radius: 30px;
   background:
-    radial-gradient(circle at 88% 18%, #edf4ff 0, transparent 15rem),
+    radial-gradient(circle at 88% 18%, #edf5f0 0, transparent 15rem),
     white;
-  box-shadow: 0 15px 34px rgba(39, 89, 158, 0.08);
+  box-shadow: 0 15px 34px rgba(54, 90, 77, 0.09);
 }
 
 .parking-current-card::before {
@@ -1826,7 +1826,7 @@ p {
   bottom: -100px;
   width: 250px;
   height: 250px;
-  border: 42px solid rgba(52, 120, 246, 0.055);
+  border: 42px solid rgba(77, 118, 103, 0.065);
   border-radius: 50%;
   content: "";
 }
@@ -1838,14 +1838,14 @@ p {
 
 .parking-current-card p {
   margin-bottom: 6px;
-  color: #58708f;
+  color: #587064;
   font-size: 0.8rem;
   font-weight: 750;
 }
 
 .parking-current-card h2 {
   margin-bottom: 13px;
-  color: #173f79;
+  color: var(--green-dark);
   font-size: clamp(2.8rem, 12vw, 4.5rem);
   letter-spacing: -0.07em;
   line-height: 1;
@@ -1864,7 +1864,7 @@ p {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  color: #667890;
+  color: #687970;
   font-size: 0.69rem;
 }
 
@@ -1876,10 +1876,10 @@ p {
   height: 88px;
   flex: 0 0 88px;
   place-items: center;
-  border: 5px solid rgba(52, 120, 246, 0.46);
+  border: 5px solid rgba(77, 118, 103, 0.46);
   border-radius: 28px;
-  background: var(--blue-soft);
-  color: var(--blue);
+  background: var(--green-soft);
+  color: var(--green);
   font-size: 3.2rem;
   font-weight: 950;
 }
@@ -1938,27 +1938,27 @@ p {
 }
 
 .choice-grid button:hover {
-  background: var(--blue-soft);
+  background: var(--green-soft);
 }
 
 .choice-grid button.is-selected {
-  border-color: var(--blue);
-  background: var(--blue);
+  border-color: var(--green);
+  background: var(--green);
   color: white;
-  box-shadow: 0 6px 15px rgba(52, 120, 246, 0.2);
+  box-shadow: 0 6px 15px rgba(77, 118, 103, 0.2);
 }
 
 .button--parking {
   min-height: 54px;
   margin-top: 26px;
   border-radius: 17px;
-  background: var(--blue);
+  background: var(--green);
   color: white;
-  box-shadow: 0 9px 20px rgba(52, 120, 246, 0.22);
+  box-shadow: 0 9px 20px rgba(77, 118, 103, 0.22);
 }
 
 .button--parking:hover:not(:disabled) {
-  background: var(--blue-dark);
+  background: var(--green-dark);
 }
 
 .etc-switch {
