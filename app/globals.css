@@ -2546,12 +2546,22 @@ p {
   gap: 0;
 }
 
+.modal-card--event {
+  padding: 18px 20px;
+}
+
+.modal-card--event .modal-head {
+  top: -18px;
+  margin: -18px 0 4px;
+  padding: 18px 0 10px;
+}
+
 .event-title-field {
-  margin: 8px 0 10px;
+  margin: 6px 0 8px;
 }
 
 .event-title-field input {
-  min-height: 58px;
+  min-height: 52px;
   font-size: 1.05rem;
   font-weight: 700;
 }
@@ -2560,10 +2570,10 @@ p {
   display: flex;
   width: 100%;
   min-width: 0;
-  min-height: 64px;
+  min-height: 56px;
   align-items: center;
   gap: 12px;
-  padding: 10px 2px;
+  padding: 7px 2px;
   border: 0;
   border-bottom: 1px solid var(--line);
   border-radius: 0;
@@ -2668,26 +2678,19 @@ p {
 
 .event-color-summary {
   display: flex;
-  min-height: 64px;
+  min-height: 46px;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 2px 16px;
-}
-
-.event-color-summary > span {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 800;
+  justify-content: flex-end;
+  padding: 7px 2px 9px;
 }
 
 .event-color-trigger {
-  min-width: 88px;
-  min-height: 38px;
-  padding: 0 20px;
+  min-width: 70px;
+  min-height: 32px;
+  padding: 0 15px;
   border: 1px solid rgba(37, 48, 42, 0.1);
   border-radius: 999px;
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   font-weight: 900;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }

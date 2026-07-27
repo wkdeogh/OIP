@@ -705,12 +705,14 @@ function Modal({
   title,
   description,
   headerAction,
+  className,
   onClose,
   children,
 }: {
   title: string;
   description?: string;
   headerAction?: ReactNode;
+  className?: string;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -719,7 +721,7 @@ function Modal({
       <section
         aria-labelledby="modal-title"
         aria-modal="true"
-        className="modal-card"
+        className={`modal-card${className ? ` ${className}` : ""}`}
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -1099,8 +1101,13 @@ function EventForm({
         onSubmit={onSubmit}
       >
         <label className="field event-title-field">
-          <span>제목 *</span>
-          <input name="title" placeholder="일정 제목" required />
+          <input
+            aria-label="일정 제목"
+            autoFocus
+            name="title"
+            placeholder="일정 제목"
+            required
+          />
         </label>
 
         <input name="start_date" readOnly type="hidden" value={range.start} />
@@ -1197,7 +1204,6 @@ function EventForm({
         </div>
 
         <div className="event-color-summary">
-          <span>컬러</span>
           <button
             aria-label={`컬러 선택, 현재 ${selectedColorName}`}
             className="event-color-trigger"
@@ -4732,6 +4738,7 @@ export function OipApp({
 
       {modal === "event" ? (
         <Modal
+          className="modal-card--event"
           headerAction={
             <EventVisibilityControls
               onChange={setEventScope}
