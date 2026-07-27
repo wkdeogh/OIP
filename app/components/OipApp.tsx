@@ -41,6 +41,12 @@ type TripSection =
   | "trip_foods"
   | "trip_places";
 type TripDetailResource = Exclude<TripSection, "overview">;
+type TripDetailItem =
+  | TripFlight
+  | TripAccommodation
+  | TripTransportation
+  | TripFood
+  | TripPlace;
 
 const USER_META: Record<
   UserCode,
@@ -156,6 +162,10 @@ function formatDateTime(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function toDateTimeInput(value?: string | null) {
+  return value ? `${dateKeyInSeoul(value)}T${timeInSeoul(value)}` : "";
 }
 
 function daysUntil(value: string) {
@@ -464,7 +474,6 @@ function PasswordGate({
         <div className="gate-brand">
           <CloverLogo large />
           <div>
-            <p className="eyebrow">우리 둘의 생활 기록</p>
             <h1>OIP</h1>
           </div>
         </div>
@@ -514,9 +523,8 @@ function UserGate({ onSelect }: { onSelect: (user: UserCode) => void }) {
     <main className="gate-screen">
       <section className="gate-card">
         <CloverLogo large />
-        <p className="eyebrow">OIP에 오신 걸 환영해요</p>
+        <p className="eyebrow">OIP</p>
         <h1 className="user-gate-title">누가 사용 중인가요?</h1>
-        <p className="gate-copy">이 기기에서 사용할 이름을 선택해 주세요.</p>
         <div className="user-choice-grid">
           {(Object.keys(USER_META) as UserCode[]).map((code) => (
             <button
@@ -527,7 +535,6 @@ function UserGate({ onSelect }: { onSelect: (user: UserCode) => void }) {
             >
               <span className="avatar">{USER_META[code].short}</span>
               <strong>{USER_META[code].name}</strong>
-              <small>선택하기</small>
             </button>
           ))}
         </div>
@@ -539,11 +546,13 @@ function UserGate({ onSelect }: { onSelect: (user: UserCode) => void }) {
 function Modal({
   title,
   description,
+  headerAction,
   onClose,
   children,
 }: {
   title: string;
   description?: string;
+  headerAction?: ReactNode;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -561,14 +570,17 @@ function Modal({
             <h2 id="modal-title">{title}</h2>
             {description ? <p>{description}</p> : null}
           </div>
-          <button
-            aria-label="닫기"
-            className="icon-button"
-            onClick={onClose}
-            type="button"
-          >
-            ×
-          </button>
+          <div className="modal-head-actions">
+            {headerAction}
+            <button
+              aria-label="닫기"
+              className="icon-button"
+              onClick={onClose}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
         </div>
         {children}
       </section>
@@ -614,6 +626,8 @@ function CalendarView({
   setSelectedDate,
   onAddEvent,
   onAddDayOff,
+  onDeleteEvent,
+  onDeleteDayOff,
   onVisibleYearChange,
 }: {
   events: CalendarEvent[];
@@ -623,6 +637,8 @@ function CalendarView({
   setSelectedDate: (date: string) => void;
   onAddEvent: (range?: DateRange) => void;
   onAddDayOff: () => void;
+  onDeleteEvent: (event: CalendarEvent) => void;
+  onDeleteDayOff: (item: DayOff) => void;
   onVisibleYearChange: (year: number) => void;
 }) {
   const selected = parseDateKey(selectedDate);
@@ -792,6 +808,7 @@ function CalendarView({
             ‹
           </button>
           <button
+            aria-label="이번 달에서 오늘로 이동"
             className="month-title"
             onClick={() => {
               const today = new Date();
@@ -805,7 +822,6 @@ function CalendarView({
             <strong>
               {year}년 {month + 1}월
             </strong>
-            <small>오늘로 이동</small>
           </button>
           <button
             aria-label="다음 달"
@@ -816,9 +832,6 @@ function CalendarView({
             ›
           </button>
         </div>
-        <p className="calendar-gesture-hint">
-          좌우로 밀어 달력 이동 · 날짜를 길게 눌러 기간 선택
-        </p>
         <div className="calendar-weekdays" aria-hidden="true">
           {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
             <span key={day}>{day}</span>
@@ -906,7 +919,7 @@ function CalendarView({
                   </span>
                 ) : null}
                 <span className="day-events">
-                  {dateEvents.slice(0, 2).map((event) => (
+                  {dateEvents.slice(0, 3).map((event) => (
                     <span
                       className={[
                         "event-chip",
@@ -941,8 +954,8 @@ function CalendarView({
                       {event.title}
                     </span>
                   ))}
-                  {dateEvents.length > 2 ? (
-                    <span className="more-events">+{dateEvents.length - 2}</span>
+                  {dateEvents.length > 3 ? (
+                    <span className="more-events">+{dateEvents.length - 3}</span>
                   ) : null}
                 </span>
               </button>
@@ -975,6 +988,14 @@ function CalendarView({
               <div className={`dayoff-row dayoff-row--${item.owner_id}`} key={item.id}>
                 <AuthorBadge user={item.owner_id} />
                 <strong>{item.day_off_type}</strong>
+                <button
+                  aria-label={`${USER_META[item.owner_id].name} 휴무 삭제`}
+                  className="row-delete"
+                  onClick={() => onDeleteDayOff(item)}
+                  type="button"
+                >
+                  ×
+                </button>
               </div>
             ))}
           </div>
@@ -1008,7 +1029,7 @@ function CalendarView({
                     }`}
                   />
                 )}
-                <div>
+                <div className="detail-row-copy">
                   <strong>{event.title}</strong>
                   <p>
                     {event.is_all_day
@@ -1026,6 +1047,16 @@ function CalendarView({
                         : `${USER_META[event.author_id as UserCode].name} 개인`}
                   </p>
                 </div>
+                {event.event_type !== "anniversary" ? (
+                  <button
+                    aria-label={`${event.title} 일정 삭제`}
+                    className="row-delete"
+                    onClick={() => onDeleteEvent(event)}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                ) : null}
               </article>
             ))}
           </div>
@@ -1352,19 +1383,35 @@ function priceFormValue(form: FormData) {
 function TripDetailForm({
   trip,
   resource,
+  item,
   onClose,
   onSubmit,
 }: {
   trip: Trip;
   resource: TripDetailResource;
+  item?: TripDetailItem;
   onClose: () => void;
   onSubmit: (
     resource: TripDetailResource,
     payload: Record<string, unknown>,
+    id?: string,
   ) => void;
 }) {
   const label =
     TRIP_SECTION_LABELS.find(([id]) => id === resource)?.[1] ?? "세부 정보";
+  const flight = resource === "trip_flights" ? (item as TripFlight) : undefined;
+  const accommodation =
+    resource === "trip_accommodations"
+      ? (item as TripAccommodation)
+      : undefined;
+  const transportation =
+    resource === "trip_transportations"
+      ? (item as TripTransportation)
+      : undefined;
+  const food = resource === "trip_foods" ? (item as TripFood) : undefined;
+  const place = resource === "trip_places" ? (item as TripPlace) : undefined;
+  const detailPrice =
+    flight?.price ?? accommodation?.price ?? transportation?.price ?? null;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1437,7 +1484,7 @@ function TripDetailForm({
         location: optionalFormValue(form, "location"),
         link: optionalFormValue(form, "link"),
         price_range: optionalFormValue(form, "price_range"),
-        is_visited: false,
+        is_visited: food?.is_visited ?? false,
         memo: optionalFormValue(form, "memo"),
       };
     } else {
@@ -1450,28 +1497,27 @@ function TripDetailForm({
         location: optionalFormValue(form, "location"),
         link: optionalFormValue(form, "link"),
         desired_date: optionalFormValue(form, "desired_date"),
-        is_visited: false,
+        is_visited: place?.is_visited ?? false,
         memo: optionalFormValue(form, "memo"),
       };
     }
 
-    onSubmit(resource, payload);
+    onSubmit(resource, payload, item?.id);
     onClose();
   }
 
   return (
-    <Modal
-      description={`${trip.title}에 저장됩니다.`}
-      onClose={onClose}
-      title={`${label} 추가`}
-    >
+    <Modal onClose={onClose} title={`${label} ${item ? "수정" : "추가"}`}>
       <form className="modal-form" onSubmit={submit}>
         {resource === "trip_flights" ? (
           <>
             <div className="field-row">
               <label className="field">
                 <span>구분</span>
-                <select defaultValue="가는 편" name="direction">
+                <select
+                  defaultValue={flight?.direction ?? "가는 편"}
+                  name="direction"
+                >
                   <option>가는 편</option>
                   <option>오는 편</option>
                   <option>기타</option>
@@ -1479,55 +1525,99 @@ function TripDetailForm({
               </label>
               <label className="field">
                 <span>항공사</span>
-                <input autoFocus name="airline" placeholder="예: 대한항공" />
+                <input
+                  autoFocus
+                  defaultValue={flight?.airline ?? ""}
+                  name="airline"
+                  placeholder="예: 대한항공"
+                />
               </label>
             </div>
             <div className="field-row">
               <label className="field">
                 <span>출발 도시</span>
-                <input name="departure_city" placeholder="서울" />
+                <input
+                  defaultValue={flight?.departure_city ?? ""}
+                  name="departure_city"
+                  placeholder="서울"
+                />
               </label>
               <label className="field">
                 <span>출발 공항</span>
-                <input name="departure_airport" placeholder="인천 ICN" />
+                <input
+                  defaultValue={flight?.departure_airport ?? ""}
+                  name="departure_airport"
+                  placeholder="인천 ICN"
+                />
               </label>
             </div>
             <label className="field">
               <span>출발 일시</span>
-              <input name="departure_at" type="datetime-local" />
+              <input
+                defaultValue={toDateTimeInput(flight?.departure_at)}
+                name="departure_at"
+                type="datetime-local"
+              />
             </label>
             <div className="field-row">
               <label className="field">
                 <span>도착 도시</span>
-                <input name="arrival_city" placeholder="오사카" />
+                <input
+                  defaultValue={flight?.arrival_city ?? ""}
+                  name="arrival_city"
+                  placeholder="오사카"
+                />
               </label>
               <label className="field">
                 <span>도착 공항</span>
-                <input name="arrival_airport" placeholder="간사이 KIX" />
+                <input
+                  defaultValue={flight?.arrival_airport ?? ""}
+                  name="arrival_airport"
+                  placeholder="간사이 KIX"
+                />
               </label>
             </div>
             <label className="field">
               <span>도착 일시</span>
-              <input name="arrival_at" type="datetime-local" />
+              <input
+                defaultValue={toDateTimeInput(flight?.arrival_at)}
+                name="arrival_at"
+                type="datetime-local"
+              />
             </label>
             <div className="field-row">
               <label className="field">
                 <span>편명</span>
-                <input name="flight_number" placeholder="KE721" />
+                <input
+                  defaultValue={flight?.flight_number ?? ""}
+                  name="flight_number"
+                  placeholder="KE721"
+                />
               </label>
               <label className="field">
                 <span>예약번호</span>
-                <input name="reservation_number" />
+                <input
+                  defaultValue={flight?.reservation_number ?? ""}
+                  name="reservation_number"
+                />
               </label>
             </div>
             <div className="field-row">
               <label className="field">
                 <span>좌석</span>
-                <input name="seat_info" placeholder="12A, 12B" />
+                <input
+                  defaultValue={flight?.seat_info ?? ""}
+                  name="seat_info"
+                  placeholder="12A, 12B"
+                />
               </label>
               <label className="field">
                 <span>수하물</span>
-                <input name="baggage_info" placeholder="위탁 23kg" />
+                <input
+                  defaultValue={flight?.baggage_info ?? ""}
+                  name="baggage_info"
+                  placeholder="위탁 23kg"
+                />
               </label>
             </div>
           </>
@@ -1535,34 +1625,62 @@ function TripDetailForm({
           <>
             <label className="field">
               <span>숙소 이름 *</span>
-              <input autoFocus name="name" required />
+              <input
+                autoFocus
+                defaultValue={accommodation?.name ?? ""}
+                name="name"
+                required
+              />
             </label>
             <label className="field">
               <span>주소</span>
-              <input name="address" />
+              <input
+                defaultValue={accommodation?.address ?? ""}
+                name="address"
+              />
             </label>
             <label className="field">
               <span>지도 링크</span>
-              <input inputMode="url" name="map_url" type="url" />
+              <input
+                defaultValue={accommodation?.map_url ?? ""}
+                inputMode="url"
+                name="map_url"
+                type="url"
+              />
             </label>
             <div className="field-row">
               <label className="field">
                 <span>체크인</span>
-                <input name="check_in_at" type="datetime-local" />
+                <input
+                  defaultValue={toDateTimeInput(accommodation?.check_in_at)}
+                  name="check_in_at"
+                  type="datetime-local"
+                />
               </label>
               <label className="field">
                 <span>체크아웃</span>
-                <input name="check_out_at" type="datetime-local" />
+                <input
+                  defaultValue={toDateTimeInput(accommodation?.check_out_at)}
+                  name="check_out_at"
+                  type="datetime-local"
+                />
               </label>
             </div>
             <div className="field-row">
               <label className="field">
                 <span>예약번호</span>
-                <input name="reservation_number" />
+                <input
+                  defaultValue={accommodation?.reservation_number ?? ""}
+                  name="reservation_number"
+                />
               </label>
               <label className="field">
                 <span>연락처</span>
-                <input inputMode="tel" name="contact" />
+                <input
+                  defaultValue={accommodation?.contact ?? ""}
+                  inputMode="tel"
+                  name="contact"
+                />
               </label>
             </div>
           </>
@@ -1571,7 +1689,10 @@ function TripDetailForm({
             <div className="field-row">
               <label className="field">
                 <span>교통수단</span>
-                <select defaultValue="기차" name="transport_type">
+                <select
+                  defaultValue={transportation?.transport_type ?? "기차"}
+                  name="transport_type"
+                >
                   {["기차", "버스", "렌터카", "택시", "선박", "기타"].map(
                     (option) => (
                       <option key={option}>{option}</option>
@@ -1581,36 +1702,63 @@ function TripDetailForm({
               </label>
               <label className="field">
                 <span>제목 *</span>
-                <input autoFocus name="title" required />
+                <input
+                  autoFocus
+                  defaultValue={transportation?.title ?? ""}
+                  name="title"
+                  required
+                />
               </label>
             </div>
             <div className="field-row">
               <label className="field">
                 <span>출발 위치</span>
-                <input name="departure_location" />
+                <input
+                  defaultValue={transportation?.departure_location ?? ""}
+                  name="departure_location"
+                />
               </label>
               <label className="field">
                 <span>도착 위치</span>
-                <input name="arrival_location" />
+                <input
+                  defaultValue={transportation?.arrival_location ?? ""}
+                  name="arrival_location"
+                />
               </label>
             </div>
             <div className="field-row">
               <label className="field">
                 <span>출발 일시</span>
-                <input name="departure_at" type="datetime-local" />
+                <input
+                  defaultValue={toDateTimeInput(transportation?.departure_at)}
+                  name="departure_at"
+                  type="datetime-local"
+                />
               </label>
               <label className="field">
                 <span>도착 일시</span>
-                <input name="arrival_at" type="datetime-local" />
+                <input
+                  defaultValue={toDateTimeInput(transportation?.arrival_at)}
+                  name="arrival_at"
+                  type="datetime-local"
+                />
               </label>
             </div>
             <label className="field">
               <span>예약 정보</span>
-              <input name="reservation_info" />
+              <input
+                defaultValue={transportation?.reservation_info ?? ""}
+                name="reservation_info"
+              />
             </label>
             <label className="field">
               <span>링크</span>
-              <input inputMode="url" name="link" type="url" />
+              <input
+                defaultValue={transportation?.link ?? ""}
+                inputMode="url"
+                name="link"
+                type="url"
+              />
             </label>
           </>
         ) : resource === "trip_foods" ? (
@@ -1618,11 +1766,19 @@ function TripDetailForm({
             <div className="field-row">
               <label className="field">
                 <span>이름 *</span>
-                <input autoFocus name="name" required />
+                <input
+                  autoFocus
+                  defaultValue={food?.name ?? ""}
+                  name="name"
+                  required
+                />
               </label>
               <label className="field">
                 <span>종류</span>
-                <select defaultValue="음식" name="item_type">
+                <select
+                  defaultValue={food?.item_type ?? "음식"}
+                  name="item_type"
+                >
                   <option>음식</option>
                   <option>식당</option>
                 </select>
@@ -1630,16 +1786,25 @@ function TripDetailForm({
             </div>
             <label className="field">
               <span>위치</span>
-              <input name="location" />
+              <input defaultValue={food?.location ?? ""} name="location" />
             </label>
             <div className="field-row">
               <label className="field">
                 <span>가격대</span>
-                <input name="price_range" placeholder="예: 1인 2만원대" />
+                <input
+                  defaultValue={food?.price_range ?? ""}
+                  name="price_range"
+                  placeholder="예: 1인 2만원대"
+                />
               </label>
               <label className="field">
                 <span>링크</span>
-                <input inputMode="url" name="link" type="url" />
+                <input
+                  defaultValue={food?.link ?? ""}
+                  inputMode="url"
+                  name="link"
+                  type="url"
+                />
               </label>
             </div>
           </>
@@ -1648,11 +1813,19 @@ function TripDetailForm({
             <div className="field-row">
               <label className="field">
                 <span>장소 이름 *</span>
-                <input autoFocus name="name" required />
+                <input
+                  autoFocus
+                  defaultValue={place?.name ?? ""}
+                  name="name"
+                  required
+                />
               </label>
               <label className="field">
                 <span>분류</span>
-                <select defaultValue="관광" name="category">
+                <select
+                  defaultValue={place?.category ?? "관광"}
+                  name="category"
+                >
                   <option>관광</option>
                   <option>쇼핑</option>
                   <option>체험</option>
@@ -1662,7 +1835,7 @@ function TripDetailForm({
             </div>
             <label className="field">
               <span>위치</span>
-              <input name="location" />
+              <input defaultValue={place?.location ?? ""} name="location" />
             </label>
             <div className="field-row">
               <label className="field">
@@ -1670,13 +1843,19 @@ function TripDetailForm({
                 <input
                   max={trip.end_date}
                   min={trip.start_date}
+                  defaultValue={place?.desired_date ?? ""}
                   name="desired_date"
                   type="date"
                 />
               </label>
               <label className="field">
                 <span>링크</span>
-                <input inputMode="url" name="link" type="url" />
+                <input
+                  defaultValue={place?.link ?? ""}
+                  inputMode="url"
+                  name="link"
+                  type="url"
+                />
               </label>
             </div>
           </>
@@ -1685,12 +1864,18 @@ function TripDetailForm({
         {resource !== "trip_foods" && resource !== "trip_places" ? (
           <label className="field">
             <span>가격</span>
-            <input min="0" name="price" step="1" type="number" />
+            <input
+              defaultValue={detailPrice ?? ""}
+              min="0"
+              name="price"
+              step="1"
+              type="number"
+            />
           </label>
         ) : null}
         <label className="field">
           <span>메모</span>
-          <textarea name="memo" rows={3} />
+          <textarea defaultValue={item?.memo ?? ""} name="memo" rows={3} />
         </label>
         <button className="button button--primary button--full" type="submit">
           저장
@@ -1704,6 +1889,42 @@ function formatPrice(value?: number | null) {
   return value ? `${Number(value).toLocaleString("ko-KR")}원` : null;
 }
 
+function TravelDetailFields({
+  fields,
+}: {
+  fields: Array<{
+    label: string;
+    value?: ReactNode;
+    href?: string | null;
+  }>;
+}) {
+  const visibleFields = fields.filter(
+    (field) =>
+      field.value !== null &&
+      field.value !== undefined &&
+      field.value !== "",
+  );
+  if (!visibleFields.length) return null;
+  return (
+    <dl className="travel-detail-fields">
+      {visibleFields.map((field) => (
+        <div key={field.label}>
+          <dt>{field.label}</dt>
+          <dd>
+            {field.href ? (
+              <a href={field.href} rel="noreferrer" target="_blank">
+                {field.value}
+              </a>
+            ) : (
+              field.value
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function TravelView({
   trips,
   flights,
@@ -1712,8 +1933,9 @@ function TravelView({
   foods,
   places,
   onAdd,
-  onAddDetail,
+  onSaveDetail,
   onDeleteDetail,
+  onDeleteTrip,
   onToggleVisited,
 }: {
   trips: Trip[];
@@ -1723,11 +1945,13 @@ function TravelView({
   foods: TripFood[];
   places: TripPlace[];
   onAdd: () => void;
-  onAddDetail: (
+  onSaveDetail: (
     resource: TripDetailResource,
     payload: Record<string, unknown>,
+    id?: string,
   ) => void;
   onDeleteDetail: (resource: TripDetailResource, id: string) => void;
+  onDeleteTrip: (trip: Trip) => void;
   onToggleVisited: (
     resource: "trip_foods" | "trip_places",
     id: string,
@@ -1745,7 +1969,10 @@ function TravelView({
     upcoming[0]?.id ?? trips[0]?.id ?? null,
   );
   const [section, setSection] = useState<TripSection>("overview");
-  const [editor, setEditor] = useState<TripDetailResource | null>(null);
+  const [editor, setEditor] = useState<{
+    resource: TripDetailResource;
+    item?: TripDetailItem;
+  } | null>(null);
   const effectiveSelectedTrip = trips.some((trip) => trip.id === selectedTrip)
     ? selectedTrip
     : (upcoming[0]?.id ?? trips[0]?.id ?? null);
@@ -1776,7 +2003,6 @@ function TravelView({
         <div className="page-lead">
           <div>
             <h2>여행</h2>
-            <p>예약, 숙소, 이동 정보와 방문 후보를 여행별로 관리합니다.</p>
           </div>
           <button className="button button--primary" onClick={onAdd} type="button">
             + 여행 추가
@@ -1865,7 +2091,16 @@ function TravelView({
 
       {detail ? (
         <aside className="card trip-detail-card">
-          <h2>{detail.title}</h2>
+          <div className="trip-detail-title-row">
+            <h2>{detail.title}</h2>
+            <button
+              className="text-button text-button--danger"
+              onClick={() => onDeleteTrip(detail)}
+              type="button"
+            >
+              여행 삭제
+            </button>
+          </div>
           <p className="trip-detail-period">
             {detail.destination} · {formatKoreanDate(detail.start_date, true)} —{" "}
             {formatKoreanDate(detail.end_date, true)}
@@ -1917,7 +2152,7 @@ function TravelView({
                 </strong>
                 <button
                   className="button button--soft"
-                  onClick={() => setEditor(section)}
+                  onClick={() => setEditor({ resource: section })}
                   type="button"
                 >
                   + 추가
@@ -1929,45 +2164,86 @@ function TravelView({
                   <div className="travel-detail-list">
                     {detailFlights.map((item) => (
                       <article className="travel-detail-item" key={item.id}>
-                        <span className="travel-detail-icon">✈</span>
-                        <div>
-                          <small>
-                            {item.direction}
-                            {item.airline ? ` · ${item.airline}` : ""}
-                            {item.flight_number ? ` ${item.flight_number}` : ""}
-                          </small>
-                          <strong>
-                            {item.departure_city ||
-                              item.departure_airport ||
-                              "출발지 미정"}{" "}
-                            →{" "}
-                            {item.arrival_city ||
-                              item.arrival_airport ||
-                              "도착지 미정"}
-                          </strong>
-                          <p>
-                            {item.departure_at
-                              ? formatDateTime(item.departure_at)
-                              : "출발 시간 미정"}
-                            {formatPrice(item.price)
-                              ? ` · ${formatPrice(item.price)}`
-                              : ""}
-                          </p>
+                        <div className="travel-detail-item-head">
+                          <span className="travel-detail-icon">✈</span>
+                          <div className="travel-detail-summary">
+                            <small>
+                              {item.direction}
+                              {item.airline ? ` · ${item.airline}` : ""}
+                              {item.flight_number
+                                ? ` ${item.flight_number}`
+                                : ""}
+                            </small>
+                            <strong>
+                              {item.departure_city ||
+                                item.departure_airport ||
+                                "출발지 미정"}{" "}
+                              →{" "}
+                              {item.arrival_city ||
+                                item.arrival_airport ||
+                                "도착지 미정"}
+                            </strong>
+                          </div>
+                          <div className="travel-detail-actions">
+                            <button
+                              aria-label="비행편 수정"
+                              className="icon-button icon-button--small"
+                              onClick={() =>
+                                setEditor({
+                                  resource: "trip_flights",
+                                  item,
+                                })
+                              }
+                              type="button"
+                            >
+                              ✎
+                            </button>
+                            <button
+                              aria-label="비행편 삭제"
+                              className="icon-button icon-button--small"
+                              onClick={() =>
+                                deleteDetail(
+                                  "trip_flights",
+                                  item.id,
+                                  item.flight_number || "비행편",
+                                )
+                              }
+                              type="button"
+                            >
+                              ×
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          aria-label="비행편 삭제"
-                          className="icon-button icon-button--small"
-                          onClick={() =>
-                            deleteDetail(
-                              "trip_flights",
-                              item.id,
-                              item.flight_number || "비행편",
-                            )
-                          }
-                          type="button"
-                        >
-                          ×
-                        </button>
+                        <TravelDetailFields
+                          fields={[
+                            { label: "항공사", value: item.airline },
+                            { label: "편명", value: item.flight_number },
+                            { label: "출발 도시", value: item.departure_city },
+                            { label: "출발 공항", value: item.departure_airport },
+                            {
+                              label: "출발 일시",
+                              value: item.departure_at
+                                ? formatDateTime(item.departure_at)
+                                : null,
+                            },
+                            { label: "도착 도시", value: item.arrival_city },
+                            { label: "도착 공항", value: item.arrival_airport },
+                            {
+                              label: "도착 일시",
+                              value: item.arrival_at
+                                ? formatDateTime(item.arrival_at)
+                                : null,
+                            },
+                            {
+                              label: "예약번호",
+                              value: item.reservation_number,
+                            },
+                            { label: "좌석", value: item.seat_info },
+                            { label: "수하물", value: item.baggage_info },
+                            { label: "가격", value: formatPrice(item.price) },
+                            { label: "메모", value: item.memo },
+                          ]}
+                        />
                       </article>
                     ))}
                   </div>
@@ -1979,33 +2255,71 @@ function TravelView({
                   <div className="travel-detail-list">
                     {detailAccommodations.map((item) => (
                       <article className="travel-detail-item" key={item.id}>
-                        <span className="travel-detail-icon">⌂</span>
-                        <div>
-                          <small>숙소</small>
-                          <strong>{item.name}</strong>
-                          <p>
-                            {item.check_in_at
-                              ? `${formatDateTime(item.check_in_at)} 체크인`
-                              : item.address || "체크인 미정"}
-                            {formatPrice(item.price)
-                              ? ` · ${formatPrice(item.price)}`
-                              : ""}
-                          </p>
+                        <div className="travel-detail-item-head">
+                          <span className="travel-detail-icon">⌂</span>
+                          <div className="travel-detail-summary">
+                            <small>숙소</small>
+                            <strong>{item.name}</strong>
+                          </div>
+                          <div className="travel-detail-actions">
+                            <button
+                              aria-label="숙소 수정"
+                              className="icon-button icon-button--small"
+                              onClick={() =>
+                                setEditor({
+                                  resource: "trip_accommodations",
+                                  item,
+                                })
+                              }
+                              type="button"
+                            >
+                              ✎
+                            </button>
+                            <button
+                              aria-label="숙소 삭제"
+                              className="icon-button icon-button--small"
+                              onClick={() =>
+                                deleteDetail(
+                                  "trip_accommodations",
+                                  item.id,
+                                  item.name,
+                                )
+                              }
+                              type="button"
+                            >
+                              ×
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          aria-label="숙소 삭제"
-                          className="icon-button icon-button--small"
-                          onClick={() =>
-                            deleteDetail(
-                              "trip_accommodations",
-                              item.id,
-                              item.name,
-                            )
-                          }
-                          type="button"
-                        >
-                          ×
-                        </button>
+                        <TravelDetailFields
+                          fields={[
+                            { label: "주소", value: item.address },
+                            {
+                              label: "지도",
+                              value: item.map_url ? "지도 열기" : null,
+                              href: item.map_url,
+                            },
+                            {
+                              label: "체크인",
+                              value: item.check_in_at
+                                ? formatDateTime(item.check_in_at)
+                                : null,
+                            },
+                            {
+                              label: "체크아웃",
+                              value: item.check_out_at
+                                ? formatDateTime(item.check_out_at)
+                                : null,
+                            },
+                            {
+                              label: "예약번호",
+                              value: item.reservation_number,
+                            },
+                            { label: "연락처", value: item.contact },
+                            { label: "가격", value: formatPrice(item.price) },
+                            { label: "메모", value: item.memo },
+                          ]}
+                        />
                       </article>
                     ))}
                   </div>
@@ -2017,33 +2331,77 @@ function TravelView({
                   <div className="travel-detail-list">
                     {detailTransportations.map((item) => (
                       <article className="travel-detail-item" key={item.id}>
-                        <span className="travel-detail-icon">↔</span>
-                        <div>
-                          <small>{item.transport_type}</small>
-                          <strong>{item.title}</strong>
-                          <p>
-                            {[item.departure_location, item.arrival_location]
-                              .filter(Boolean)
-                              .join(" → ") || "위치 미정"}
-                            {item.departure_at
-                              ? ` · ${formatDateTime(item.departure_at)}`
-                              : ""}
-                          </p>
+                        <div className="travel-detail-item-head">
+                          <span className="travel-detail-icon">↔</span>
+                          <div className="travel-detail-summary">
+                            <small>{item.transport_type}</small>
+                            <strong>{item.title}</strong>
+                          </div>
+                          <div className="travel-detail-actions">
+                            <button
+                              aria-label="교통 정보 수정"
+                              className="icon-button icon-button--small"
+                              onClick={() =>
+                                setEditor({
+                                  resource: "trip_transportations",
+                                  item,
+                                })
+                              }
+                              type="button"
+                            >
+                              ✎
+                            </button>
+                            <button
+                              aria-label="교통 정보 삭제"
+                              className="icon-button icon-button--small"
+                              onClick={() =>
+                                deleteDetail(
+                                  "trip_transportations",
+                                  item.id,
+                                  item.title,
+                                )
+                              }
+                              type="button"
+                            >
+                              ×
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          aria-label="교통 정보 삭제"
-                          className="icon-button icon-button--small"
-                          onClick={() =>
-                            deleteDetail(
-                              "trip_transportations",
-                              item.id,
-                              item.title,
-                            )
-                          }
-                          type="button"
-                        >
-                          ×
-                        </button>
+                        <TravelDetailFields
+                          fields={[
+                            {
+                              label: "출발 위치",
+                              value: item.departure_location,
+                            },
+                            {
+                              label: "출발 일시",
+                              value: item.departure_at
+                                ? formatDateTime(item.departure_at)
+                                : null,
+                            },
+                            {
+                              label: "도착 위치",
+                              value: item.arrival_location,
+                            },
+                            {
+                              label: "도착 일시",
+                              value: item.arrival_at
+                                ? formatDateTime(item.arrival_at)
+                                : null,
+                            },
+                            {
+                              label: "예약 정보",
+                              value: item.reservation_info,
+                            },
+                            { label: "가격", value: formatPrice(item.price) },
+                            {
+                              label: "링크",
+                              value: item.link ? "링크 열기" : null,
+                              href: item.link,
+                            },
+                            { label: "메모", value: item.memo },
+                          ]}
+                        />
                       </article>
                     ))}
                   </div>
@@ -2058,40 +2416,68 @@ function TravelView({
                         className={`travel-detail-item${item.is_visited ? " is-complete" : ""}`}
                         key={item.id}
                       >
-                        <button
-                          aria-label={`${item.name} 방문 완료`}
-                          aria-pressed={item.is_visited}
-                          className="travel-check"
-                          onClick={() =>
-                            onToggleVisited(
-                              "trip_foods",
-                              item.id,
-                              !item.is_visited,
-                            )
-                          }
-                          type="button"
-                        >
-                          {item.is_visited ? "✓" : ""}
-                        </button>
-                        <div>
-                          <small>{item.item_type}</small>
-                          <strong>{item.name}</strong>
-                          <p>
-                            {[item.location, item.price_range]
-                              .filter(Boolean)
-                              .join(" · ") || "세부 정보 없음"}
-                          </p>
+                        <div className="travel-detail-item-head">
+                          <button
+                            aria-label={`${item.name} 방문 완료`}
+                            aria-pressed={item.is_visited}
+                            className="travel-check"
+                            onClick={() =>
+                              onToggleVisited(
+                                "trip_foods",
+                                item.id,
+                                !item.is_visited,
+                              )
+                            }
+                            type="button"
+                          >
+                            {item.is_visited ? "✓" : ""}
+                          </button>
+                          <div className="travel-detail-summary">
+                            <small>{item.item_type}</small>
+                            <strong>{item.name}</strong>
+                          </div>
+                          <div className="travel-detail-actions">
+                            <button
+                              aria-label="먹을 것 수정"
+                              className="icon-button icon-button--small"
+                              onClick={() =>
+                                setEditor({
+                                  resource: "trip_foods",
+                                  item,
+                                })
+                              }
+                              type="button"
+                            >
+                              ✎
+                            </button>
+                            <button
+                              aria-label="먹을 것 삭제"
+                              className="icon-button icon-button--small"
+                              onClick={() =>
+                                deleteDetail("trip_foods", item.id, item.name)
+                              }
+                              type="button"
+                            >
+                              ×
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          aria-label="먹을 것 삭제"
-                          className="icon-button icon-button--small"
-                          onClick={() =>
-                            deleteDetail("trip_foods", item.id, item.name)
-                          }
-                          type="button"
-                        >
-                          ×
-                        </button>
+                        <TravelDetailFields
+                          fields={[
+                            { label: "위치", value: item.location },
+                            { label: "가격대", value: item.price_range },
+                            {
+                              label: "링크",
+                              value: item.link ? "링크 열기" : null,
+                              href: item.link,
+                            },
+                            {
+                              label: "방문 여부",
+                              value: item.is_visited ? "완료" : "미완료",
+                            },
+                            { label: "메모", value: item.memo },
+                          ]}
+                        />
                       </article>
                     ))}
                   </div>
@@ -2105,40 +2491,73 @@ function TravelView({
                       className={`travel-detail-item${item.is_visited ? " is-complete" : ""}`}
                       key={item.id}
                     >
-                      <button
-                        aria-label={`${item.name} 방문 완료`}
-                        aria-pressed={item.is_visited}
-                        className="travel-check"
-                        onClick={() =>
-                          onToggleVisited(
-                            "trip_places",
-                            item.id,
-                            !item.is_visited,
-                          )
-                        }
-                        type="button"
-                      >
-                        {item.is_visited ? "✓" : ""}
-                      </button>
-                      <div>
-                        <small>{item.category}</small>
-                        <strong>{item.name}</strong>
-                        <p>
-                          {[item.location, item.desired_date]
-                            .filter(Boolean)
-                            .join(" · ") || "세부 정보 없음"}
-                        </p>
+                      <div className="travel-detail-item-head">
+                        <button
+                          aria-label={`${item.name} 방문 완료`}
+                          aria-pressed={item.is_visited}
+                          className="travel-check"
+                          onClick={() =>
+                            onToggleVisited(
+                              "trip_places",
+                              item.id,
+                              !item.is_visited,
+                            )
+                          }
+                          type="button"
+                        >
+                          {item.is_visited ? "✓" : ""}
+                        </button>
+                        <div className="travel-detail-summary">
+                          <small>{item.category}</small>
+                          <strong>{item.name}</strong>
+                        </div>
+                        <div className="travel-detail-actions">
+                          <button
+                            aria-label="갈 곳 수정"
+                            className="icon-button icon-button--small"
+                            onClick={() =>
+                              setEditor({
+                                resource: "trip_places",
+                                item,
+                              })
+                            }
+                            type="button"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            aria-label="갈 곳 삭제"
+                            className="icon-button icon-button--small"
+                            onClick={() =>
+                              deleteDetail("trip_places", item.id, item.name)
+                            }
+                            type="button"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        aria-label="갈 곳 삭제"
-                        className="icon-button icon-button--small"
-                        onClick={() =>
-                          deleteDetail("trip_places", item.id, item.name)
-                        }
-                        type="button"
-                      >
-                        ×
-                      </button>
+                      <TravelDetailFields
+                        fields={[
+                          { label: "위치", value: item.location },
+                          {
+                            label: "방문 희망일",
+                            value: item.desired_date
+                              ? formatKoreanDate(item.desired_date, true)
+                              : null,
+                          },
+                          {
+                            label: "링크",
+                            value: item.link ? "링크 열기" : null,
+                            href: item.link,
+                          },
+                          {
+                            label: "방문 여부",
+                            value: item.is_visited ? "완료" : "미완료",
+                          },
+                          { label: "메모", value: item.memo },
+                        ]}
+                      />
                     </article>
                   ))}
                 </div>
@@ -2152,9 +2571,10 @@ function TravelView({
 
       {detail && editor ? (
         <TripDetailForm
+          item={editor.item}
           onClose={() => setEditor(null)}
-          onSubmit={onAddDetail}
-          resource={editor}
+          onSubmit={onSaveDetail}
+          resource={editor.resource}
           trip={detail}
         />
       ) : null}
@@ -2277,13 +2697,6 @@ function ParkingView({
     record?.pillar_number ?? 4,
   );
   const [isSaving, setIsSaving] = useState(false);
-  const pillars = (["A", "B", "C", "D"] as const).flatMap((pillarLetter) =>
-    ([1, 2, 3, 4] as const).map((pillarNumber) => ({
-      letter: pillarLetter,
-      number: pillarNumber,
-      label: `${pillarLetter}${pillarNumber}`,
-    })),
-  );
 
   async function save() {
     setIsSaving(true);
@@ -2317,7 +2730,6 @@ function ParkingView({
           ) : (
             <>
               <h2 className="parking-empty">아직 저장 전</h2>
-              <p>아래에서 위치를 선택해 주세요.</p>
             </>
           )}
         </div>
@@ -2350,27 +2762,35 @@ function ParkingView({
           <div className="picker-label">
             <strong>기둥</strong>
           </div>
-          <div className="choice-grid choice-grid--pillars">
-            {pillars.map((pillar) => (
-              <button
-                aria-pressed={
-                  letter === pillar.letter && number === pillar.number
-                }
-                className={
-                  letter === pillar.letter && number === pillar.number
-                    ? "is-selected"
-                    : ""
-                }
-                key={pillar.label}
-                onClick={() => {
-                  setLetter(pillar.letter);
-                  setNumber(pillar.number);
-                }}
-                type="button"
-              >
-                {pillar.label}
-              </button>
-            ))}
+          <div className="pillar-pickers">
+            <div className="choice-grid choice-grid--four">
+              {(["A", "B", "C", "D"] as const).map((value) => (
+                <button
+                  aria-label={`기둥 ${value}`}
+                  aria-pressed={letter === value}
+                  className={letter === value ? "is-selected" : ""}
+                  key={value}
+                  onClick={() => setLetter(value)}
+                  type="button"
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+            <div className="choice-grid choice-grid--four">
+              {([1, 2, 3, 4] as const).map((value) => (
+                <button
+                  aria-label={`기둥 ${value}`}
+                  aria-pressed={number === value}
+                  className={number === value ? "is-selected" : ""}
+                  key={value}
+                  onClick={() => setNumber(value)}
+                  type="button"
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <button
@@ -2847,6 +3267,38 @@ export function OipApp() {
     void writeRecord("POST", "calendar_days_off", next);
   }
 
+  function deleteEvent(item: CalendarEvent) {
+    if (!globalThis.confirm(`"${item.title}" 일정을 삭제할까요?`)) return;
+    setEvents((items) => items.filter((entry) => entry.id !== item.id));
+    void writeRecord(
+      "DELETE",
+      "calendar_events",
+      undefined,
+      item.id,
+    ).then((saved) => {
+      if (!saved) setEvents((items) => [...items, item]);
+    });
+  }
+
+  function deleteDayOff(item: DayOff) {
+    if (
+      !globalThis.confirm(
+        `${USER_META[item.owner_id].name}의 ${item.day_off_type} 휴무를 삭제할까요?`,
+      )
+    ) {
+      return;
+    }
+    setDaysOff((items) => items.filter((entry) => entry.id !== item.id));
+    void writeRecord(
+      "DELETE",
+      "calendar_days_off",
+      undefined,
+      item.id,
+    ).then((saved) => {
+      if (!saved) setDaysOff((items) => [...items, item]);
+    });
+  }
+
   function createTodo(
     title: string,
     visibility: Visibility,
@@ -2982,29 +3434,58 @@ export function OipApp() {
     void writeRecord("POST", "trips", next);
   }
 
-  function addTripDetail(
+  function saveTripDetail(
     resource: TripDetailResource,
     payload: Record<string, unknown>,
+    id?: string,
   ) {
-    const next = { id: newId(), ...payload };
+    const next = { id: id ?? newId(), ...payload };
     if (resource === "trip_flights") {
-      setTripFlights((items) => [...items, next as TripFlight]);
+      setTripFlights((items) =>
+        id
+          ? items.map((item) =>
+              item.id === id ? ({ ...item, ...payload } as TripFlight) : item,
+            )
+          : [...items, next as TripFlight],
+      );
     } else if (resource === "trip_accommodations") {
-      setTripAccommodations((items) => [
-        ...items,
-        next as TripAccommodation,
-      ]);
+      setTripAccommodations((items) =>
+        id
+          ? items.map((item) =>
+              item.id === id
+                ? ({ ...item, ...payload } as TripAccommodation)
+                : item,
+            )
+          : [...items, next as TripAccommodation],
+      );
     } else if (resource === "trip_transportations") {
-      setTripTransportations((items) => [
-        ...items,
-        next as TripTransportation,
-      ]);
+      setTripTransportations((items) =>
+        id
+          ? items.map((item) =>
+              item.id === id
+                ? ({ ...item, ...payload } as TripTransportation)
+                : item,
+            )
+          : [...items, next as TripTransportation],
+      );
     } else if (resource === "trip_foods") {
-      setTripFoods((items) => [...items, next as TripFood]);
+      setTripFoods((items) =>
+        id
+          ? items.map((item) =>
+              item.id === id ? ({ ...item, ...payload } as TripFood) : item,
+            )
+          : [...items, next as TripFood],
+      );
     } else {
-      setTripPlaces((items) => [...items, next as TripPlace]);
+      setTripPlaces((items) =>
+        id
+          ? items.map((item) =>
+              item.id === id ? ({ ...item, ...payload } as TripPlace) : item,
+            )
+          : [...items, next as TripPlace],
+      );
     }
-    void writeRecord("POST", resource, next);
+    void writeRecord(id ? "PATCH" : "POST", resource, id ? payload : next, id);
   }
 
   function deleteTripDetail(resource: TripDetailResource, id: string) {
@@ -3024,6 +3505,58 @@ export function OipApp() {
       setTripPlaces((items) => items.filter((item) => item.id !== id));
     }
     void writeRecord("DELETE", resource, undefined, id);
+  }
+
+  function deleteTrip(item: Trip) {
+    if (!globalThis.confirm(`"${item.title}" 여행과 세부 내용을 모두 삭제할까요?`)) {
+      return;
+    }
+    const removedFlights = tripFlights.filter(
+      (entry) => entry.trip_id === item.id,
+    );
+    const removedAccommodations = tripAccommodations.filter(
+      (entry) => entry.trip_id === item.id,
+    );
+    const removedTransportations = tripTransportations.filter(
+      (entry) => entry.trip_id === item.id,
+    );
+    const removedFoods = tripFoods.filter((entry) => entry.trip_id === item.id);
+    const removedPlaces = tripPlaces.filter(
+      (entry) => entry.trip_id === item.id,
+    );
+
+    setTrips((items) => items.filter((entry) => entry.id !== item.id));
+    setTripFlights((items) =>
+      items.filter((entry) => entry.trip_id !== item.id),
+    );
+    setTripAccommodations((items) =>
+      items.filter((entry) => entry.trip_id !== item.id),
+    );
+    setTripTransportations((items) =>
+      items.filter((entry) => entry.trip_id !== item.id),
+    );
+    setTripFoods((items) =>
+      items.filter((entry) => entry.trip_id !== item.id),
+    );
+    setTripPlaces((items) =>
+      items.filter((entry) => entry.trip_id !== item.id),
+    );
+
+    void writeRecord("DELETE", "trips", undefined, item.id).then((saved) => {
+      if (saved) return;
+      setTrips((items) => [...items, item]);
+      setTripFlights((items) => [...items, ...removedFlights]);
+      setTripAccommodations((items) => [
+        ...items,
+        ...removedAccommodations,
+      ]);
+      setTripTransportations((items) => [
+        ...items,
+        ...removedTransportations,
+      ]);
+      setTripFoods((items) => [...items, ...removedFoods]);
+      setTripPlaces((items) => [...items, ...removedPlaces]);
+    });
   }
 
   function toggleTripVisited(
@@ -3162,7 +3695,6 @@ export function OipApp() {
           <CloverLogo />
           <span>
             <strong>OIP</strong>
-            <small>우리 둘의 생활 기록</small>
           </span>
         </div>
         <nav aria-label="주 메뉴">
@@ -3260,6 +3792,8 @@ export function OipApp() {
                   holidays={holidays}
                   onAddDayOff={() => setModal("dayoff")}
                   onAddEvent={openEventModal}
+                  onDeleteDayOff={deleteDayOff}
+                  onDeleteEvent={deleteEvent}
                   onVisibleYearChange={setHolidayYear}
                   selectedDate={selectedDate}
                   setSelectedDate={setSelectedDate}
@@ -3290,8 +3824,9 @@ export function OipApp() {
               flights={tripFlights}
               foods={tripFoods}
               onAdd={() => setModal("trip")}
-              onAddDetail={addTripDetail}
               onDeleteDetail={deleteTripDetail}
+              onDeleteTrip={deleteTrip}
+              onSaveDetail={saveTripDetail}
               onToggleVisited={toggleTripVisited}
               places={tripPlaces}
               transportations={tripTransportations}
@@ -3351,11 +3886,16 @@ export function OipApp() {
 
       {modal === "event" ? (
         <Modal
-          description="기본은 공동 일정이며, 필요할 때만 개인 일정으로 바꿉니다."
+          headerAction={
+            <label className="modal-private-toggle">
+              <input form="event-form" name="private" type="checkbox" />
+              <span>개인</span>
+            </label>
+          }
           onClose={() => setModal(null)}
           title="일정 추가"
         >
-          <form className="modal-form" onSubmit={addEvent}>
+          <form className="modal-form" id="event-form" onSubmit={addEvent}>
             <label className="field">
               <span>제목 *</span>
               <input autoFocus name="title" placeholder="일정 제목" required />
@@ -3391,13 +3931,6 @@ export function OipApp() {
                 <input name="end_time" type="time" />
               </label>
             </div>
-            <label className="check-field">
-              <input name="private" type="checkbox" />
-              <span>
-                <strong>개인 일정</strong>
-                <small>체크하면 현재 사용자에게만 보여요</small>
-              </span>
-            </label>
             <button className="button button--primary button--full" type="submit">
               일정 저장
             </button>

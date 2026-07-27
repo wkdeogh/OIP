@@ -754,14 +754,6 @@ p {
   padding: 13px 12px;
 }
 
-.calendar-gesture-hint {
-  margin: -6px 0 10px;
-  color: var(--muted);
-  font-size: 0.61rem;
-  font-weight: 650;
-  text-align: center;
-}
-
 .calendar-toolbar .icon-button {
   width: 40px;
   height: 40px;
@@ -1052,7 +1044,8 @@ p {
 
 .detail-row {
   display: grid;
-  grid-template-columns: 12px 1fr;
+  grid-template-columns: 22px minmax(0, 1fr) 36px;
+  align-items: center;
   gap: 10px;
   padding: 13px 2px;
   border-bottom: 1px solid #edf0ec;
@@ -1070,6 +1063,10 @@ p {
   margin: 3px 0 0;
   color: var(--muted);
   font-size: 0.72rem;
+}
+
+.detail-row-copy {
+  min-width: 0;
 }
 
 .detail-dot {
@@ -1104,6 +1101,10 @@ p {
   padding: 7px 10px;
   border-radius: 12px;
   font-size: 0.77rem;
+}
+
+.dayoff-row .row-delete {
+  margin-left: auto;
 }
 
 .dayoff-row--daeho {
@@ -1518,6 +1519,13 @@ p {
   letter-spacing: -0.04em;
 }
 
+.trip-detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .trip-detail-period {
   color: var(--muted);
   font-size: 0.76rem;
@@ -1623,11 +1631,7 @@ p {
 }
 
 .travel-detail-item {
-  display: grid;
   min-width: 0;
-  grid-template-columns: 36px minmax(0, 1fr) 34px;
-  align-items: center;
-  gap: 9px;
   padding: 11px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1642,7 +1646,14 @@ p {
   text-decoration: line-through;
 }
 
-.travel-detail-item > div {
+.travel-detail-item-head {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.travel-detail-summary {
   display: grid;
   min-width: 0;
   gap: 2px;
@@ -1660,14 +1671,45 @@ p {
   white-space: nowrap;
 }
 
-.travel-detail-item p {
-  margin: 0;
-  overflow: hidden;
+.travel-detail-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.travel-detail-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 14px;
+  margin: 11px 0 0 45px;
+  padding-top: 11px;
+  border-top: 1px solid var(--line);
+}
+
+.travel-detail-fields > div {
+  min-width: 0;
+}
+
+.travel-detail-fields dt {
+  margin-bottom: 2px;
   color: var(--muted);
-  font-size: 0.63rem;
-  line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.58rem;
+  font-weight: 750;
+}
+
+.travel-detail-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.travel-detail-fields a {
+  color: var(--blue);
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .travel-detail-icon,
@@ -1817,11 +1859,11 @@ p {
 .parking-current-card {
   position: relative;
   display: flex;
-  min-height: 210px;
+  min-height: 175px;
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
-  padding: clamp(24px, 6vw, 38px);
+  padding: clamp(20px, 4vw, 30px);
   border: 1px solid #d9e5f8;
   border-radius: 30px;
   background:
@@ -1928,8 +1970,13 @@ p {
   grid-template-columns: repeat(3, 1fr);
 }
 
-.choice-grid--pillars {
+.choice-grid--four {
   grid-template-columns: repeat(4, 1fr);
+}
+
+.pillar-pickers {
+  display: grid;
+  gap: 8px;
 }
 
 .choice-grid button {
@@ -2177,6 +2224,13 @@ p {
   background: white;
 }
 
+.modal-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .modal-head h2 {
   margin-bottom: 5px;
   font-size: 1.3rem;
@@ -2223,6 +2277,27 @@ p {
 
 .modal-head .icon-button {
   margin: 0;
+}
+
+.modal-private-toggle {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.modal-private-toggle input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--green);
 }
 
 .check-field input {
@@ -2467,7 +2542,7 @@ p {
   }
 
   .parking-current-card {
-    min-height: 560px;
+    min-height: 360px;
     align-items: flex-start;
   }
 

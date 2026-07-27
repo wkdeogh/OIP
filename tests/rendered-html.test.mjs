@@ -29,7 +29,7 @@ test("server-renders the OIP application shell", async () => {
 
   const html = await response.text();
   assert.match(html, /<html[^>]+lang="ko"/i);
-  assert.match(html, /<title>OIP · 우리 둘의 생활 기록<\/title>/i);
+  assert.match(html, /<title>OIP<\/title>/i);
   assert.match(html, /불러오는 중/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });

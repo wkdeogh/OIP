@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
     requestHeaders.get("x-forwarded-proto") ??
     (host.startsWith("localhost") ? "http" : "https");
   const baseUrl = `${protocol}://${host}`;
-  const title = "OIP · 우리 둘의 생활 기록";
+  const title = "OIP";
   const description =
     "대호와 상희가 일정, 장보기, 여행, 냉장고와 주차 위치를 함께 관리하는 생활 앱";
 
@@ -35,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
           url: `${baseUrl}/og.png`,
           width: 1729,
           height: 910,
-          alt: "OIP · 우리 둘의 생활 기록",
+          alt: "OIP",
         },
       ],
     },
