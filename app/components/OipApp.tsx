@@ -30,8 +30,14 @@ import type {
   Visibility,
 } from "../oip-types";
 
-type MainTab = "schedule" | "travel" | "fridge" | "parking" | "etc";
-type ScheduleTab = "calendar" | "todo" | "shopping";
+type MainTab =
+  | "schedule"
+  | "tasks"
+  | "travel"
+  | "fridge"
+  | "parking"
+  | "etc";
+type TaskTab = "todo" | "shopping";
 type ThemeMode = "light" | "dark";
 type ModalName = "event" | "dayoff" | "trip" | "fridge" | null;
 type DateRange = { start: string; end: string };
@@ -90,6 +96,7 @@ const MAIN_TABS: Array<{
   title: string;
 }> = [
   { id: "schedule", label: "일정", icon: "▦", title: "일정" },
+  { id: "tasks", label: "할일", icon: "✓", title: "할일" },
   { id: "travel", label: "여행", icon: "✈", title: "여행" },
   { id: "fridge", label: "냉장고", icon: "□", title: "냉장고" },
   { id: "parking", label: "주차장", icon: "P", title: "주차장" },
@@ -556,11 +563,6 @@ function LoadingScreen() {
 function DataLoadingSkeleton() {
   return (
     <div className="data-loading" aria-busy="true" aria-label="데이터 불러오는 중">
-      <div className="sub-tabs data-loading-tabs" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
       <div className="calendar-layout">
         <section className="card calendar-card data-loading-calendar">
           <div className="data-loading-toolbar">
@@ -3846,7 +3848,7 @@ export function OipApp({
   >("checking");
   const [currentUser, setCurrentUser] = useState<UserCode>("daeho");
   const [mainTab, setMainTab] = useState<MainTab>(initialMainTab);
-  const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("calendar");
+  const [taskTab, setTaskTab] = useState<TaskTab>("todo");
   const [modal, setModal] = useState<ModalName>(null);
   const [selectedDate, setSelectedDate] = useState(toDateKey(new Date()));
   const [eventRange, setEventRange] = useState<DateRange>({
@@ -3881,9 +3883,7 @@ export function OipApp({
   const loadedHolidayYears = useRef(new Set<number>());
 
   const isCalendarPage =
-    authState === "ready" &&
-    mainTab === "schedule" &&
-    scheduleTab === "calendar";
+    authState === "ready" && mainTab === "schedule";
 
   useEffect(() => {
     const className = "calendar-scroll-locked";
@@ -4674,9 +4674,7 @@ export function OipApp({
 
         <main
           className={`content${
-            mainTab === "schedule" && scheduleTab === "calendar"
-              ? " content--calendar"
-              : ""
+            mainTab === "schedule" ? " content--calendar" : ""
           }`}
         >
           {isDataLoading ? (
@@ -4684,25 +4682,44 @@ export function OipApp({
           ) : (
             <>
           {mainTab === "schedule" ? (
+            <CalendarView
+              daysOff={daysOff}
+              events={events}
+              holidays={holidays}
+              onAddDayOff={() => setModal("dayoff")}
+              onAddEvent={openEventModal}
+              onDeleteDayOff={deleteDayOff}
+              onDeleteEvent={deleteEvent}
+              onVisibleYearChange={setHolidayYear}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+            />
+          ) : null}
+
+          {mainTab === "tasks" ? (
             <>
-              <div className="sub-tabs" role="tablist" aria-label="일정 메뉴">
+              <div
+                className="sub-tabs sub-tabs--tasks"
+                role="tablist"
+                aria-label="할일 메뉴"
+              >
                 {(
                   [
-                    ["calendar", "캘린더"],
                     ["todo", "TODO"],
                     ["shopping", "쇼핑목록"],
-                  ] as Array<[ScheduleTab, string]>
+                  ] as Array<[TaskTab, string]>
                 ).map(([id, label]) => (
                   <button
-                    aria-selected={scheduleTab === id}
-                    className={scheduleTab === id ? "is-active" : ""}
+                    aria-selected={taskTab === id}
+                    className={taskTab === id ? "is-active" : ""}
                     key={id}
-                    onClick={() => setScheduleTab(id)}
+                    onClick={() => setTaskTab(id)}
                     role="tab"
                     type="button"
                   >
                     {label}
-                    {id === "todo" && todos.filter((item) => !item.is_completed).length
+                    {id === "todo" &&
+                    todos.filter((item) => !item.is_completed).length
                       ? ` ${todos.filter((item) => !item.is_completed).length}`
                       : ""}
                     {id === "shopping" &&
@@ -4712,20 +4729,7 @@ export function OipApp({
                   </button>
                 ))}
               </div>
-              {scheduleTab === "calendar" ? (
-                <CalendarView
-                  daysOff={daysOff}
-                  events={events}
-                  holidays={holidays}
-                  onAddDayOff={() => setModal("dayoff")}
-                  onAddEvent={openEventModal}
-                  onDeleteDayOff={deleteDayOff}
-                  onDeleteEvent={deleteEvent}
-                  onVisibleYearChange={setHolidayYear}
-                  selectedDate={selectedDate}
-                  setSelectedDate={setSelectedDate}
-                />
-              ) : scheduleTab === "todo" ? (
+              {taskTab === "todo" ? (
                 <TodoView
                   currentUser={currentUser}
                   onCreate={createTodo}

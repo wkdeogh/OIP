@@ -785,7 +785,7 @@ p {
   left: 0;
   display: grid;
   min-height: 76px;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   padding: 7px max(8px, env(safe-area-inset-right))
     max(12px, calc(env(safe-area-inset-bottom) + 4px))
     max(8px, env(safe-area-inset-left));
@@ -852,6 +852,10 @@ p {
   background: var(--green);
   color: white;
   box-shadow: 0 5px 14px rgba(77, 118, 103, 0.17);
+}
+
+.sub-tabs--tasks {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .data-loading {
@@ -1109,7 +1113,7 @@ p {
   padding: 3px 4px;
   border-radius: 3px;
   color: #34413a;
-  font-size: 0.55rem;
+  font-size: 0.6rem;
   font-weight: 800;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -1159,7 +1163,7 @@ p {
 .event-chip--daeho,
 .event-chip--sanghee,
 .event-chip--private {
-  font-size: 0.59rem;
+  font-size: 0.64rem;
 }
 
 .event-chip--system {
@@ -3437,13 +3441,13 @@ p {
 
   .event-chip {
     padding: 4px 5px;
-    font-size: 0.67rem;
+    font-size: 0.72rem;
   }
 
   .event-chip--daeho,
   .event-chip--sanghee,
   .event-chip--private {
-    font-size: 0.71rem;
+    font-size: 0.76rem;
   }
 
   .more-events {
@@ -3680,13 +3684,13 @@ p {
 
   .event-chip {
     padding-inline: 2px;
-    font-size: 0.51rem;
+    font-size: 0.56rem;
   }
 
   .event-chip--daeho,
   .event-chip--sanghee,
   .event-chip--private {
-    font-size: 0.55rem;
+    font-size: 0.6rem;
   }
 
   .modal-head-actions,
