@@ -3880,6 +3880,26 @@ export function OipApp({
   const [candidates, setCandidates] = useState<RandomCandidate[]>([]);
   const loadedHolidayYears = useRef(new Set<number>());
 
+  const isCalendarPage =
+    authState === "ready" &&
+    mainTab === "schedule" &&
+    scheduleTab === "calendar";
+
+  useEffect(() => {
+    const className = "calendar-scroll-locked";
+    document.documentElement.classList.toggle(className, isCalendarPage);
+    document.body.classList.toggle(className, isCalendarPage);
+
+    if (isCalendarPage) {
+      window.scrollTo({ top: 0 });
+    }
+
+    return () => {
+      document.documentElement.classList.remove(className);
+      document.body.classList.remove(className);
+    };
+  }, [isCalendarPage]);
+
   useEffect(() => {
     const targetPath = mainTab === "parking" ? "/parking" : "/";
     if (window.location.pathname === targetPath) return;
@@ -4589,7 +4609,9 @@ export function OipApp({
   const activeTab = MAIN_TABS.find((tab) => tab.id === mainTab) ?? MAIN_TABS[0];
 
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell${isCalendarPage ? " app-shell--calendar" : ""}`}
+    >
       <aside className="desktop-nav">
         <div className="desktop-brand">
           <CloverLogo />

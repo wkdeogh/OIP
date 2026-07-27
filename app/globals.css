@@ -126,6 +126,13 @@ body {
   color: var(--ink);
 }
 
+html.calendar-scroll-locked,
+body.calendar-scroll-locked {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 button,
 input,
 select,
@@ -692,6 +699,60 @@ p {
 
 .content--calendar .sub-tabs {
   margin-inline: 14px;
+}
+
+.app-shell--calendar,
+.app-shell--calendar .app-main {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-shell--calendar .app-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell--calendar .app-header,
+.app-shell--calendar .demo-banner,
+.app-shell--calendar .mobile-nav,
+.app-shell--calendar .content--calendar > .sub-tabs {
+  flex: 0 0 auto;
+}
+
+.app-shell--calendar .content--calendar {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  padding-bottom: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.app-shell--calendar .content--calendar > .data-loading,
+.app-shell--calendar .calendar-layout,
+.app-shell--calendar .calendar-card {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.app-shell--calendar .data-loading-grid,
+.app-shell--calendar .calendar-grid {
+  min-height: 0;
+  flex: 1 1 auto;
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+}
+
+.app-shell--calendar .calendar-day,
+.app-shell--calendar .data-loading-day {
+  min-height: 0;
+}
+
+.app-shell--calendar .mobile-nav {
+  position: relative;
 }
 
 .demo-banner {
