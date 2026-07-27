@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import type {
   CalendarEvent,
   DayOff,
@@ -843,7 +844,7 @@ function EventDateRangePicker({
     setDraft({ start: draft.start, end: date });
   }
 
-  return (
+  return createPortal(
     <div
       className="event-date-picker-backdrop"
       onMouseDown={onClose}
@@ -975,7 +976,8 @@ function EventDateRangePicker({
           </button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1003,7 +1005,7 @@ function EventColorPicker({
     };
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
       className="event-color-picker-backdrop"
       onMouseDown={onClose}
@@ -1055,7 +1057,8 @@ function EventColorPicker({
           })}
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

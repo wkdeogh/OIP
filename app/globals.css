@@ -2796,9 +2796,10 @@ p {
   z-index: 180;
   inset: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding-top: max(52px, env(safe-area-inset-top));
+  padding: max(12px, env(safe-area-inset-top)) 12px
+    max(12px, env(safe-area-inset-bottom));
   background: rgba(20, 27, 23, 0.58);
   backdrop-filter: blur(4px);
   animation: fade-in 160ms ease both;
@@ -2806,12 +2807,11 @@ p {
 
 .event-date-picker {
   width: min(100%, 560px);
-  max-height: calc(100dvh - max(52px, env(safe-area-inset-top)));
+  max-height: 100%;
   padding: 8px 18px max(18px, env(safe-area-inset-bottom));
   overflow-y: auto;
   border: 1px solid var(--line);
-  border-bottom: 0;
-  border-radius: 28px 28px 0 0;
+  border-radius: 28px;
   background: var(--surface);
   box-shadow: 0 -20px 50px rgba(20, 31, 25, 0.24);
   color: var(--ink);
