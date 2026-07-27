@@ -23,6 +23,11 @@
   --private-soft: #eee9f5;
   --system: #9a91b7;
   --system-soft: #ebe8f4;
+  --event-daeho: #c7ddd5;
+  --event-sanghee: #f3cbd0;
+  --event-shared: #f1d67f;
+  --event-private: #d9cbe8;
+  --event-system: #d7d0e9;
   --danger: #c75d58;
   --shadow: 0 14px 34px rgba(28, 34, 43, 0.08);
   --shadow-soft: 0 7px 20px rgba(28, 34, 43, 0.055);
@@ -54,6 +59,11 @@
   --private-soft: #2c2438;
   --system: #b1a9cc;
   --system-soft: #2a2638;
+  --event-daeho: #294a3f;
+  --event-sanghee: #542f35;
+  --event-shared: #55481f;
+  --event-private: #403252;
+  --event-system: #3c3652;
   --danger: #e0706b;
   --shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
   --shadow-soft: 0 7px 20px rgba(0, 0, 0, 0.35);
@@ -84,6 +94,11 @@
     --private-soft: #2c2438;
     --system: #b1a9cc;
     --system-soft: #2a2638;
+    --event-daeho: #294a3f;
+    --event-sanghee: #542f35;
+    --event-shared: #55481f;
+    --event-private: #403252;
+    --event-system: #3c3652;
     --danger: #e0706b;
     --shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
     --shadow-soft: 0 7px 20px rgba(0, 0, 0, 0.35);
@@ -1064,19 +1079,19 @@ p {
 }
 
 .event-chip--daeho {
-  background: var(--daeho-soft);
+  background: var(--event-daeho);
 }
 
 .event-chip--sanghee {
-  background: var(--sanghee-soft);
+  background: var(--event-sanghee);
 }
 
 .event-chip--shared {
-  background: var(--shared-soft);
+  background: var(--event-shared);
 }
 
 .event-chip--private {
-  background: var(--private-soft);
+  background: var(--event-private);
   color: #584968;
 }
 
@@ -1087,7 +1102,7 @@ p {
 }
 
 .event-chip--system {
-  background: var(--system-soft);
+  background: var(--event-system);
 }
 
 .more-events {

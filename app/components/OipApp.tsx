@@ -62,15 +62,26 @@ const USER_META: Record<
 
 const EVENT_COLOR_OPTIONS = [
   { name: "기본색", value: "" },
-  { name: "노랑", value: "#F6D875" },
-  { name: "파랑", value: "#A8D5F2" },
-  { name: "초록", value: "#A8DDB8" },
-  { name: "보라", value: "#CEB7EC" },
-  { name: "분홍", value: "#F5B7C3" },
-  { name: "주황", value: "#F7C49A" },
-  { name: "코랄", value: "#F4A6A0" },
-  { name: "회색", value: "#CCD3DB" },
+  { name: "노랑", value: "#EBC44F" },
+  { name: "파랑", value: "#7FC1EB" },
+  { name: "초록", value: "#82CE99" },
+  { name: "보라", value: "#B596DE" },
+  { name: "분홍", value: "#EC91A5" },
+  { name: "주황", value: "#EFA966" },
+  { name: "코랄", value: "#EB7F78" },
+  { name: "회색", value: "#AEB8C4" },
 ] as const;
+
+const LEGACY_EVENT_COLOR_DISPLAY: Record<string, string> = {
+  "#F6D875": "#EBC44F",
+  "#A8D5F2": "#7FC1EB",
+  "#A8DDB8": "#82CE99",
+  "#CEB7EC": "#B596DE",
+  "#F5B7C3": "#EC91A5",
+  "#F7C49A": "#EFA966",
+  "#F4A6A0": "#EB7F78",
+  "#CCD3DB": "#AEB8C4",
+};
 
 const MAIN_TABS: Array<{
   id: MainTab;
@@ -219,9 +230,14 @@ function calendarEventColor(event: CalendarEvent) {
 }
 
 function defaultEventColor(scope: CalendarEventScope, user: UserCode) {
-  if (scope === "shared") return "var(--shared-soft)";
-  if (scope === "private") return "var(--private-soft)";
-  return user === "daeho" ? "var(--daeho-soft)" : "var(--sanghee-soft)";
+  if (scope === "shared") return "var(--event-shared)";
+  if (scope === "private") return "var(--event-private)";
+  return user === "daeho" ? "var(--event-daeho)" : "var(--event-sanghee)";
+}
+
+function displayedCustomEventColor(color?: string | null) {
+  if (!color) return null;
+  return LEGACY_EVENT_COLOR_DISPLAY[color.toUpperCase()] ?? color;
 }
 
 function newId() {
@@ -1418,7 +1434,11 @@ function CalendarDaySheet({
                       className={`detail-dot detail-dot--${calendarEventColor(event)}`}
                       style={
                         event.custom_color
-                          ? { backgroundColor: event.custom_color }
+                          ? {
+                              backgroundColor: displayedCustomEventColor(
+                                event.custom_color,
+                              )!,
+                            }
                           : undefined
                       }
                     />
@@ -1805,7 +1825,9 @@ function CalendarView({
                             gridRow: lane + 1,
                             ...(event.custom_color
                               ? {
-                                  backgroundColor: event.custom_color,
+                                  backgroundColor: displayedCustomEventColor(
+                                    event.custom_color,
+                                  )!,
                                   color: "#25302a",
                                 }
                               : {}),
