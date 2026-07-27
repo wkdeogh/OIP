@@ -31,6 +31,7 @@ import type {
 
 type MainTab = "schedule" | "travel" | "fridge" | "parking" | "etc";
 type ScheduleTab = "calendar" | "todo" | "shopping";
+type ThemeMode = "light" | "dark";
 type ModalName = "event" | "dayoff" | "trip" | "fridge" | null;
 type DateRange = { start: string; end: string };
 type CalendarEventScope = "shared" | "personal" | "private";
@@ -479,8 +480,12 @@ function DataLoadingSkeleton() {
 
 function PasswordGate({
   onAuthenticated,
+  theme,
+  onToggleTheme,
 }: {
   onAuthenticated: () => void;
+  theme: ThemeMode;
+  onToggleTheme: () => void;
 }) {
   const showLocalHint = process.env.NODE_ENV === "development";
   const [password, setPassword] = useState("");
@@ -516,6 +521,9 @@ function PasswordGate({
 
   return (
     <main className="gate-screen">
+      <div className="gate-theme-toggle">
+        <ThemeToggleButton onToggle={onToggleTheme} theme={theme} />
+      </div>
       <section className="gate-card">
         <div className="gate-brand">
           <CloverLogo large />
@@ -564,9 +572,20 @@ function PasswordGate({
   );
 }
 
-function UserGate({ onSelect }: { onSelect: (user: UserCode) => void }) {
+function UserGate({
+  onSelect,
+  theme,
+  onToggleTheme,
+}: {
+  onSelect: (user: UserCode) => void;
+  theme: ThemeMode;
+  onToggleTheme: () => void;
+}) {
   return (
     <main className="gate-screen">
+      <div className="gate-theme-toggle">
+        <ThemeToggleButton onToggle={onToggleTheme} theme={theme} />
+      </div>
       <section className="gate-card">
         <CloverLogo large />
         <p className="eyebrow">OIP</p>
@@ -3071,7 +3090,50 @@ function EtcView({
   );
 }
 
+function ThemeToggleButton({
+  theme,
+  onToggle,
+}: {
+  theme: ThemeMode;
+  onToggle: () => void;
+}) {
+  const nextMode = theme === "dark" ? "라이트" : "다크";
+
+  return (
+    <button
+      aria-label={`${nextMode} 모드로 전환`}
+      className="theme-toggle-button"
+      onClick={onToggle}
+      title={`${nextMode} 모드로 전환`}
+      type="button"
+    >
+      <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+    </button>
+  );
+}
+
 export function OipApp() {
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof document === "undefined") return "light";
+    return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("oip.theme", theme);
+    } catch {}
+    const themeMeta = document.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]',
+    );
+    if (themeMeta) {
+      themeMeta.content = theme === "dark" ? "#12161b" : "#f5f6f8";
+    }
+  }, [theme]);
+
+  const toggleTheme = () =>
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
+
   const [authState, setAuthState] = useState<
     "checking" | "locked" | "selecting" | "ready"
   >("checking");
@@ -3772,6 +3834,7 @@ export function OipApp() {
   if (authState === "locked") {
     return (
       <PasswordGate
+        onToggleTheme={toggleTheme}
         onAuthenticated={() => {
           const stored = localStorage.getItem("oip.currentUser");
           if (stored === "daeho" || stored === "sanghee") {
@@ -3783,10 +3846,19 @@ export function OipApp() {
             setAuthState("selecting");
           }
         }}
+        theme={theme}
       />
     );
   }
-  if (authState === "selecting") return <UserGate onSelect={chooseUser} />;
+  if (authState === "selecting") {
+    return (
+      <UserGate
+        onSelect={chooseUser}
+        onToggleTheme={toggleTheme}
+        theme={theme}
+      />
+    );
+  }
 
   const activeTab = MAIN_TABS.find((tab) => tab.id === mainTab) ?? MAIN_TABS[0];
 
@@ -3825,6 +3897,7 @@ export function OipApp() {
             <h1>{activeTab.title}</h1>
           </div>
           <div className="header-actions">
+            <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
             <button
               aria-label={`현재 사용자 ${USER_META[currentUser].name}, 사용자 변경`}
               className={`user-pill user-pill--${currentUser}`}

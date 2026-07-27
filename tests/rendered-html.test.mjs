@@ -31,6 +31,8 @@ test("server-renders the OIP application shell", async () => {
   assert.match(html, /<html[^>]+lang="ko"/i);
   assert.match(html, /<title>OIP<\/title>/i);
   assert.match(html, /oip_logo\.png/i);
+  assert.match(html, /oip\.theme/i);
+  assert.match(html, /prefers-color-scheme:\s*dark/i);
   assert.match(html, /불러오는 중/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
