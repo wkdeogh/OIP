@@ -3631,7 +3631,11 @@ function ThemeToggleButton({
   );
 }
 
-export function OipApp() {
+export function OipApp({
+  initialMainTab = "schedule",
+}: {
+  initialMainTab?: MainTab;
+}) {
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof document === "undefined") return "light";
     return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
@@ -3657,7 +3661,7 @@ export function OipApp() {
     "checking" | "locked" | "selecting" | "ready"
   >("checking");
   const [currentUser, setCurrentUser] = useState<UserCode>("daeho");
-  const [mainTab, setMainTab] = useState<MainTab>("schedule");
+  const [mainTab, setMainTab] = useState<MainTab>(initialMainTab);
   const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("calendar");
   const [modal, setModal] = useState<ModalName>(null);
   const [selectedDate, setSelectedDate] = useState(toDateKey(new Date()));
@@ -3689,6 +3693,16 @@ export function OipApp() {
   const [parking, setParking] = useState<ParkingRecord | null>(null);
   const [candidates, setCandidates] = useState<RandomCandidate[]>([]);
   const loadedHolidayYears = useRef(new Set<number>());
+
+  useEffect(() => {
+    const targetPath = mainTab === "parking" ? "/parking" : "/";
+    if (window.location.pathname === targetPath) return;
+    window.history.replaceState(
+      { ...window.history.state, oipMainTab: mainTab },
+      "",
+      targetPath,
+    );
+  }, [mainTab]);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
