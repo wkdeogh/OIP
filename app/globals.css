@@ -117,6 +117,7 @@ html {
     Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
     "Noto Sans KR", "Segoe UI", sans-serif;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 body {
@@ -124,6 +125,7 @@ body {
   min-height: 100vh;
   background: var(--paper);
   color: var(--ink);
+  touch-action: manipulation;
 }
 
 html.calendar-scroll-locked,
