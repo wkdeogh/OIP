@@ -559,12 +559,6 @@ function DataLoadingSkeleton() {
             ))}
           </div>
         </section>
-        <aside className="card day-detail data-loading-detail" aria-hidden="true">
-          <span />
-          <i />
-          <i />
-          <i />
-        </aside>
       </div>
       <span className="sr-only">일정과 생활 데이터를 불러오고 있습니다.</span>
     </div>
@@ -801,11 +795,16 @@ function EventDateRangePicker({
   );
 
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
     }
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
   }, [onClose]);
 
   const days = monthCalendarDays(visibleMonth);
@@ -1180,6 +1179,194 @@ function AuthorBadge({ user }: { user: UserCode }) {
   );
 }
 
+function CalendarDaySheet({
+  date,
+  events,
+  daysOff,
+  holidays,
+  onAddDayOff,
+  onAddEvent,
+  onClose,
+  onDeleteDayOff,
+  onDeleteEvent,
+}: {
+  date: string;
+  events: CalendarEvent[];
+  daysOff: DayOff[];
+  holidays: PublicHoliday[];
+  onAddDayOff: () => void;
+  onAddEvent: () => void;
+  onClose: () => void;
+  onDeleteDayOff: (item: DayOff) => void;
+  onDeleteEvent: (event: CalendarEvent) => void;
+}) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [onClose]);
+
+  const isEmpty = !events.length && !daysOff.length && !holidays.length;
+
+  return (
+    <div
+      className="day-sheet-backdrop"
+      onMouseDown={onClose}
+      role="presentation"
+    >
+      <section
+        aria-labelledby="day-sheet-title"
+        aria-modal="true"
+        className="day-sheet"
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className="day-sheet-handle" aria-hidden="true" />
+        <header className="day-sheet-head">
+          <div>
+            <h2 id="day-sheet-title">{formatKoreanDate(date, true)}</h2>
+          </div>
+          <button
+            aria-label="날짜 상세 닫기"
+            className="icon-button"
+            onClick={onClose}
+            type="button"
+          >
+            ×
+          </button>
+        </header>
+
+        <div className="day-sheet-actions">
+          <button
+            className="button button--soft"
+            onClick={() => {
+              onClose();
+              onAddDayOff();
+            }}
+            type="button"
+          >
+            휴무
+          </button>
+          <button
+            className="button button--primary"
+            onClick={() => {
+              onClose();
+              onAddEvent();
+            }}
+            type="button"
+          >
+            + 일정 추가
+          </button>
+        </div>
+
+        <div className="day-sheet-content">
+          {daysOff.length ? (
+            <div className="dayoff-list">
+              {daysOff.map((item) => (
+                <div
+                  className={`dayoff-row dayoff-row--${item.owner_id}`}
+                  key={item.id}
+                >
+                  <AuthorBadge user={item.owner_id} />
+                  <strong>{item.day_off_type}</strong>
+                  <button
+                    aria-label={`${USER_META[item.owner_id].name} 휴무 삭제`}
+                    className="row-delete"
+                    onClick={() => onDeleteDayOff(item)}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {holidays.length ? (
+            <div className="holiday-detail-list">
+              {holidays.map((holiday) => (
+                <div className="holiday-detail" key={holiday.date}>
+                  <span>공휴일</span>
+                  <strong>{holiday.name}</strong>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {events.length ? (
+            <div className="detail-list">
+              {events.map((event) => (
+                <article className="detail-row" key={event.id}>
+                  {event.event_type === "anniversary" ? (
+                    <span className="detail-emoji">
+                      {anniversaryEmoji(event.title)}
+                    </span>
+                  ) : (
+                    <span
+                      className={`detail-dot detail-dot--${calendarEventColor(event)}`}
+                      style={
+                        event.custom_color
+                          ? { backgroundColor: event.custom_color }
+                          : undefined
+                      }
+                    />
+                  )}
+                  <div className="detail-row-copy">
+                    <strong>{event.title}</strong>
+                    <p>
+                      {event.is_all_day
+                        ? "종일"
+                        : event.end_at
+                          ? `${timeInSeoul(event.start_at)}–${timeInSeoul(event.end_at)}`
+                          : `${timeInSeoul(event.start_at)} 시작`}
+                      {eventDateRange(event).start !==
+                      eventDateRange(event).end
+                        ? ` · ${formatKoreanDate(eventDateRange(event).start)}–${formatKoreanDate(eventDateRange(event).end)}`
+                        : ""}
+                      {" · "}
+                      {event.event_type === "anniversary"
+                        ? "기념일"
+                        : calendarEventScope(event) === "shared"
+                          ? "공통일정"
+                          : calendarEventScope(event) === "personal"
+                            ? `${USER_META[event.author_id as UserCode].name} 개인일정`
+                            : "나만보기"}
+                    </p>
+                  </div>
+                  {event.event_type !== "anniversary" ? (
+                    <button
+                      aria-label={`${event.title} 일정 삭제`}
+                      className="row-delete"
+                      onClick={() => onDeleteEvent(event)}
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          ) : null}
+
+          {isEmpty ? (
+            <div className="day-sheet-empty">
+              <span aria-hidden="true">◷</span>
+              <p>이 날짜에는 일정이 없어요</p>
+            </div>
+          ) : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function CalendarView({
   events,
   daysOff,
@@ -1208,6 +1395,7 @@ function CalendarView({
     new Date(selected.getFullYear(), selected.getMonth(), 1),
   );
   const [dragRange, setDragRange] = useState<DateRange | null>(null);
+  const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
   const gestureRef = useRef<{
     startX: number;
     startY: number;
@@ -1342,6 +1530,7 @@ function CalendarView({
       const currentDate = dateFromPointer(event) ?? gesture.startDate;
       const range = normalizeRange(gesture.startDate, currentDate);
       setDragRange(range);
+      setIsDaySheetOpen(false);
       setSelectedDate(range.start);
       suppressClickRef.current = true;
       onAddEvent(range);
@@ -1457,7 +1646,6 @@ function CalendarView({
                     : undefined;
             const isOutside = date.getMonth() !== month;
             const isToday = key === toDateKey(new Date());
-            const isSelected = key === selectedDate;
             const isRangeSelected =
               dragRange && key >= dragRange.start && key <= dragRange.end;
             return (
@@ -1473,7 +1661,6 @@ function CalendarView({
                   "calendar-day",
                   isOutside ? "calendar-day--outside" : "",
                   isToday ? "calendar-day--today" : "",
-                  isSelected ? "calendar-day--selected" : "",
                   isRangeSelected ? "calendar-day--range" : "",
                   dateHolidays.length ? "calendar-day--holiday" : "",
                 ]
@@ -1485,6 +1672,7 @@ function CalendarView({
                   if (suppressClickRef.current) return;
                   setDragRange(null);
                   setSelectedDate(key);
+                  setIsDaySheetOpen(true);
                 }}
                 style={{ background }}
                 type="button"
@@ -1575,116 +1763,19 @@ function CalendarView({
         </div>
       </section>
 
-      <aside className="card day-detail">
-        <div className="section-heading">
-          <div>
-            <h2>{formatKoreanDate(selectedDate, true)}</h2>
-          </div>
-          <div className="small-actions">
-            <button className="button button--soft" onClick={onAddDayOff}>
-              휴무
-            </button>
-            <button
-              className="button button--primary"
-              onClick={() => onAddEvent()}
-            >
-              + 일정
-            </button>
-          </div>
-        </div>
-
-        {selectedDaysOff.length ? (
-          <div className="dayoff-list">
-            {selectedDaysOff.map((item) => (
-              <div className={`dayoff-row dayoff-row--${item.owner_id}`} key={item.id}>
-                <AuthorBadge user={item.owner_id} />
-                <strong>{item.day_off_type}</strong>
-                <button
-                  aria-label={`${USER_META[item.owner_id].name} 휴무 삭제`}
-                  className="row-delete"
-                  onClick={() => onDeleteDayOff(item)}
-                  type="button"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {selectedHolidays.length ? (
-          <div className="holiday-detail-list">
-            {selectedHolidays.map((holiday) => (
-              <div className="holiday-detail" key={holiday.date}>
-                <span>공휴일</span>
-                <strong>{holiday.name}</strong>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {selectedEvents.length ? (
-          <div className="detail-list">
-            {selectedEvents.map((event) => (
-              <article className="detail-row" key={event.id}>
-                {event.event_type === "anniversary" ? (
-                  <span className="detail-emoji">
-                    {anniversaryEmoji(event.title)}
-                  </span>
-                ) : (
-                  <span
-                    className={`detail-dot detail-dot--${calendarEventColor(event)}`}
-                    style={
-                      event.custom_color
-                        ? { backgroundColor: event.custom_color }
-                        : undefined
-                    }
-                  />
-                )}
-                <div className="detail-row-copy">
-                  <strong>{event.title}</strong>
-                  <p>
-                    {event.is_all_day
-                      ? "종일"
-                      : event.end_at
-                        ? `${timeInSeoul(event.start_at)}–${timeInSeoul(event.end_at)}`
-                        : `${timeInSeoul(event.start_at)} 시작`}
-                    {eventDateRange(event).start !==
-                    eventDateRange(event).end
-                      ? ` · ${formatKoreanDate(eventDateRange(event).start)}–${formatKoreanDate(eventDateRange(event).end)}`
-                      : ""}
-                    {" · "}
-                    {event.event_type === "anniversary"
-                      ? "기념일"
-                      : calendarEventScope(event) === "shared"
-                        ? "공통일정"
-                        : calendarEventScope(event) === "personal"
-                          ? `${USER_META[event.author_id as UserCode].name} 개인일정`
-                          : "나만보기"}
-                  </p>
-                </div>
-                {event.event_type !== "anniversary" ? (
-                  <button
-                    aria-label={`${event.title} 일정 삭제`}
-                    className="row-delete"
-                    onClick={() => onDeleteEvent(event)}
-                    type="button"
-                  >
-                    ×
-                  </button>
-                ) : null}
-              </article>
-            ))}
-          </div>
-        ) : !selectedDaysOff.length && !selectedHolidays.length ? (
-          <EmptyState
-            action="일정 추가"
-            icon="◷"
-            onAction={() => onAddEvent()}
-            title="이 날짜에는 일정이 없어요"
-          />
-        ) : null}
-      </aside>
+      {isDaySheetOpen ? (
+        <CalendarDaySheet
+          date={selectedDate}
+          daysOff={selectedDaysOff}
+          events={selectedEvents}
+          holidays={selectedHolidays}
+          onAddDayOff={onAddDayOff}
+          onAddEvent={onAddEvent}
+          onClose={() => setIsDaySheetOpen(false)}
+          onDeleteDayOff={onDeleteDayOff}
+          onDeleteEvent={onDeleteEvent}
+        />
+      ) : null}
     </div>
   );
 }
