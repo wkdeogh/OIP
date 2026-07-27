@@ -831,18 +831,14 @@ function EventDateRangePicker({
 
   function chooseDate(date: string) {
     if (selection === "start") {
-      const next = {
-        start: date,
-        end: draft.end < date ? date : draft.end,
-      };
+      const next = { start: date, end: date };
       setDraft(next);
       setSelection("end");
-      const end = parseDateKey(next.end);
-      setVisibleMonth(new Date(end.getFullYear(), end.getMonth(), 1));
       return;
     }
 
-    setDraft(normalizeRange(draft.start, date));
+    if (date < draft.start) return;
+    setDraft({ start: draft.start, end: date });
   }
 
   return (
@@ -866,7 +862,7 @@ function EventDateRangePicker({
             onClick={() => chooseSelection("start")}
             type="button"
           >
-            <small>시작</small>
+            <small>시작 날짜</small>
             <span>
               <strong>{startDetail.day}</strong>
               <span>
@@ -885,7 +881,7 @@ function EventDateRangePicker({
             onClick={() => chooseSelection("end")}
             type="button"
           >
-            <small>종료</small>
+            <small>종료 날짜</small>
             <span>
               <strong>{endDetail.day}</strong>
               <span>
@@ -936,19 +932,24 @@ function EventDateRangePicker({
             const isEnd = key === draft.end;
             const isInRange = key >= draft.start && key <= draft.end;
             const isToday = key === toDateKey(new Date());
+            const isDisabled = selection === "end" && key < draft.start;
 
             return (
               <button
-                aria-label={formatKoreanDate(key, true)}
+                aria-label={`${formatKoreanDate(key, true)}${
+                  isDisabled ? ", 종료일로 선택할 수 없음" : ""
+                }`}
                 className={[
                   isOutside ? "is-outside" : "",
                   isInRange ? "is-in-range" : "",
                   isStart ? "is-start" : "",
                   isEnd ? "is-end" : "",
                   isToday ? "is-today" : "",
+                  isDisabled ? "is-disabled" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
+                disabled={isDisabled}
                 key={key}
                 onClick={() => chooseDate(key)}
                 type="button"

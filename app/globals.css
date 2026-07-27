@@ -1017,29 +1017,6 @@ p {
   overflow: visible;
 }
 
-.event-chip--range {
-  position: relative;
-  z-index: 2;
-  margin-right: calc(-1px - var(--calendar-day-inline-padding));
-  margin-left: calc(-1 * var(--calendar-day-inline-padding));
-  border-radius: 0;
-}
-
-.event-chip--segment-start {
-  margin-left: 0;
-  border-radius: 5px 0 0 5px;
-}
-
-.event-chip--segment-end {
-  margin-right: 0;
-  border-radius: 0 5px 5px 0;
-}
-
-.event-chip--segment-start.event-chip--segment-end {
-  margin-inline: 0;
-  border-radius: 5px;
-}
-
 .event-chip {
   display: block;
   overflow: hidden;
@@ -1051,6 +1028,29 @@ p {
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.event-chip.event-chip--range {
+  position: relative;
+  z-index: 2;
+  margin-right: calc(-1px - var(--calendar-day-inline-padding));
+  margin-left: calc(-1 * var(--calendar-day-inline-padding));
+  border-radius: 0;
+}
+
+.event-chip.event-chip--segment-start {
+  margin-left: 0;
+  border-radius: 5px 0 0 5px;
+}
+
+.event-chip.event-chip--segment-end {
+  margin-right: 0;
+  border-radius: 0 5px 5px 0;
+}
+
+.event-chip.event-chip--segment-start.event-chip--segment-end {
+  margin-inline: 0;
+  border-radius: 5px;
 }
 
 .event-chip--daeho {
@@ -2941,6 +2941,12 @@ p {
 
 .event-date-picker-grid button.is-outside {
   color: #bcc3bf;
+}
+
+.event-date-picker-grid button.is-disabled {
+  color: #cdd2cf;
+  cursor: default;
+  opacity: 0.42;
 }
 
 .event-date-picker-grid button.is-in-range {
