@@ -919,6 +919,15 @@ p {
   user-select: none;
 }
 
+.calendar-grid--slide-next {
+  animation: calendar-slide-next 220ms cubic-bezier(0.22, 0.75, 0.32, 1) both;
+}
+
+.calendar-grid--slide-previous {
+  animation: calendar-slide-previous 220ms
+    cubic-bezier(0.22, 0.75, 0.32, 1) both;
+}
+
 .calendar-day {
   --calendar-day-inline-padding: 3px;
   position: relative;
@@ -959,7 +968,7 @@ p {
   display: grid;
   width: 23px;
   height: 23px;
-  margin: 0 0 3px 1px;
+  margin: -2px 0 3px 1px;
   place-items: center;
   border-radius: 50%;
   font-size: 0.71rem;
@@ -996,7 +1005,7 @@ p {
 .holiday-label {
   overflow: hidden;
   min-height: 0.6rem;
-  margin: -3px 2px 2px;
+  margin: -5px 2px 1px;
   color: #c15c57;
   font-size: 0.49rem;
   font-weight: 800;
@@ -1021,9 +1030,9 @@ p {
   display: block;
   overflow: hidden;
   padding: 3px 4px;
-  border-radius: 5px;
+  border-radius: 3px;
   color: #34413a;
-  font-size: 0.52rem;
+  font-size: 0.55rem;
   font-weight: 800;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -1040,17 +1049,17 @@ p {
 
 .event-chip.event-chip--segment-start {
   margin-left: 0;
-  border-radius: 5px 0 0 5px;
+  border-radius: 3px 0 0 3px;
 }
 
 .event-chip.event-chip--segment-end {
   margin-right: 0;
-  border-radius: 0 5px 5px 0;
+  border-radius: 0 3px 3px 0;
 }
 
 .event-chip.event-chip--segment-start.event-chip--segment-end {
   margin-inline: 0;
-  border-radius: 5px;
+  border-radius: 3px;
 }
 
 .event-chip--daeho {
@@ -1073,7 +1082,7 @@ p {
 .event-chip--daeho,
 .event-chip--sanghee,
 .event-chip--private {
-  font-size: 0.56rem;
+  font-size: 0.59rem;
 }
 
 .event-chip--system {
@@ -3323,6 +3332,20 @@ p {
   }
 }
 
+@keyframes calendar-slide-next {
+  from {
+    opacity: 0.45;
+    transform: translateX(30px);
+  }
+}
+
+@keyframes calendar-slide-previous {
+  from {
+    opacity: 0.45;
+    transform: translateX(-30px);
+  }
+}
+
 @media (min-width: 700px) {
   .content {
     padding: 24px 24px 110px;
@@ -3337,13 +3360,13 @@ p {
 
   .event-chip {
     padding: 4px 5px;
-    font-size: 0.64rem;
+    font-size: 0.67rem;
   }
 
   .event-chip--daeho,
   .event-chip--sanghee,
   .event-chip--private {
-    font-size: 0.68rem;
+    font-size: 0.71rem;
   }
 
   .more-events {
@@ -3539,13 +3562,13 @@ p {
 
   .event-chip {
     padding-inline: 2px;
-    font-size: 0.47rem;
+    font-size: 0.51rem;
   }
 
   .event-chip--daeho,
   .event-chip--sanghee,
   .event-chip--private {
-    font-size: 0.52rem;
+    font-size: 0.55rem;
   }
 
   .modal-head-actions,

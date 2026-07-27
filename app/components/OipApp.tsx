@@ -1499,6 +1499,9 @@ function CalendarView({
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(selected.getFullYear(), selected.getMonth(), 1),
   );
+  const [monthMotion, setMonthMotion] = useState<"next" | "previous" | null>(
+    null,
+  );
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
   const gestureRef = useRef<{
     startX: number;
@@ -1544,6 +1547,18 @@ function CalendarView({
     () => buildCalendarEventLanes(allEvents, days),
     [allEvents, days],
   );
+  const holidayWeekIndexes = useMemo(() => {
+    const dayIndexes = new Map(
+      days.map((date, index) => [toDateKey(date), index]),
+    );
+    const indexes = new Set<number>();
+    holidays.forEach((holiday) => {
+      if (!holiday.is_holiday) return;
+      const dayIndex = dayIndexes.get(holiday.date);
+      if (dayIndex !== undefined) indexes.add(Math.floor(dayIndex / 7));
+    });
+    return indexes;
+  }, [days, holidays]);
 
   const selectedEvents = allEvents.filter((event) =>
     eventCoversDate(event, selectedDate),
@@ -1559,6 +1574,7 @@ function CalendarView({
 
   function moveMonth(offset: number) {
     const next = new Date(year, month + offset, 1);
+    setMonthMotion(offset > 0 ? "next" : "previous");
     setVisibleMonth(next);
     setSelectedDate(toDateKey(next));
   }
@@ -1618,9 +1634,17 @@ function CalendarView({
             className="month-title"
             onClick={() => {
               const today = new Date();
-              setVisibleMonth(
-                new Date(today.getFullYear(), today.getMonth(), 1),
+              const todayMonth = new Date(
+                today.getFullYear(),
+                today.getMonth(),
+                1,
               );
+              if (todayMonth.getTime() !== visibleMonth.getTime()) {
+                setMonthMotion(
+                  todayMonth > visibleMonth ? "next" : "previous",
+                );
+                setVisibleMonth(todayMonth);
+              }
               setSelectedDate(toDateKey(today));
             }}
             type="button"
@@ -1644,7 +1668,10 @@ function CalendarView({
           ))}
         </div>
         <div
-          className="calendar-grid"
+          className={`calendar-grid${
+            monthMotion ? ` calendar-grid--slide-${monthMotion}` : ""
+          }`}
+          key={`${year}-${month}`}
           onPointerCancel={cancelGesture}
           onPointerDown={startGesture}
           onPointerUp={finishGesture}
@@ -1652,6 +1679,7 @@ function CalendarView({
           {days.map((date, dayIndex) => {
             const key = toDateKey(date);
             const weekIndex = Math.floor(dayIndex / 7);
+            const weekHasHoliday = holidayWeekIndexes.has(weekIndex);
             const dateEvents = allEvents
               .filter(
                 (event) =>
@@ -1730,16 +1758,18 @@ function CalendarView({
                     </span>
                   ) : null}
                 </span>
-                <span
-                  aria-hidden={!dateHolidays.length}
-                  className={`holiday-label${
-                    dateHolidays.length ? "" : " holiday-label--empty"
-                  }`}
-                >
-                  {dateHolidays.length
-                    ? dateHolidays.map((holiday) => holiday.name).join(" · ")
-                    : "\u00a0"}
-                </span>
+                {weekHasHoliday ? (
+                  <span
+                    aria-hidden={!dateHolidays.length}
+                    className={`holiday-label${
+                      dateHolidays.length ? "" : " holiday-label--empty"
+                    }`}
+                  >
+                    {dateHolidays.length
+                      ? dateHolidays.map((holiday) => holiday.name).join(" · ")
+                      : "\u00a0"}
+                  </span>
+                ) : null}
                 <span className="day-events">
                   {dateEvents
                     .filter(({ lane }) => lane < 3)
