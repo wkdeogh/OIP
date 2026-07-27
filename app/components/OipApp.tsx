@@ -35,6 +35,7 @@ type ThemeMode = "light" | "dark";
 type ModalName = "event" | "dayoff" | "trip" | "fridge" | null;
 type DateRange = { start: string; end: string };
 type CalendarEventScope = "shared" | "personal" | "private";
+type DateRangeSelection = "start" | "end";
 type TripSection =
   | "overview"
   | "trip_flights"
@@ -57,6 +58,18 @@ const USER_META: Record<
   daeho: { name: "대호", short: "대", color: "#7fa99b" },
   sanghee: { name: "상희", short: "상", color: "#e9a6ad" },
 };
+
+const EVENT_COLOR_OPTIONS = [
+  { name: "기본색", value: "" },
+  { name: "노랑", value: "#F6D875" },
+  { name: "파랑", value: "#A8D5F2" },
+  { name: "초록", value: "#A8DDB8" },
+  { name: "보라", value: "#CEB7EC" },
+  { name: "분홍", value: "#F5B7C3" },
+  { name: "주황", value: "#F7C49A" },
+  { name: "코랄", value: "#F4A6A0" },
+  { name: "회색", value: "#CCD3DB" },
+] as const;
 
 const MAIN_TABS: Array<{
   id: MainTab;
@@ -124,6 +137,18 @@ function normalizeRange(start: string, end: string): DateRange {
   return start <= end ? { start, end } : { start: end, end: start };
 }
 
+function monthCalendarDays(month: Date) {
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const firstWeekday = new Date(year, monthIndex, 1).getDay();
+  const firstCell = new Date(year, monthIndex, 1 - firstWeekday, 12);
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(firstCell);
+    date.setDate(firstCell.getDate() + index);
+    return date;
+  });
+}
+
 function eventDateRange(event: CalendarEvent): DateRange {
   return normalizeRange(
     dateKeyInSeoul(event.start_at),
@@ -164,6 +189,34 @@ function formatKoreanDate(value: string, includeYear = false) {
     day: "numeric",
     weekday: "short",
   }).format(date);
+}
+
+function formatEventDateSummary(range: DateRange) {
+  const formatter = new Intl.DateTimeFormat("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
+  const start = formatter.format(parseDateKey(range.start));
+  if (range.start === range.end) return start;
+  return `${start} – ${formatter.format(parseDateKey(range.end))}`;
+}
+
+function formatDatePickerDetail(value: string) {
+  const date = parseDateKey(value);
+  return {
+    day: date.getDate(),
+    month: `${date.getFullYear()}년 ${date.getMonth() + 1}월`,
+    weekday: new Intl.DateTimeFormat("ko-KR", { weekday: "long" }).format(date),
+  };
+}
+
+function addOneHour(value: string) {
+  const [hour, minute] = value.split(":").map(Number);
+  const total = Math.min(hour * 60 + minute + 60, 23 * 60 + 59);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(
+    total % 60,
+  ).padStart(2, "0")}`;
 }
 
 function formatDateTime(value: string) {
@@ -691,6 +744,372 @@ function EventVisibilityControls() {
   );
 }
 
+function EventDateRangePicker({
+  value,
+  onApply,
+  onClose,
+}: {
+  value: DateRange;
+  onApply: (range: DateRange) => void;
+  onClose: () => void;
+}) {
+  const initialDate = parseDateKey(value.start);
+  const [draft, setDraft] = useState(value);
+  const [selection, setSelection] = useState<DateRangeSelection>("start");
+  const [visibleMonth, setVisibleMonth] = useState(
+    new Date(initialDate.getFullYear(), initialDate.getMonth(), 1),
+  );
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  const days = monthCalendarDays(visibleMonth);
+  const year = visibleMonth.getFullYear();
+  const month = visibleMonth.getMonth();
+  const startDetail = formatDatePickerDetail(draft.start);
+  const endDetail = formatDatePickerDetail(draft.end);
+
+  function chooseSelection(nextSelection: DateRangeSelection) {
+    setSelection(nextSelection);
+    const valueToShow =
+      nextSelection === "start" ? draft.start : draft.end;
+    const date = parseDateKey(valueToShow);
+    setVisibleMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+  }
+
+  function chooseDate(date: string) {
+    if (selection === "start") {
+      const next = {
+        start: date,
+        end: draft.end < date ? date : draft.end,
+      };
+      setDraft(next);
+      setSelection("end");
+      const end = parseDateKey(next.end);
+      setVisibleMonth(new Date(end.getFullYear(), end.getMonth(), 1));
+      return;
+    }
+
+    setDraft(normalizeRange(draft.start, date));
+  }
+
+  return (
+    <div
+      className="event-date-picker-backdrop"
+      onMouseDown={onClose}
+      role="presentation"
+    >
+      <section
+        aria-label="일정 날짜 선택"
+        aria-modal="true"
+        className="event-date-picker"
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className="event-date-picker-handle" aria-hidden="true" />
+        <div className="event-date-selection">
+          <button
+            aria-pressed={selection === "start"}
+            className={selection === "start" ? "is-active" : ""}
+            onClick={() => chooseSelection("start")}
+            type="button"
+          >
+            <small>시작</small>
+            <span>
+              <strong>{startDetail.day}</strong>
+              <span>
+                {startDetail.month}
+                <br />
+                {startDetail.weekday}
+              </span>
+            </span>
+          </button>
+          <span className="event-date-selection-arrow" aria-hidden="true">
+            →
+          </span>
+          <button
+            aria-pressed={selection === "end"}
+            className={selection === "end" ? "is-active" : ""}
+            onClick={() => chooseSelection("end")}
+            type="button"
+          >
+            <small>종료</small>
+            <span>
+              <strong>{endDetail.day}</strong>
+              <span>
+                {endDetail.month}
+                <br />
+                {endDetail.weekday}
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <div className="event-date-picker-toolbar">
+          <strong>
+            {year}년 {month + 1}월
+          </strong>
+          <div>
+            <button
+              aria-label="이전 달"
+              onClick={() =>
+                setVisibleMonth(new Date(year, month - 1, 1))
+              }
+              type="button"
+            >
+              ‹
+            </button>
+            <button
+              aria-label="다음 달"
+              onClick={() =>
+                setVisibleMonth(new Date(year, month + 1, 1))
+              }
+              type="button"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+
+        <div className="event-date-picker-weekdays" aria-hidden="true">
+          {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+            <span key={day}>{day}</span>
+          ))}
+        </div>
+        <div className="event-date-picker-grid">
+          {days.map((date) => {
+            const key = toDateKey(date);
+            const isOutside = date.getMonth() !== month;
+            const isStart = key === draft.start;
+            const isEnd = key === draft.end;
+            const isInRange = key >= draft.start && key <= draft.end;
+            const isToday = key === toDateKey(new Date());
+
+            return (
+              <button
+                aria-label={formatKoreanDate(key, true)}
+                className={[
+                  isOutside ? "is-outside" : "",
+                  isInRange ? "is-in-range" : "",
+                  isStart ? "is-start" : "",
+                  isEnd ? "is-end" : "",
+                  isToday ? "is-today" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                key={key}
+                onClick={() => chooseDate(key)}
+                type="button"
+              >
+                {date.getDate()}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="event-date-picker-actions">
+          <button className="button button--soft" onClick={onClose} type="button">
+            취소
+          </button>
+          <button
+            className="button button--primary"
+            onClick={() => onApply(draft)}
+            type="button"
+          >
+            적용
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function EventForm({
+  initialRange,
+  onSubmit,
+}: {
+  initialRange: DateRange;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const [range, setRange] = useState(initialRange);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [hasTime, setHasTime] = useState(false);
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("10:00");
+  const [color, setColor] = useState("");
+
+  function blurActiveInput() {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }
+
+  function toggleTime() {
+    blurActiveInput();
+    setHasTime((value) => !value);
+  }
+
+  return (
+    <>
+      <form
+        className="modal-form event-form"
+        id="event-form"
+        onSubmit={onSubmit}
+      >
+        <label className="field event-title-field">
+          <span>제목 *</span>
+          <input name="title" placeholder="일정 제목" required />
+        </label>
+
+        <input name="start_date" readOnly type="hidden" value={range.start} />
+        <input name="end_date" readOnly type="hidden" value={range.end} />
+        <input
+          name="start_time"
+          readOnly
+          type="hidden"
+          value={hasTime ? startTime : ""}
+        />
+        <input
+          name="end_time"
+          readOnly
+          type="hidden"
+          value={hasTime ? endTime : ""}
+        />
+        <input name="custom_color" readOnly type="hidden" value={color} />
+
+        <button
+          className="event-setting-row event-date-setting"
+          onClick={() => {
+            blurActiveInput();
+            setIsDatePickerOpen(true);
+          }}
+          type="button"
+        >
+          <span className="event-setting-icon" aria-hidden="true">
+            31
+          </span>
+          <span>
+            <small>날짜</small>
+            <strong>{formatEventDateSummary(range)}</strong>
+          </span>
+          <span className="event-setting-chevron" aria-hidden="true">
+            ›
+          </span>
+        </button>
+
+        <div className="event-time-section">
+          <button
+            aria-checked={hasTime}
+            className="event-setting-row"
+            onClick={toggleTime}
+            role="switch"
+            type="button"
+          >
+            <span className="event-setting-icon" aria-hidden="true">
+              ◷
+            </span>
+            <span>
+              <small>시간</small>
+              <strong>
+                {hasTime ? `${startTime} – ${endTime}` : "시간 설정"}
+              </strong>
+            </span>
+            <span
+              aria-hidden="true"
+              className={`event-time-switch${hasTime ? " is-on" : ""}`}
+            >
+              <span />
+            </span>
+          </button>
+
+          {hasTime ? (
+            <div className="event-time-fields">
+              <label className="field">
+                <span>시작</span>
+                <input
+                  onChange={(event) => {
+                    const nextStart = event.target.value;
+                    setStartTime(nextStart);
+                    if (
+                      range.start === range.end &&
+                      nextStart >= endTime
+                    ) {
+                      setEndTime(addOneHour(nextStart));
+                    }
+                  }}
+                  type="time"
+                  value={startTime}
+                />
+              </label>
+              <label className="field">
+                <span>종료</span>
+                <input
+                  min={range.start === range.end ? startTime : undefined}
+                  onChange={(event) => setEndTime(event.target.value)}
+                  type="time"
+                  value={endTime}
+                />
+              </label>
+            </div>
+          ) : null}
+        </div>
+
+        <fieldset className="event-color-fieldset">
+          <legend>컬러</legend>
+          <div className="event-color-options">
+            {EVENT_COLOR_OPTIONS.map((option) => (
+              <button
+                aria-label={option.name}
+                aria-pressed={color === option.value}
+                className={`event-color-button${
+                  option.value ? "" : " event-color-button--default"
+                }${color === option.value ? " is-selected" : ""}`}
+                key={option.name}
+                onClick={() => {
+                  blurActiveInput();
+                  setColor(option.value);
+                }}
+                style={
+                  option.value
+                    ? { backgroundColor: option.value }
+                    : undefined
+                }
+                title={option.name}
+                type="button"
+              >
+                {color === option.value ? <span>✓</span> : null}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        <button
+          className="button button--primary button--full event-submit"
+          type="submit"
+        >
+          일정 저장
+        </button>
+      </form>
+
+      {isDatePickerOpen ? (
+        <EventDateRangePicker
+          onApply={(nextRange) => {
+            setRange(nextRange);
+            setIsDatePickerOpen(false);
+          }}
+          onClose={() => setIsDatePickerOpen(false)}
+          value={range}
+        />
+      ) : null}
+    </>
+  );
+}
+
 function EmptyState({
   icon,
   title,
@@ -1043,7 +1462,10 @@ function CalendarView({
                       key={event.id}
                       style={
                         event.custom_color
-                          ? { backgroundColor: event.custom_color }
+                          ? {
+                              backgroundColor: event.custom_color,
+                              color: "#25302a",
+                            }
                           : undefined
                       }
                     >
@@ -1122,6 +1544,11 @@ function CalendarView({
                 ) : (
                   <span
                     className={`detail-dot detail-dot--${calendarEventColor(event)}`}
+                    style={
+                      event.custom_color
+                        ? { backgroundColor: event.custom_color }
+                        : undefined
+                    }
                   />
                 )}
                 <div className="detail-row-copy">
@@ -1129,7 +1556,9 @@ function CalendarView({
                   <p>
                     {event.is_all_day
                       ? "종일"
-                      : `${timeInSeoul(event.start_at)} 시작`}
+                      : event.end_at
+                        ? `${timeInSeoul(event.start_at)}–${timeInSeoul(event.end_at)}`
+                        : `${timeInSeoul(event.start_at)} 시작`}
                     {eventDateRange(event).start !==
                     eventDateRange(event).end
                       ? ` · ${formatKoreanDate(eventDateRange(event).start)}–${formatKoreanDate(eventDateRange(event).end)}`
@@ -3384,6 +3813,12 @@ export function OipApp() {
     const endDate = String(form.get("end_date") ?? startDate);
     const startTime = String(form.get("start_time") ?? "");
     const endTime = String(form.get("end_time") ?? "");
+    const requestedColor = String(form.get("custom_color") ?? "");
+    const customColor = EVENT_COLOR_OPTIONS.some(
+      (option) => option.value && option.value === requestedColor,
+    )
+      ? requestedColor
+      : null;
     const isShared = form.get("shared") === "on";
     const isPrivate = form.get("private") === "on";
     if (!title || !startDate || !endDate || endDate < startDate) return;
@@ -3401,7 +3836,7 @@ export function OipApp() {
       author_id: currentUser,
       event_type: "normal",
       color_mode: !isPrivate && !isShared ? "custom" : "default",
-      custom_color: null,
+      custom_color: customColor,
     };
     setEvents((items) => [...items, next]);
     setSelectedDate(startDate);
@@ -4071,46 +4506,7 @@ export function OipApp() {
           onClose={() => setModal(null)}
           title="일정 추가"
         >
-          <form className="modal-form" id="event-form" onSubmit={addEvent}>
-            <label className="field">
-              <span>제목 *</span>
-              <input autoFocus name="title" placeholder="일정 제목" required />
-            </label>
-            <div className="field-row event-date-grid">
-              <label className="field">
-                <span>시작 날짜 *</span>
-                <input
-                  defaultValue={eventRange.start}
-                  name="start_date"
-                  required
-                  type="date"
-                />
-              </label>
-              <label className="field">
-                <span>종료 날짜 *</span>
-                <input
-                  defaultValue={eventRange.end}
-                  min={eventRange.start}
-                  name="end_date"
-                  required
-                  type="date"
-                />
-              </label>
-            </div>
-            <div className="field-row event-time-grid">
-              <label className="field">
-                <span>시작 시간</span>
-                <input name="start_time" type="time" />
-              </label>
-              <label className="field">
-                <span>종료 시간</span>
-                <input name="end_time" type="time" />
-              </label>
-            </div>
-            <button className="button button--primary button--full" type="submit">
-              일정 저장
-            </button>
-          </form>
+          <EventForm initialRange={eventRange} onSubmit={addEvent} />
         </Modal>
       ) : null}
 
