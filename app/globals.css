@@ -937,13 +937,14 @@ p {
 }
 
 .calendar-day {
+  --calendar-day-inline-padding: 3px;
   position: relative;
   display: flex;
   min-width: 0;
   min-height: 88px;
   flex-direction: column;
   align-items: stretch;
-  padding: 5px 3px;
+  padding: 5px var(--calendar-day-inline-padding);
   border-right: 1px solid #e9ebee;
   border-bottom: 1px solid #e9ebee;
   background-color: white;
@@ -1026,6 +1027,7 @@ p {
 
 .holiday-label {
   overflow: hidden;
+  min-height: 0.6rem;
   margin: -1px 2px 3px;
   color: #c15c57;
   font-size: 0.49rem;
@@ -1035,28 +1037,37 @@ p {
   white-space: nowrap;
 }
 
+.holiday-label--empty {
+  visibility: hidden;
+}
+
 .day-events {
   display: grid;
+  min-height: 41px;
+  grid-template-rows: repeat(3, minmax(11px, auto)) auto;
   gap: 2px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .event-chip--range {
-  margin-inline: -3px;
+  position: relative;
+  z-index: 2;
+  margin-right: calc(-1px - var(--calendar-day-inline-padding));
+  margin-left: calc(-1 * var(--calendar-day-inline-padding));
   border-radius: 0;
 }
 
-.event-chip--range-start {
+.event-chip--segment-start {
   margin-left: 0;
   border-radius: 5px 0 0 5px;
 }
 
-.event-chip--range-end {
+.event-chip--segment-end {
   margin-right: 0;
   border-radius: 0 5px 5px 0;
 }
 
-.event-chip--range-start.event-chip--range-end {
+.event-chip--segment-start.event-chip--segment-end {
   margin-inline: 0;
   border-radius: 5px;
 }
@@ -1096,6 +1107,7 @@ p {
 }
 
 .more-events {
+  grid-row: 4;
   padding-left: 3px;
   color: var(--muted);
   font-size: 0.51rem;
@@ -3168,8 +3180,9 @@ p {
   }
 
   .calendar-day {
+    --calendar-day-inline-padding: 5px;
     min-height: 112px;
-    padding: 7px 5px;
+    padding: 7px var(--calendar-day-inline-padding);
   }
 
   .event-chip {

@@ -161,6 +161,46 @@ function eventCoversDate(event: CalendarEvent, date: string) {
   return date >= range.start && date <= range.end;
 }
 
+function calendarEventLaneKey(weekIndex: number, eventId: string) {
+  return `${weekIndex}:${eventId}`;
+}
+
+function buildCalendarEventLanes(events: CalendarEvent[], days: Date[]) {
+  const lanes = new Map<string, number>();
+
+  for (let weekIndex = 0; weekIndex < 6; weekIndex += 1) {
+    const weekStart = toDateKey(days[weekIndex * 7]);
+    const weekEnd = toDateKey(days[weekIndex * 7 + 6]);
+    const segments = events
+      .filter((event) => event.event_type !== "anniversary")
+      .map((event) => {
+        const range = eventDateRange(event);
+        return {
+          event,
+          start: range.start < weekStart ? weekStart : range.start,
+          end: range.end > weekEnd ? weekEnd : range.end,
+        };
+      })
+      .filter((segment) => segment.start <= segment.end)
+      .sort(
+        (left, right) =>
+          left.start.localeCompare(right.start) ||
+          right.end.localeCompare(left.end) ||
+          left.event.title.localeCompare(right.event.title, "ko"),
+      );
+    const laneEnds: string[] = [];
+
+    segments.forEach((segment) => {
+      let lane = laneEnds.findIndex((end) => end < segment.start);
+      if (lane === -1) lane = laneEnds.length;
+      laneEnds[lane] = segment.end;
+      lanes.set(calendarEventLaneKey(weekIndex, segment.event.id), lane);
+    });
+  }
+
+  return lanes;
+}
+
 function anniversaryEmoji(title: string) {
   if (title.includes("만난")) return "❤️";
   if (title.includes("결혼")) return "💍";
@@ -1196,16 +1236,25 @@ function CalendarView({
     }));
   }, [visibleMonth]);
 
-  const allEvents = [...events, ...systemEvents];
+  const allEvents = useMemo(
+    () => [...events, ...systemEvents],
+    [events, systemEvents],
+  );
   const year = visibleMonth.getFullYear();
   const month = visibleMonth.getMonth();
-  const firstWeekday = new Date(year, month, 1).getDay();
-  const firstCell = new Date(year, month, 1 - firstWeekday);
-  const days = Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(firstCell);
-    date.setDate(firstCell.getDate() + index);
-    return date;
-  });
+  const days = useMemo(() => {
+    const firstWeekday = new Date(year, month, 1).getDay();
+    const firstCell = new Date(year, month, 1 - firstWeekday, 12);
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(firstCell);
+      date.setDate(firstCell.getDate() + index);
+      return date;
+    });
+  }, [month, year]);
+  const eventLanes = useMemo(
+    () => buildCalendarEventLanes(allEvents, days),
+    [allEvents, days],
+  );
 
   const selectedEvents = allEvents.filter((event) =>
     eventCoversDate(event, selectedDate),
@@ -1366,13 +1415,30 @@ function CalendarView({
           onPointerMove={moveGesture}
           onPointerUp={finishGesture}
         >
-          {days.map((date) => {
+          {days.map((date, dayIndex) => {
             const key = toDateKey(date);
-            const dateEvents = allEvents.filter(
-              (event) =>
-                event.event_type !== "anniversary" &&
-                eventCoversDate(event, key),
-            );
+            const weekIndex = Math.floor(dayIndex / 7);
+            const dateEvents = allEvents
+              .filter(
+                (event) =>
+                  event.event_type !== "anniversary" &&
+                  eventCoversDate(event, key),
+              )
+              .map((event) => ({
+                event,
+                lane:
+                  eventLanes.get(
+                    calendarEventLaneKey(weekIndex, event.id),
+                  ) ?? 0,
+              }))
+              .sort(
+                (left, right) =>
+                  left.lane - right.lane ||
+                  left.event.start_at.localeCompare(right.event.start_at),
+              );
+            const hiddenEventCount = dateEvents.filter(
+              ({ lane }) => lane >= 3,
+            ).length;
             const dateAnniversaries = systemEvents.filter(
               (event) => eventCoversDate(event, key),
             );
@@ -1435,48 +1501,72 @@ function CalendarView({
                     </span>
                   ) : null}
                 </span>
-                {dateHolidays.length ? (
-                  <span className="holiday-label">
-                    {dateHolidays.map((holiday) => holiday.name).join(" · ")}
-                  </span>
-                ) : null}
+                <span
+                  aria-hidden={!dateHolidays.length}
+                  className={`holiday-label${
+                    dateHolidays.length ? "" : " holiday-label--empty"
+                  }`}
+                >
+                  {dateHolidays.length
+                    ? dateHolidays.map((holiday) => holiday.name).join(" · ")
+                    : "\u00a0"}
+                </span>
                 <span className="day-events">
-                  {dateEvents.slice(0, 3).map((event) => (
-                    <span
-                      className={[
-                        "event-chip",
-                        `event-chip--${calendarEventColor(event)}`,
-                        eventDateRange(event).start !==
-                        eventDateRange(event).end
-                          ? "event-chip--range"
-                          : "",
-                        eventDateRange(event).start === key
-                          ? "event-chip--range-start"
-                          : "",
-                        eventDateRange(event).end === key
-                          ? "event-chip--range-end"
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      key={event.id}
-                      style={
-                        event.custom_color
-                          ? {
-                              backgroundColor: event.custom_color,
-                              color: "#25302a",
-                            }
-                          : undefined
-                      }
-                    >
-                      {event.is_all_day
-                        ? ""
-                        : `${timeInSeoul(event.start_at)} `}
-                      {event.title}
-                    </span>
-                  ))}
-                  {dateEvents.length > 3 ? (
-                    <span className="more-events">+{dateEvents.length - 3}</span>
+                  {dateEvents
+                    .filter(({ lane }) => lane < 3)
+                    .map(({ event, lane }) => {
+                      const range = eventDateRange(event);
+                      const isRange = range.start !== range.end;
+                      const isSegmentStart =
+                        isRange &&
+                        (range.start === key || date.getDay() === 0);
+                      const isSegmentEnd =
+                        isRange && (range.end === key || date.getDay() === 6);
+                      const showTitle = !isRange || isSegmentStart;
+                      const showStartTime =
+                        showTitle &&
+                        !event.is_all_day &&
+                        range.start === key;
+
+                      return (
+                        <span
+                          className={[
+                            "event-chip",
+                            `event-chip--${calendarEventColor(event)}`,
+                            isRange ? "event-chip--range" : "",
+                            isSegmentStart
+                              ? "event-chip--segment-start"
+                              : "",
+                            isSegmentEnd ? "event-chip--segment-end" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          key={event.id}
+                          style={{
+                            gridRow: lane + 1,
+                            ...(event.custom_color
+                              ? {
+                                  backgroundColor: event.custom_color,
+                                  color: "#25302a",
+                                }
+                              : {}),
+                          }}
+                        >
+                          {showTitle ? (
+                            <>
+                              {showStartTime
+                                ? `${timeInSeoul(event.start_at)} `
+                                : ""}
+                              {event.title}
+                            </>
+                          ) : (
+                            "\u00a0"
+                          )}
+                        </span>
+                      );
+                    })}
+                  {hiddenEventCount ? (
+                    <span className="more-events">+{hiddenEventCount}</span>
                   ) : null}
                 </span>
               </button>
