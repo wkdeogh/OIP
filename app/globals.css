@@ -1029,7 +1029,7 @@ p {
 .event-chip {
   display: block;
   overflow: hidden;
-  margin-inline: calc(2px - var(--calendar-day-inline-padding));
+  margin-inline: calc(1px - var(--calendar-day-inline-padding));
   padding: 3px 4px;
   border-radius: 3px;
   color: #34413a;
@@ -1049,17 +1049,17 @@ p {
 }
 
 .event-chip.event-chip--segment-start {
-  margin-left: calc(2px - var(--calendar-day-inline-padding));
+  margin-left: calc(1px - var(--calendar-day-inline-padding));
   border-radius: 3px 0 0 3px;
 }
 
 .event-chip.event-chip--segment-end {
-  margin-right: calc(2px - var(--calendar-day-inline-padding));
+  margin-right: calc(1px - var(--calendar-day-inline-padding));
   border-radius: 0 3px 3px 0;
 }
 
 .event-chip.event-chip--segment-start.event-chip--segment-end {
-  margin-inline: calc(2px - var(--calendar-day-inline-padding));
+  margin-inline: calc(1px - var(--calendar-day-inline-padding));
   border-radius: 3px;
 }
 
