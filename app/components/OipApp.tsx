@@ -5137,10 +5137,15 @@ export function OipApp({
 
       <div className="app-main">
         <header className="app-header">
-          <div className="mobile-brand">
+          <button
+            aria-label="OIP 새로고침"
+            className="mobile-brand"
+            onClick={() => globalThis.location.reload()}
+            type="button"
+          >
             <CloverLogo />
             <strong>OIP</strong>
-          </div>
+          </button>
           <div>
             <h1>{activeTab.title}</h1>
           </div>

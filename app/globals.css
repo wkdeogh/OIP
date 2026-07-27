@@ -602,6 +602,9 @@ p {
   display: flex;
   align-items: center;
   gap: 7px;
+  padding: 0;
+  background: transparent;
+  color: inherit;
 }
 
 .mobile-brand .clover-logo {
@@ -753,6 +756,7 @@ p {
 
 .app-shell--calendar .mobile-nav {
   position: relative;
+  margin-bottom: 18px;
 }
 
 .demo-banner {
@@ -883,15 +887,15 @@ p {
 
 .data-loading-toolbar {
   display: flex;
-  min-height: 68px;
+  min-height: 44px;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 12px;
+  padding: 4px 12px;
 }
 
 .data-loading-toolbar span {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
 }
 
@@ -946,18 +950,29 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 12px;
+  padding: 4px 12px;
 }
 
 .calendar-toolbar .icon-button {
-  width: 40px;
-  height: 40px;
-  flex-basis: 40px;
+  width: 36px;
+  height: 36px;
+  flex-basis: 36px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #9aa1aa;
+  font-size: 1.75rem;
+  font-weight: 400;
+}
+
+.calendar-toolbar .icon-button:hover:not(:disabled) {
+  background: transparent;
+  color: #707983;
 }
 
 .month-title {
   display: grid;
-  min-height: 42px;
+  min-height: 36px;
   place-items: center;
   background: transparent;
 }
@@ -3343,6 +3358,17 @@ p {
 
 [data-theme="dark"] .calendar-weekdays {
   background: var(--surface-soft);
+}
+
+[data-theme="dark"] .calendar-toolbar .icon-button {
+  border: 0;
+  background: transparent;
+  color: #7e8995;
+}
+
+[data-theme="dark"] .calendar-toolbar .icon-button:hover:not(:disabled) {
+  background: transparent;
+  color: #aab3bd;
 }
 
 [data-theme="dark"] .calendar-day {
