@@ -56,14 +56,24 @@ type TripSection =
   | "trip_accommodations"
   | "trip_transportations"
   | "trip_foods"
-  | "trip_places";
-type TripDetailResource = Exclude<TripSection, "overview">;
+  | "trip_places"
+  | "trip_checklist"
+  | "trip_notepad";
+type TripDetailResource = Exclude<
+  TripSection,
+  "overview" | "trip_checklist" | "trip_notepad"
+>;
 type TripDetailItem =
   | TripFlight
   | TripAccommodation
   | TripTransportation
   | TripFood
   | TripPlace;
+type TripChecklistItem = {
+  id: string;
+  title: string;
+  is_checked: boolean;
+};
 
 const USER_META: Record<
   UserCode,
@@ -158,23 +168,83 @@ function inferredCountryCode(destination: string) {
   )?.[0];
 }
 
-const TRIP_COUNTRY_MEMO_PATTERN = /^\[\[country:([A-Z]{2})\]\]\n?/;
+const TRIP_COUNTRY_MEMO_PATTERN = /^\[\[country:([A-Z]{2})\]\]\n?/m;
+const TRIP_CHECKLIST_MEMO_PATTERN = /^\[\[checklist:([^\]]*)\]\]\n?/m;
 
 function tripCountryCode(trip: Trip) {
   return (
     trip.country_code ??
     trip.memo?.match(TRIP_COUNTRY_MEMO_PATTERN)?.[1] ??
-    inferredCountryCode(trip.destination)
+    inferredCountryCode(`${trip.title} ${trip.destination}`)
   );
 }
 
 function visibleTripMemo(memo?: string | null) {
-  return (memo ?? "").replace(TRIP_COUNTRY_MEMO_PATTERN, "").trim();
+  return (memo ?? "")
+    .replace(TRIP_COUNTRY_MEMO_PATTERN, "")
+    .replace(TRIP_CHECKLIST_MEMO_PATTERN, "")
+    .trim();
 }
 
-function memoWithCountryCode(memo: string | null | undefined, countryCode: string) {
-  const visibleMemo = visibleTripMemo(memo);
-  return `[[country:${countryCode}]]${visibleMemo ? `\n${visibleMemo}` : ""}`;
+function tripChecklistFromMemo(memo?: string | null): TripChecklistItem[] {
+  const encoded = memo?.match(TRIP_CHECKLIST_MEMO_PATTERN)?.[1];
+  if (!encoded) return [];
+  try {
+    const parsed = JSON.parse(decodeURIComponent(encoded)) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is TripChecklistItem =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof item.id === "string" &&
+        typeof item.title === "string" &&
+        typeof item.is_checked === "boolean",
+    );
+  } catch {
+    return [];
+  }
+}
+
+function composeTripMemo(
+  memo: string | null | undefined,
+  changes: {
+    countryCode?: string | null;
+    checklist?: TripChecklistItem[];
+    visibleMemo?: string;
+  },
+) {
+  const currentCountry = memo?.match(TRIP_COUNTRY_MEMO_PATTERN)?.[1] ?? null;
+  const countryCode =
+    changes.countryCode === undefined ? currentCountry : changes.countryCode;
+  const checklist =
+    changes.checklist === undefined ? tripChecklistFromMemo(memo) : changes.checklist;
+  const note =
+    changes.visibleMemo === undefined ? visibleTripMemo(memo) : changes.visibleMemo.trim();
+  const metadata = [
+    countryCode ? `[[country:${countryCode}]]` : "",
+    checklist.length
+      ? `[[checklist:${encodeURIComponent(JSON.stringify(checklist))}]]`
+      : "",
+  ].filter(Boolean);
+  return [...metadata, note].filter(Boolean).join("\n");
+}
+
+function memoWithCountryCode(
+  memo: string | null | undefined,
+  countryCode: string,
+) {
+  return composeTripMemo(memo, { countryCode });
+}
+
+function memoWithChecklist(
+  memo: string | null | undefined,
+  checklist: TripChecklistItem[],
+) {
+  return composeTripMemo(memo, { checklist });
+}
+
+function memoWithVisibleText(memo: string | null | undefined, text: string) {
+  return composeTripMemo(memo, { visibleMemo: text });
 }
 
 const DAY_BACKGROUND_OPTIONS = [
@@ -2593,6 +2663,8 @@ const TRIP_SECTION_LABELS: Array<[TripSection, string]> = [
   ["trip_transportations", "교통"],
   ["trip_foods", "먹을 것"],
   ["trip_places", "갈 곳"],
+  ["trip_checklist", "준비물"],
+  ["trip_notepad", "메모장"],
 ];
 
 function optionalFormValue(form: FormData, name: string) {
@@ -3281,7 +3353,6 @@ function TripListCard({
         type="button"
       >
         <span className="trip-copy">
-          <span className="trip-destination">{trip.destination}</span>
           <strong>{trip.title}</strong>
           <span className="trip-period">
             {isPast
@@ -3373,6 +3444,126 @@ function CountryPicker({
   );
 }
 
+function TripChecklistPanel({
+  items,
+  onAdd,
+  onDelete,
+  onToggle,
+}: {
+  items: TripChecklistItem[];
+  onAdd: (title: string) => void;
+  onDelete: (id: string) => void;
+  onToggle: (id: string) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const completed = items.filter((item) => item.is_checked).length;
+
+  return (
+    <div className="trip-checklist-panel">
+      <form
+        className="trip-checklist-add"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const value = title.trim();
+          if (!value) return;
+          onAdd(value);
+          setTitle("");
+        }}
+      >
+        <input
+          aria-label="준비물"
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="준비물 추가"
+          value={title}
+        />
+        <button className="button button--primary" type="submit">
+          추가
+        </button>
+      </form>
+      {items.length ? (
+        <>
+          <div className="trip-checklist-progress">
+            <span>
+              {completed} / {items.length}
+            </span>
+            <i>
+              <span
+                style={{
+                  width: `${Math.round((completed / items.length) * 100)}%`,
+                }}
+              />
+            </i>
+          </div>
+          <div className="trip-checklist-list">
+            {items.map((item) => (
+              <div
+                className={`trip-checklist-item${
+                  item.is_checked ? " is-complete" : ""
+                }`}
+                key={item.id}
+              >
+                <button
+                  aria-label={`${item.title} ${
+                    item.is_checked ? "체크 해제" : "체크"
+                  }`}
+                  aria-pressed={item.is_checked}
+                  className="travel-check"
+                  onClick={() => onToggle(item.id)}
+                  type="button"
+                >
+                  {item.is_checked ? "✓" : ""}
+                </button>
+                <strong>{item.title}</strong>
+                <button
+                  aria-label={`${item.title} 삭제`}
+                  className="icon-button icon-button--small"
+                  onClick={() => onDelete(item.id)}
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="trip-empty-copy">준비물이 없습니다.</p>
+      )}
+    </div>
+  );
+}
+
+function TripNotepad({
+  trip,
+  onSave,
+}: {
+  trip: Trip;
+  onSave: (memo: string) => void;
+}) {
+  const [memo, setMemo] = useState(() => visibleTripMemo(trip.memo));
+
+  return (
+    <form
+      className="trip-notepad"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave(memo);
+      }}
+    >
+      <textarea
+        aria-label="여행 메모"
+        onChange={(event) => setMemo(event.target.value)}
+        placeholder="자유롭게 적어두기"
+        rows={12}
+        value={memo}
+      />
+      <button className="button button--primary" type="submit">
+        메모 저장
+      </button>
+    </form>
+  );
+}
+
 function TravelView({
   trips,
   flights,
@@ -3386,6 +3577,8 @@ function TravelView({
   onDeleteTrip,
   onToggleVisited,
   onUpdateCountry,
+  onUpdateChecklist,
+  onUpdateMemo,
 }: {
   trips: Trip[];
   flights: TripFlight[];
@@ -3402,6 +3595,8 @@ function TravelView({
   onDeleteDetail: (resource: TripDetailResource, id: string) => void;
   onDeleteTrip: (trip: Trip) => void;
   onUpdateCountry: (trip: Trip, countryCode: string) => void;
+  onUpdateChecklist: (trip: Trip, items: TripChecklistItem[]) => void;
+  onUpdateMemo: (trip: Trip, memo: string) => void;
   onToggleVisited: (
     resource: "trip_foods" | "trip_places",
     id: string,
@@ -3427,7 +3622,7 @@ function TravelView({
   } | null>(null);
   const detail = trips.find((trip) => trip.id === selectedTrip);
   const countryTrip = trips.find((trip) => trip.id === countryPickerTrip);
-  const detailMemo = visibleTripMemo(detail?.memo);
+  const detailChecklist = tripChecklistFromMemo(detail?.memo);
 
   const detailFlights = flights.filter((item) => item.trip_id === detail?.id);
   const detailAccommodations = accommodations.filter(
@@ -3535,7 +3730,7 @@ function TravelView({
       {detail ? (
         <Modal
           className="trip-detail-modal"
-          description={`${detail.destination} · ${formatKoreanDate(
+          description={`${formatKoreanDate(
             detail.start_date,
             true,
           )} — ${formatKoreanDate(detail.end_date, true)}`}
@@ -3543,7 +3738,7 @@ function TravelView({
             setEditor(null);
             setSelectedTrip(null);
           }}
-          title={detail.title}
+          title={`${countryFlag(tripCountryCode(detail))} ${detail.title}`}
         >
           <div className="trip-section-tabs" role="tablist" aria-label="여행 상세">
             {TRIP_SECTION_LABELS.map(([id, label]) => (
@@ -3678,14 +3873,39 @@ function TravelView({
                 </button>
               </div>
 
-              {detailMemo ? (
-                <div className="trip-memo">
-                  <span>메모</span>
-                  <p>{detailMemo}</p>
-                  <small>{USER_META[detail.author_id].name}</small>
-                </div>
-              ) : null}
             </div>
+          ) : section === "trip_checklist" ? (
+            <TripChecklistPanel
+              items={detailChecklist}
+              onAdd={(title) =>
+                onUpdateChecklist(detail, [
+                  ...detailChecklist,
+                  { id: newId(), title, is_checked: false },
+                ])
+              }
+              onDelete={(id) =>
+                onUpdateChecklist(
+                  detail,
+                  detailChecklist.filter((item) => item.id !== id),
+                )
+              }
+              onToggle={(id) =>
+                onUpdateChecklist(
+                  detail,
+                  detailChecklist.map((item) =>
+                    item.id === id
+                      ? { ...item, is_checked: !item.is_checked }
+                      : item,
+                  ),
+                )
+              }
+            />
+          ) : section === "trip_notepad" ? (
+            <TripNotepad
+              key={detail.id}
+              onSave={(memo) => onUpdateMemo(detail, memo)}
+              trip={detail}
+            />
           ) : (
             <div className="trip-detail-section">
               <div className="trip-detail-section-head">
@@ -5270,17 +5490,16 @@ export function OipApp({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const title = String(form.get("title") ?? "").trim();
-    const destination = String(form.get("destination") ?? "").trim();
     const start = String(form.get("start") ?? "");
     const end = String(form.get("end") ?? "");
-    if (!title || !destination || !start || !end || end < start) return;
+    if (!title || !start || !end || end < start) return;
     const next: Trip = {
       id: newId(),
       title,
-      destination,
+      destination: title,
       start_date: start,
       end_date: end,
-      memo: String(form.get("memo") ?? ""),
+      memo: "",
       author_id: currentUser,
     };
     setTrips((items) => [...items, next]);
@@ -5289,7 +5508,9 @@ export function OipApp({
   }
 
   function updateTripCountry(item: Trip, countryCode: string) {
-    const cleanMemo = visibleTripMemo(item.memo);
+    const memoWithoutCountry = composeTripMemo(item.memo, {
+      countryCode: null,
+    });
     const fallbackMemo = memoWithCountryCode(item.memo, countryCode);
     setTrips((items) =>
       items.map((entry) =>
@@ -5299,14 +5520,16 @@ export function OipApp({
     void writeRecord(
       "PATCH",
       "trips",
-      { country_code: countryCode, memo: cleanMemo || null },
+      { country_code: countryCode, memo: memoWithoutCountry || null },
       item.id,
       true,
     ).then((savedToCountryColumn) => {
       if (savedToCountryColumn) {
         setTrips((items) =>
           items.map((entry) =>
-            entry.id === item.id ? { ...entry, memo: cleanMemo || null } : entry,
+            entry.id === item.id
+              ? { ...entry, memo: memoWithoutCountry || null }
+              : entry,
           ),
         );
         showToast("저장했어요.");
@@ -5332,6 +5555,48 @@ export function OipApp({
           );
         }
       });
+    });
+  }
+
+  function updateTripChecklist(item: Trip, checklist: TripChecklistItem[]) {
+    const nextMemo = memoWithChecklist(item.memo, checklist);
+    setTrips((items) =>
+      items.map((entry) =>
+        entry.id === item.id ? { ...entry, memo: nextMemo || null } : entry,
+      ),
+    );
+    void writeRecord(
+      "PATCH",
+      "trips",
+      { memo: nextMemo || null },
+      item.id,
+    ).then((saved) => {
+      if (!saved) {
+        setTrips((items) =>
+          items.map((entry) => (entry.id === item.id ? item : entry)),
+        );
+      }
+    });
+  }
+
+  function updateTripMemo(item: Trip, memo: string) {
+    const nextMemo = memoWithVisibleText(item.memo, memo);
+    setTrips((items) =>
+      items.map((entry) =>
+        entry.id === item.id ? { ...entry, memo: nextMemo || null } : entry,
+      ),
+    );
+    void writeRecord(
+      "PATCH",
+      "trips",
+      { memo: nextMemo || null },
+      item.id,
+    ).then((saved) => {
+      if (!saved) {
+        setTrips((items) =>
+          items.map((entry) => (entry.id === item.id ? item : entry)),
+        );
+      }
     });
   }
 
@@ -5760,7 +6025,9 @@ export function OipApp({
               onDeleteTrip={deleteTrip}
               onSaveDetail={saveTripDetail}
               onToggleVisited={toggleTripVisited}
+              onUpdateChecklist={updateTripChecklist}
               onUpdateCountry={updateTripCountry}
+              onUpdateMemo={updateTripMemo}
               places={tripPlaces}
               transportations={tripTransportations}
               trips={trips}
@@ -5924,7 +6191,6 @@ export function OipApp({
 
       {modal === "trip" ? (
         <Modal
-          description="여행 기간과 기본 정보를 먼저 등록해 주세요."
           onClose={() => setModal(null)}
           title="여행 추가"
         >
@@ -5932,10 +6198,6 @@ export function OipApp({
             <label className="field">
               <span>여행 제목 *</span>
               <input autoFocus name="title" placeholder="예: 가을 교토" required />
-            </label>
-            <label className="field">
-              <span>여행지 *</span>
-              <input name="destination" placeholder="도시 또는 지역" required />
             </label>
             <div className="field-row">
               <label className="field">
@@ -5947,10 +6209,6 @@ export function OipApp({
                 <input name="end" required type="date" />
               </label>
             </div>
-            <label className="field">
-              <span>메모</span>
-              <textarea name="memo" placeholder="함께 기억할 내용" rows={3} />
-            </label>
             <button className="button button--primary button--full" type="submit">
               여행 저장
             </button>

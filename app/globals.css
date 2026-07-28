@@ -2366,6 +2366,107 @@ p {
   text-align: center;
 }
 
+.trip-checklist-panel,
+.trip-notepad {
+  display: grid;
+  gap: 12px;
+}
+
+.trip-checklist-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.trip-checklist-add input,
+.trip-notepad textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: white;
+  color: var(--ink);
+}
+
+.trip-checklist-add input {
+  min-height: 42px;
+  padding: 8px 12px;
+}
+
+.trip-checklist-add .button {
+  min-height: 42px;
+  padding-inline: 16px;
+}
+
+.trip-checklist-progress {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.trip-checklist-progress > i {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--green-soft);
+}
+
+.trip-checklist-progress > i > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+  transition: width 180ms ease;
+}
+
+.trip-checklist-list {
+  display: grid;
+  gap: 7px;
+}
+
+.trip-checklist-item {
+  display: grid;
+  min-height: 52px;
+  grid-template-columns: 36px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.trip-checklist-item > strong {
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-checklist-item.is-complete {
+  opacity: 0.58;
+}
+
+.trip-checklist-item.is-complete > strong {
+  text-decoration: line-through;
+}
+
+.trip-notepad textarea {
+  min-height: 260px;
+  padding: 14px;
+  font-size: 0.8rem;
+  line-height: 1.65;
+  resize: vertical;
+}
+
+.trip-notepad .button {
+  min-width: 110px;
+  justify-self: end;
+}
+
 .country-picker-modal {
   width: min(100%, 620px);
 }
@@ -3547,6 +3648,7 @@ p {
 [data-theme="dark"] .trip-overview-row,
 [data-theme="dark"] .trip-overview-empty,
 [data-theme="dark"] .trip-overview-secondary button,
+[data-theme="dark"] .trip-checklist-item,
 [data-theme="dark"] .travel-detail-item,
 [data-theme="dark"] .travel-check,
 [data-theme="dark"] .country-search,
@@ -3593,6 +3695,8 @@ p {
 [data-theme="dark"] .candidate-form select,
 [data-theme="dark"] .inline-input input,
 [data-theme="dark"] .quick-form input,
+[data-theme="dark"] .trip-checklist-add input,
+[data-theme="dark"] .trip-notepad textarea,
 [data-theme="dark"] .check-field {
   border-color: var(--line);
   background: #202730;
