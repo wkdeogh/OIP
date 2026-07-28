@@ -2398,19 +2398,12 @@ function TodoView({
   return (
     <section className="feature-grid">
       <div className="card quick-form-card">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">빠른 추가</p>
-            <h2>할 일을 적어 주세요</h2>
-          </div>
-          <AuthorBadge user={currentUser} />
-        </div>
         <form className="quick-form" onSubmit={submit}>
           <label className="field field--grow">
             <span className="sr-only">할 일 제목</span>
             <input
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="예: 관리비 납부하기"
+              placeholder="할일 입력!"
               value={title}
             />
           </label>
@@ -2433,15 +2426,6 @@ function TodoView({
                 <option value="shared">공동</option>
                 <option value="private">개인</option>
               </select>
-            </label>
-            <label className="mini-field">
-              <span>마감일</span>
-              <input
-                min={toDateKey(new Date())}
-                onChange={(event) => setDueAt(event.target.value)}
-                type="date"
-                value={dueAt}
-              />
             </label>
           </div>
         </form>
@@ -2551,15 +2535,11 @@ function ShoppingView({
   return (
     <section className="feature-grid">
       <form className="card shopping-quick" onSubmit={submit}>
-        <div>
-          <p className="eyebrow">쇼핑목록</p>
-          <h2>무엇을 사야 하나요?</h2>
-        </div>
         <div className="inline-input">
           <input
             aria-label="쇼핑 품목"
             onChange={(event) => setName(event.target.value)}
-            placeholder="품목명만 입력해도 돼요"
+            placeholder="살거 입력!"
             value={name}
           />
           <button
@@ -2570,9 +2550,6 @@ function ShoppingView({
             추가
           </button>
         </div>
-        <p className="form-note">
-          {USER_META[currentUser].name} 이름으로 공동 목록에 추가됩니다.
-        </p>
       </form>
 
       <div className="card list-card">
@@ -3655,7 +3632,7 @@ function TravelView({
       <div>
         <div className="page-lead">
           <div>
-            <h2>여행</h2>
+            <h2>✈️</h2>
           </div>
           <button className="button button--primary" onClick={onAdd} type="button">
             + 여행 추가
@@ -4375,13 +4352,7 @@ function FridgeView({
     <section>
       <div className="page-lead">
         <div>
-          <p className="eyebrow">유통기한 먼저</p>
-          <h2>먹을 때를 놓치지 않게</h2>
-          <p>
-            {urgent.length
-              ? `3일 안에 확인할 아이템이 ${urgent.length}개 있어요.`
-              : "급하게 확인할 아이템이 없어요."}
-          </p>
+          <h2>🍰</h2>
         </div>
         <button className="button button--primary" onClick={onAdd} type="button">
           + 아이템 추가
@@ -4507,8 +4478,7 @@ function ParkingView({
           )}
         </div>
         <div className="parking-mark" aria-hidden="true">
-          P
-          <span>●</span>
+          🚙
         </div>
       </article>
 
