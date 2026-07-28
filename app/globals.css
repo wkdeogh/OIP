@@ -1862,6 +1862,7 @@ p {
 }
 
 .trip-card {
+  position: relative;
   display: grid;
   min-height: 112px;
   grid-template-columns: 82px minmax(0, 1fr);
@@ -1874,6 +1875,10 @@ p {
   box-shadow: var(--shadow-soft);
   text-align: left;
   animation: rise 360ms ease both;
+}
+
+.trip-card--menu-open {
+  z-index: 12;
 }
 
 .trip-card:hover,
@@ -1960,6 +1965,9 @@ p {
   background: transparent;
   color: var(--ink);
   text-align: left;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 .trip-copy {
@@ -1990,6 +1998,37 @@ p {
 .trip-card-chevron {
   color: var(--muted);
   font-size: 1.45rem;
+}
+
+.trip-card-menu {
+  position: absolute;
+  z-index: 14;
+  top: calc(100% - 12px);
+  right: 12px;
+  min-width: 116px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: white;
+  box-shadow: 0 12px 30px rgba(30, 43, 36, 0.2);
+  animation: modal-up 160ms ease both;
+}
+
+.trip-card-menu button {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 12px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--danger);
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-align: left;
+}
+
+.trip-card-menu button:hover,
+.trip-card-menu button:focus-visible {
+  background: rgba(199, 93, 88, 0.1);
 }
 
 .past-trips {
@@ -3503,6 +3542,7 @@ p {
 [data-theme="dark"] .icon-button,
 [data-theme="dark"] .theme-toggle-button,
 [data-theme="dark"] .trip-card,
+[data-theme="dark"] .trip-card-menu,
 [data-theme="dark"] .trip-memo,
 [data-theme="dark"] .trip-overview-row,
 [data-theme="dark"] .trip-overview-empty,

@@ -3158,6 +3158,9 @@ function TripListCard({
   index,
   onOpen,
   onChooseCountry,
+  isActionMenuOpen,
+  onOpenActionMenu,
+  onDelete,
 }: {
   trip: Trip;
   today: string;
@@ -3166,7 +3169,13 @@ function TripListCard({
   index?: number;
   onOpen: () => void;
   onChooseCountry: () => void;
+  isActionMenuOpen: boolean;
+  onOpenActionMenu: () => void;
+  onDelete: () => void;
 }) {
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressStart = useRef<{ x: number; y: number } | null>(null);
+  const longPressTriggered = useRef(false);
   const inProgress = trip.start_date <= today && trip.end_date >= today;
   const code = tripCountryCode(trip);
   const countryName = code ? koreanRegionNames.of(code) : null;
@@ -3178,15 +3187,60 @@ function TripListCard({
         ? `D-${daysUntil(trip.start_date)}`
         : "예정";
 
+  function clearLongPress() {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = null;
+    pressStart.current = null;
+  }
+
+  function startLongPress(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0) return;
+    longPressTriggered.current = false;
+    pressStart.current = { x: event.clientX, y: event.clientY };
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      onOpenActionMenu();
+    }, 560);
+  }
+
+  function moveLongPress(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!pressStart.current) return;
+    if (
+      Math.abs(event.clientX - pressStart.current.x) > 10 ||
+      Math.abs(event.clientY - pressStart.current.y) > 10
+    ) {
+      clearLongPress();
+    }
+  }
+
   return (
     <article
-      className={`trip-card${isSelected ? " trip-card--selected" : ""}`}
+      className={`trip-card${isSelected ? " trip-card--selected" : ""}${
+        isActionMenuOpen ? " trip-card--menu-open" : ""
+      }`}
       style={index === undefined ? undefined : { animationDelay: `${index * 50}ms` }}
     >
       <button
         aria-label={`${trip.title} 국기 설정${countryName ? `, 현재 ${countryName}` : ""}`}
         className={`trip-visual${isPast ? " trip-visual--past" : ""}`}
-        onClick={onChooseCountry}
+        onClick={(event) => {
+          if (longPressTriggered.current) {
+            event.preventDefault();
+            longPressTriggered.current = false;
+            return;
+          }
+          onChooseCountry();
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          clearLongPress();
+          onOpenActionMenu();
+        }}
+        onPointerCancel={clearLongPress}
+        onPointerDown={startLongPress}
+        onPointerLeave={clearLongPress}
+        onPointerMove={moveLongPress}
+        onPointerUp={clearLongPress}
         type="button"
       >
         <span aria-hidden="true" className="trip-country-flag">
@@ -3196,9 +3250,34 @@ function TripListCard({
         <i aria-hidden="true">변경</i>
       </button>
       <button
+        aria-expanded={isActionMenuOpen}
+        aria-haspopup="menu"
         aria-label={`${trip.title} 상세 열기`}
         className="trip-card-open"
-        onClick={onOpen}
+        onClick={(event) => {
+          if (longPressTriggered.current) {
+            event.preventDefault();
+            longPressTriggered.current = false;
+            return;
+          }
+          onOpen();
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          clearLongPress();
+          onOpenActionMenu();
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+            event.preventDefault();
+            onOpenActionMenu();
+          }
+        }}
+        onPointerCancel={clearLongPress}
+        onPointerDown={startLongPress}
+        onPointerLeave={clearLongPress}
+        onPointerMove={moveLongPress}
+        onPointerUp={clearLongPress}
         type="button"
       >
         <span className="trip-copy">
@@ -3216,6 +3295,18 @@ function TripListCard({
           ›
         </span>
       </button>
+      {isActionMenuOpen ? (
+        <div
+          aria-label={`${trip.title} 관리`}
+          className="trip-card-menu"
+          onPointerDown={(event) => event.stopPropagation()}
+          role="menu"
+        >
+          <button onClick={onDelete} role="menuitem" type="button">
+            여행 삭제
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -3328,6 +3419,7 @@ function TravelView({
   const [countryPickerTrip, setCountryPickerTrip] = useState<string | null>(
     null,
   );
+  const [actionMenuTrip, setActionMenuTrip] = useState<string | null>(null);
   const [section, setSection] = useState<TripSection>("overview");
   const [editor, setEditor] = useState<{
     resource: TripDetailResource;
@@ -3346,6 +3438,13 @@ function TravelView({
   );
   const detailFoods = foods.filter((item) => item.trip_id === detail?.id);
   const detailPlaces = places.filter((item) => item.trip_id === detail?.id);
+
+  useEffect(() => {
+    if (!actionMenuTrip) return;
+    const closeActionMenu = () => setActionMenuTrip(null);
+    window.addEventListener("pointerdown", closeActionMenu);
+    return () => window.removeEventListener("pointerdown", closeActionMenu);
+  }, [actionMenuTrip]);
 
   function deleteDetail(
     resource: TripDetailResource,
@@ -3373,13 +3472,20 @@ function TravelView({
             {upcoming.map((trip, index) => (
               <TripListCard
                 index={index}
+                isActionMenuOpen={actionMenuTrip === trip.id}
                 isSelected={selectedTrip === trip.id}
                 key={trip.id}
                 onChooseCountry={() => setCountryPickerTrip(trip.id)}
+                onDelete={() => {
+                  setActionMenuTrip(null);
+                  onDeleteTrip(trip);
+                }}
                 onOpen={() => {
+                  setActionMenuTrip(null);
                   setSelectedTrip(trip.id);
                   setSection("overview");
                 }}
+                onOpenActionMenu={() => setActionMenuTrip(trip.id)}
                 today={today}
                 trip={trip}
               />
@@ -3403,13 +3509,20 @@ function TravelView({
               {past.map((trip) => (
                 <TripListCard
                   isPast
+                  isActionMenuOpen={actionMenuTrip === trip.id}
                   isSelected={selectedTrip === trip.id}
                   key={trip.id}
                   onChooseCountry={() => setCountryPickerTrip(trip.id)}
+                  onDelete={() => {
+                    setActionMenuTrip(null);
+                    onDeleteTrip(trip);
+                  }}
                   onOpen={() => {
+                    setActionMenuTrip(null);
                     setSelectedTrip(trip.id);
                     setSection("overview");
                   }}
+                  onOpenActionMenu={() => setActionMenuTrip(trip.id)}
                   today={today}
                   trip={trip}
                 />
@@ -3426,15 +3539,6 @@ function TravelView({
             detail.start_date,
             true,
           )} — ${formatKoreanDate(detail.end_date, true)}`}
-          headerAction={
-            <button
-              className="text-button text-button--danger"
-              onClick={() => onDeleteTrip(detail)}
-              type="button"
-            >
-              여행 삭제
-            </button>
-          }
           onClose={() => {
             setEditor(null);
             setSelectedTrip(null);
