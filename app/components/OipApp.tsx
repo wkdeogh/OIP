@@ -18,7 +18,6 @@ import type {
   FridgeItem,
   ParkingRecord,
   PublicHoliday,
-  RandomCandidate,
   ShoppingItem,
   Todo,
   Trip,
@@ -36,8 +35,7 @@ type MainTab =
   | "tasks"
   | "travel"
   | "fridge"
-  | "parking"
-  | "etc";
+  | "parking";
 type TaskTab = "todo" | "shopping";
 type ThemeMode = "light" | "dark";
 type ModalName =
@@ -281,7 +279,6 @@ const MAIN_TABS: Array<{
   { id: "travel", label: "여행", icon: "✈", title: "여행" },
   { id: "fridge", label: "냉장고", icon: "□", title: "냉장고" },
   { id: "parking", label: "주차장", icon: "P", title: "주차장" },
-  { id: "etc", label: "ETC", icon: "✦", title: "생활 도구" },
 ];
 
 function toDateKey(date: Date) {
@@ -4183,191 +4180,6 @@ function ParkingView({
   );
 }
 
-function EtcView({
-  candidates,
-  currentUser,
-  onAdd,
-  onToggle,
-  onDelete,
-}: {
-  candidates: RandomCandidate[];
-  currentUser: UserCode;
-  onAdd: (type: RandomCandidate["type"], name: string, category: string) => void;
-  onToggle: (item: RandomCandidate) => void;
-  onDelete: (item: RandomCandidate) => void;
-}) {
-  const [type, setType] = useState<RandomCandidate["type"]>("destination");
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("국내");
-  const [result, setResult] = useState<string | null>(null);
-  const [choosing, setChoosing] = useState(false);
-  const filtered = candidates.filter((item) => item.type === type);
-  const active = filtered.filter((item) => item.is_active);
-
-  function choose() {
-    if (!active.length || choosing) return;
-    setChoosing(true);
-    setResult(null);
-    globalThis.setTimeout(() => {
-      const picked = active[Math.floor(Math.random() * active.length)];
-      setResult(picked.name);
-      setChoosing(false);
-    }, 720);
-  }
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!name.trim()) return;
-    onAdd(type, name.trim(), category);
-    setName("");
-  }
-
-  return (
-    <section>
-      <div className="etc-switch" role="tablist" aria-label="랜덤 선택 종류">
-        <button
-          aria-selected={type === "destination"}
-          className={type === "destination" ? "is-active" : ""}
-          onClick={() => {
-            setType("destination");
-            setCategory("국내");
-            setResult(null);
-          }}
-          role="tab"
-          type="button"
-        >
-          여행지 뽑기
-        </button>
-        <button
-          aria-selected={type === "meal"}
-          className={type === "meal" ? "is-active" : ""}
-          onClick={() => {
-            setType("meal");
-            setCategory("한식");
-            setResult(null);
-          }}
-          role="tab"
-          type="button"
-        >
-          오늘 뭐 먹지?
-        </button>
-      </div>
-
-      <div className="etc-layout">
-        <div className="random-card">
-          <p className="eyebrow">
-            {type === "destination" ? "다음 여행은 어디로?" : "오늘의 한 끼"}
-          </p>
-          <div className={`random-result${choosing ? " is-choosing" : ""}`}>
-            <span aria-hidden="true">{type === "destination" ? "✈" : "●"}</span>
-            <h2>
-              {choosing
-                ? "두근두근…"
-                : result ??
-                  (type === "destination"
-                    ? "여행지를 뽑아 볼까요?"
-                    : "메뉴를 뽑아 볼까요?")}
-            </h2>
-            <p>활성 후보 {active.length}개 중에서 선택합니다.</p>
-          </div>
-          <button
-            className="button button--random button--full"
-            disabled={!active.length || choosing}
-            onClick={choose}
-            type="button"
-          >
-            {result ? "다시 뽑기" : "랜덤 선택"}
-          </button>
-        </div>
-
-        <div className="card candidate-card">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">후보 관리</p>
-              <h2>{type === "destination" ? "여행지 후보" : "메뉴 후보"}</h2>
-            </div>
-            <AuthorBadge user={currentUser} />
-          </div>
-          <form className="candidate-form" onSubmit={submit}>
-            <input
-              aria-label={type === "destination" ? "여행지 이름" : "메뉴 이름"}
-              onChange={(event) => setName(event.target.value)}
-              placeholder={
-                type === "destination" ? "예: 삿포로" : "예: 쌀국수"
-              }
-              value={name}
-            />
-            <select
-              aria-label="분류"
-              onChange={(event) => setCategory(event.target.value)}
-              value={category}
-            >
-              {(type === "destination"
-                ? ["국내", "해외"]
-                : ["한식", "중식", "일식", "양식", "배달", "외식", "기타"]
-              ).map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-            <button
-              className="button button--primary"
-              disabled={!name.trim()}
-              type="submit"
-            >
-              추가
-            </button>
-          </form>
-          {filtered.length ? (
-            <div className="candidate-list">
-              {filtered.map((item) => (
-                <div
-                  className={`candidate-row${item.is_active ? "" : " is-disabled"}`}
-                  key={item.id}
-                >
-                  <button
-                    aria-label={`${item.name} ${
-                      item.is_active ? "후보에서 제외" : "후보에 포함"
-                    }`}
-                    aria-pressed={item.is_active}
-                    className="candidate-toggle"
-                    onClick={() => onToggle(item)}
-                    type="button"
-                  >
-                    <span />
-                  </button>
-                  <div>
-                    <strong>{item.name}</strong>
-                    <small>{item.category ?? "기타"}</small>
-                  </div>
-                  <button
-                    aria-label={`${item.name} 삭제`}
-                    className="icon-button icon-button--small"
-                    onClick={() => onDelete(item)}
-                    type="button"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              action="위에서 후보 추가"
-              icon="✦"
-              onAction={() =>
-                document
-                  .querySelector<HTMLInputElement>(".candidate-form input")
-                  ?.focus()
-              }
-              title="아직 후보가 없어요"
-            />
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function ThemeToggleButton({
   theme,
   onToggle,
@@ -4463,7 +4275,6 @@ export function OipApp({
   const [tripPlaces, setTripPlaces] = useState<TripPlace[]>([]);
   const [fridge, setFridge] = useState<FridgeItem[]>([]);
   const [parking, setParking] = useState<ParkingRecord | null>(null);
-  const [candidates, setCandidates] = useState<RandomCandidate[]>([]);
   const loadedHolidayYears = useRef(new Set<number>());
 
   const isCalendarPage =
@@ -4565,7 +4376,6 @@ export function OipApp({
       "trip_places",
       "fridge_items",
       "parking_records",
-      "random_candidates",
     ] as const;
 
     Promise.all(
@@ -4606,9 +4416,6 @@ export function OipApp({
         setParking(
           ((loaded.parking_records as ParkingRecord[]) ?? [])[0] ?? null,
         );
-        setCandidates(
-          (loaded.random_candidates as RandomCandidate[]) ?? [],
-        );
         setIsDataLoading(false);
       })
       .catch((error: Error) => {
@@ -4625,7 +4432,6 @@ export function OipApp({
         setTripPlaces([]);
         setFridge([]);
         setParking(null);
-        setCandidates([]);
         setIsDataLoading(false);
         showToast(
           error.message === "SUPABASE_NOT_CONFIGURED"
@@ -5396,43 +5202,6 @@ export function OipApp({
     });
   }
 
-  function addCandidate(
-    type: RandomCandidate["type"],
-    name: string,
-    category: string,
-  ) {
-    const next: RandomCandidate = {
-      id: newId(),
-      type,
-      name,
-      category,
-      is_active: true,
-      author_id: currentUser,
-    };
-    setCandidates((items) => [next, ...items]);
-    void writeRecord("POST", "random_candidates", next);
-  }
-
-  function toggleCandidate(item: RandomCandidate) {
-    const active = !item.is_active;
-    setCandidates((items) =>
-      items.map((entry) =>
-        entry.id === item.id ? { ...entry, is_active: active } : entry,
-      ),
-    );
-    void writeRecord(
-      "PATCH",
-      "random_candidates",
-      { is_active: active },
-      item.id,
-    );
-  }
-
-  function deleteCandidate(item: RandomCandidate) {
-    setCandidates((items) => items.filter((entry) => entry.id !== item.id));
-    void writeRecord("DELETE", "random_candidates", undefined, item.id);
-  }
-
   if (authState === "checking") return <LoadingScreen />;
   if (authState === "locked") {
     return (
@@ -5647,17 +5416,7 @@ export function OipApp({
               record={parking}
             />
           ) : null}
-
-          {mainTab === "etc" ? (
-            <EtcView
-              candidates={candidates}
-              currentUser={currentUser}
-              onAdd={addCandidate}
-              onDelete={deleteCandidate}
-              onToggle={toggleCandidate}
-            />
-          ) : null}
-            </>
+          </>
           )}
         </main>
 

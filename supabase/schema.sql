@@ -271,21 +271,6 @@ create table if not exists public.parking_records (
 create index if not exists parking_records_created_idx
   on public.parking_records (created_at desc);
 
-create table if not exists public.random_candidates (
-  id uuid primary key default gen_random_uuid(),
-  type text not null check (type in ('destination', 'meal')),
-  name text not null check (char_length(name) between 1 and 120),
-  category text,
-  is_active boolean not null default true,
-  memo text,
-  author_id text not null references public.profiles(code),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists random_candidates_type_active_idx
-  on public.random_candidates (type, is_active);
-
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -323,8 +308,7 @@ begin
     'trip_transportations',
     'trip_foods',
     'trip_places',
-    'fridge_items',
-    'random_candidates'
+    'fridge_items'
   ]
   loop
     execute format('drop trigger if exists set_updated_at on public.%I', table_name);
@@ -355,8 +339,7 @@ begin
     'trip_foods',
     'trip_places',
     'fridge_items',
-    'parking_records',
-    'random_candidates'
+    'parking_records'
   ]
   loop
     execute format('alter table public.%I enable row level security', table_name);

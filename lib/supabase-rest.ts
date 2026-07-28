@@ -193,18 +193,6 @@ export const resourceConfigs = {
     ],
     order: "created_at.desc",
   },
-  random_candidates: {
-    table: "random_candidates",
-    fields: [
-      "type",
-      "name",
-      "category",
-      "is_active",
-      "memo",
-      "author_id",
-    ],
-    order: "created_at.desc",
-  },
 } as const satisfies Record<string, ResourceConfig>;
 
 export type ResourceName = keyof typeof resourceConfigs;

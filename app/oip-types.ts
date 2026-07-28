@@ -170,12 +170,3 @@ export type ParkingRecord = {
   author_id: UserCode;
   created_at: string;
 };
-
-export type RandomCandidate = {
-  id: string;
-  type: "destination" | "meal";
-  name: string;
-  category?: string | null;
-  is_active: boolean;
-  author_id: UserCode;
-};
