@@ -76,6 +76,7 @@ export const resourceConfigs = {
     fields: [
       "title",
       "destination",
+      "country_code",
       "start_date",
       "end_date",
       "memo",

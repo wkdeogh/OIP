@@ -69,6 +69,7 @@ export type Trip = {
   id: string;
   title: string;
   destination: string;
+  country_code?: string | null;
   start_date: string;
   end_date: string;
   memo?: string | null;

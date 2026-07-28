@@ -127,6 +127,9 @@ create table if not exists public.trips (
   id uuid primary key default gen_random_uuid(),
   title text not null check (char_length(title) between 1 and 160),
   destination text not null,
+  country_code text check (
+    country_code is null or country_code ~ '^[A-Z]{2}$'
+  ),
   start_date date not null,
   end_date date not null,
   memo text,
@@ -135,6 +138,9 @@ create table if not exists public.trips (
   updated_at timestamptz not null default now(),
   check (end_date >= start_date)
 );
+
+alter table public.trips
+  add column if not exists country_code text;
 
 create index if not exists trips_dates_idx
   on public.trips (start_date, end_date);

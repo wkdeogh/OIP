@@ -85,6 +85,98 @@ const EVENT_COLOR_OPTIONS = [
   { name: "회색", value: "#AEB8C4" },
 ] as const;
 
+const COUNTRY_CODES = `
+AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ
+BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR
+CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR
+GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU
+ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ
+LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ
+MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF
+PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI
+SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR
+TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW
+`
+  .trim()
+  .split(/\s+/);
+
+const COUNTRY_SEARCH_ALIASES: Record<string, string> = {
+  CN: "중국 차이나",
+  DE: "독일 도이칠란트",
+  ES: "스페인 에스파냐",
+  GB: "영국 잉글랜드",
+  GR: "그리스",
+  IT: "이탈리아",
+  JP: "일본 재팬",
+  KR: "대한민국 한국 코리아",
+  NL: "네덜란드",
+  TH: "태국 타이",
+  TW: "대만 타이완",
+  US: "미국 아메리카",
+  VN: "베트남",
+};
+
+const koreanRegionNames = new Intl.DisplayNames(["ko-KR"], { type: "region" });
+const englishRegionNames = new Intl.DisplayNames(["en"], { type: "region" });
+
+const COUNTRIES = COUNTRY_CODES.map((code) => ({
+  code,
+  name: koreanRegionNames.of(code) ?? code,
+  englishName: englishRegionNames.of(code) ?? code,
+})).sort((left, right) => left.name.localeCompare(right.name, "ko"));
+
+function countryFlag(code?: string | null) {
+  if (!code || !/^[A-Z]{2}$/.test(code)) return "🌏";
+  return String.fromCodePoint(
+    ...code.split("").map((letter) => 127397 + letter.charCodeAt(0)),
+  );
+}
+
+function inferredCountryCode(destination: string) {
+  const normalized = destination.toLocaleLowerCase("ko-KR");
+  const destinationHints: Array<[string, string[]]> = [
+    ["KR", ["대한민국", "한국", "제주", "서울", "부산"]],
+    ["JP", ["일본", "교토", "도쿄", "오사카", "후쿠오카", "삿포로", "오키나와"]],
+    ["US", ["미국", "뉴욕", "하와이", "괌", "사이판", "로스앤젤레스"]],
+    ["CN", ["중국", "상하이", "베이징", "칭다오"]],
+    ["TW", ["대만", "타이베이", "가오슝"]],
+    ["TH", ["태국", "방콕", "치앙마이", "푸켓"]],
+    ["VN", ["베트남", "다낭", "하노이", "호치민", "나트랑"]],
+    ["FR", ["프랑스", "파리", "니스"]],
+    ["IT", ["이탈리아", "로마", "밀라노", "피렌체", "베네치아"]],
+    ["ES", ["스페인", "바르셀로나", "마드리드"]],
+    ["GB", ["영국", "런던"]],
+    ["DE", ["독일", "베를린", "뮌헨"]],
+    ["SG", ["싱가포르"]],
+    ["PH", ["필리핀", "세부", "보라카이", "마닐라"]],
+    ["ID", ["인도네시아", "발리"]],
+    ["AU", ["호주", "시드니", "멜버른"]],
+    ["CA", ["캐나다", "밴쿠버", "토론토"]],
+  ];
+  return destinationHints.find(([, hints]) =>
+    hints.some((hint) => normalized.includes(hint.toLocaleLowerCase("ko-KR"))),
+  )?.[0];
+}
+
+const TRIP_COUNTRY_MEMO_PATTERN = /^\[\[country:([A-Z]{2})\]\]\n?/;
+
+function tripCountryCode(trip: Trip) {
+  return (
+    trip.country_code ??
+    trip.memo?.match(TRIP_COUNTRY_MEMO_PATTERN)?.[1] ??
+    inferredCountryCode(trip.destination)
+  );
+}
+
+function visibleTripMemo(memo?: string | null) {
+  return (memo ?? "").replace(TRIP_COUNTRY_MEMO_PATTERN, "").trim();
+}
+
+function memoWithCountryCode(memo: string | null | undefined, countryCode: string) {
+  const visibleMemo = visibleTripMemo(memo);
+  return `[[country:${countryCode}]]${visibleMemo ? `\n${visibleMemo}` : ""}`;
+}
+
 const DAY_BACKGROUND_OPTIONS = [
   { name: "기본", value: "" },
   { name: "노랑", value: "#F3D96B" },
@@ -459,6 +551,7 @@ const seedTrips: Trip[] = [
     id: "trip-kyoto",
     title: "늦여름 교토",
     destination: "일본 교토",
+    country_code: "JP",
     start_date: addDays(27),
     end_date: addDays(30),
     memo: "오랜만에 천천히 걷는 여행",
@@ -468,6 +561,7 @@ const seedTrips: Trip[] = [
     id: "trip-jeju",
     title: "제주 봄 여행",
     destination: "제주",
+    country_code: "KR",
     start_date: addDays(-92),
     end_date: addDays(-89),
     memo: "동쪽 해안 드라이브",
@@ -3056,6 +3150,138 @@ function TravelDetailFields({
   );
 }
 
+function TripListCard({
+  trip,
+  today,
+  isPast = false,
+  isSelected,
+  index,
+  onOpen,
+  onChooseCountry,
+}: {
+  trip: Trip;
+  today: string;
+  isPast?: boolean;
+  isSelected: boolean;
+  index?: number;
+  onOpen: () => void;
+  onChooseCountry: () => void;
+}) {
+  const inProgress = trip.start_date <= today && trip.end_date >= today;
+  const code = tripCountryCode(trip);
+  const countryName = code ? koreanRegionNames.of(code) : null;
+  const status = isPast
+    ? "지난 여행"
+    : inProgress
+      ? "여행 중"
+      : daysUntil(trip.start_date) >= 0
+        ? `D-${daysUntil(trip.start_date)}`
+        : "예정";
+
+  return (
+    <article
+      className={`trip-card${isSelected ? " trip-card--selected" : ""}`}
+      style={index === undefined ? undefined : { animationDelay: `${index * 50}ms` }}
+    >
+      <button
+        aria-label={`${trip.title} 국기 설정${countryName ? `, 현재 ${countryName}` : ""}`}
+        className={`trip-visual${isPast ? " trip-visual--past" : ""}`}
+        onClick={onChooseCountry}
+        type="button"
+      >
+        <span aria-hidden="true" className="trip-country-flag">
+          {countryFlag(code)}
+        </span>
+        <small>{status}</small>
+        <i aria-hidden="true">변경</i>
+      </button>
+      <button
+        aria-label={`${trip.title} 상세 열기`}
+        className="trip-card-open"
+        onClick={onOpen}
+        type="button"
+      >
+        <span className="trip-copy">
+          <span className="trip-destination">{trip.destination}</span>
+          <strong>{trip.title}</strong>
+          <span className="trip-period">
+            {isPast
+              ? `${formatKoreanDate(trip.end_date)} 종료`
+              : `${formatKoreanDate(trip.start_date)} — ${formatKoreanDate(
+                  trip.end_date,
+                )}`}
+          </span>
+        </span>
+        <span aria-hidden="true" className="trip-card-chevron">
+          ›
+        </span>
+      </button>
+    </article>
+  );
+}
+
+function CountryPicker({
+  trip,
+  onClose,
+  onSelect,
+}: {
+  trip: Trip;
+  onClose: () => void;
+  onSelect: (code: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const selectedCode = tripCountryCode(trip) ?? null;
+  const filteredCountries = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("ko-KR");
+    if (!normalized) return COUNTRIES;
+    return COUNTRIES.filter((country) =>
+      [
+        country.name,
+        country.englishName,
+        country.code,
+        COUNTRY_SEARCH_ALIASES[country.code] ?? "",
+      ].some((value) => value.toLocaleLowerCase("ko-KR").includes(normalized)),
+    );
+  }, [query]);
+
+  return (
+    <Modal className="country-picker-modal" onClose={onClose} title="국기 선택">
+      <label className="country-search">
+        <span aria-hidden="true">⌕</span>
+        <input
+          autoFocus
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="나라 이름 검색"
+          type="search"
+          value={query}
+        />
+      </label>
+      {filteredCountries.length ? (
+        <div className="country-list" role="list">
+          {filteredCountries.map((country) => (
+            <button
+              aria-pressed={selectedCode === country.code}
+              className="country-option"
+              key={country.code}
+              onClick={() => onSelect(country.code)}
+              type="button"
+            >
+              <span aria-hidden="true">{countryFlag(country.code)}</span>
+              <strong>{country.name}</strong>
+              <small>{country.code}</small>
+              <i aria-hidden="true">
+                {selectedCode === country.code ? "✓" : ""}
+              </i>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="country-empty">검색 결과가 없습니다.</p>
+      )}
+    </Modal>
+  );
+}
+
 function TravelView({
   trips,
   flights,
@@ -3068,6 +3294,7 @@ function TravelView({
   onDeleteDetail,
   onDeleteTrip,
   onToggleVisited,
+  onUpdateCountry,
 }: {
   trips: Trip[];
   flights: TripFlight[];
@@ -3083,6 +3310,7 @@ function TravelView({
   ) => void;
   onDeleteDetail: (resource: TripDetailResource, id: string) => void;
   onDeleteTrip: (trip: Trip) => void;
+  onUpdateCountry: (trip: Trip, countryCode: string) => void;
   onToggleVisited: (
     resource: "trip_foods" | "trip_places",
     id: string,
@@ -3096,18 +3324,18 @@ function TravelView({
   const past = [...trips]
     .filter((trip) => trip.end_date < today)
     .sort((a, b) => b.end_date.localeCompare(a.end_date));
-  const [selectedTrip, setSelectedTrip] = useState<string | null>(
-    upcoming[0]?.id ?? trips[0]?.id ?? null,
+  const [selectedTrip, setSelectedTrip] = useState<string | null>(null);
+  const [countryPickerTrip, setCountryPickerTrip] = useState<string | null>(
+    null,
   );
   const [section, setSection] = useState<TripSection>("overview");
   const [editor, setEditor] = useState<{
     resource: TripDetailResource;
     item?: TripDetailItem;
   } | null>(null);
-  const effectiveSelectedTrip = trips.some((trip) => trip.id === selectedTrip)
-    ? selectedTrip
-    : (upcoming[0]?.id ?? trips[0]?.id ?? null);
-  const detail = trips.find((trip) => trip.id === effectiveSelectedTrip);
+  const detail = trips.find((trip) => trip.id === selectedTrip);
+  const countryTrip = trips.find((trip) => trip.id === countryPickerTrip);
+  const detailMemo = visibleTripMemo(detail?.memo);
 
   const detailFlights = flights.filter((item) => item.trip_id === detail?.id);
   const detailAccommodations = accommodations.filter(
@@ -3142,42 +3370,20 @@ function TravelView({
 
         {upcoming.length ? (
           <div className="trip-list">
-            {upcoming.map((trip, index) => {
-              const inProgress =
-                trip.start_date <= today && trip.end_date >= today;
-              return (
-                <button
-                  className={`trip-card${effectiveSelectedTrip === trip.id ? " trip-card--selected" : ""}`}
-                  key={trip.id}
-                  onClick={() => {
-                    setSelectedTrip(trip.id);
-                    setSection("overview");
-                  }}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                  type="button"
-                >
-                  <div className="trip-visual">
-                    <span>{trip.destination.includes("일본") ? "日本" : "여행"}</span>
-                    <small>
-                      {inProgress
-                        ? "여행 중"
-                        : daysUntil(trip.start_date) >= 0
-                          ? `D-${daysUntil(trip.start_date)}`
-                          : "예정"}
-                    </small>
-                  </div>
-                  <div className="trip-copy">
-                    <p>{trip.destination}</p>
-                    <h3>{trip.title}</h3>
-                    <span>
-                      {formatKoreanDate(trip.start_date)} —{" "}
-                      {formatKoreanDate(trip.end_date)}
-                    </span>
-                  </div>
-                  <span aria-hidden="true">›</span>
-                </button>
-              );
-            })}
+            {upcoming.map((trip, index) => (
+              <TripListCard
+                index={index}
+                isSelected={selectedTrip === trip.id}
+                key={trip.id}
+                onChooseCountry={() => setCountryPickerTrip(trip.id)}
+                onOpen={() => {
+                  setSelectedTrip(trip.id);
+                  setSection("overview");
+                }}
+                today={today}
+                trip={trip}
+              />
+            ))}
           </div>
         ) : (
           <div className="card">
@@ -3195,25 +3401,18 @@ function TravelView({
             <summary>지난 여행 {past.length}개</summary>
             <div className="trip-list trip-list--past">
               {past.map((trip) => (
-                <button
-                  className={`trip-card${effectiveSelectedTrip === trip.id ? " trip-card--selected" : ""}`}
+                <TripListCard
+                  isPast
+                  isSelected={selectedTrip === trip.id}
                   key={trip.id}
-                  onClick={() => {
+                  onChooseCountry={() => setCountryPickerTrip(trip.id)}
+                  onOpen={() => {
                     setSelectedTrip(trip.id);
                     setSection("overview");
                   }}
-                  type="button"
-                >
-                  <div className="trip-visual trip-visual--past">
-                    <span>기록</span>
-                  </div>
-                  <div className="trip-copy">
-                    <p>{trip.destination}</p>
-                    <h3>{trip.title}</h3>
-                    <span>{formatKoreanDate(trip.end_date)} 종료</span>
-                  </div>
-                  <span aria-hidden="true">›</span>
-                </button>
+                  today={today}
+                  trip={trip}
+                />
               ))}
             </div>
           </details>
@@ -3221,9 +3420,13 @@ function TravelView({
       </div>
 
       {detail ? (
-        <aside className="card trip-detail-card">
-          <div className="trip-detail-title-row">
-            <h2>{detail.title}</h2>
+        <Modal
+          className="trip-detail-modal"
+          description={`${detail.destination} · ${formatKoreanDate(
+            detail.start_date,
+            true,
+          )} — ${formatKoreanDate(detail.end_date, true)}`}
+          headerAction={
             <button
               className="text-button text-button--danger"
               onClick={() => onDeleteTrip(detail)}
@@ -3231,11 +3434,13 @@ function TravelView({
             >
               여행 삭제
             </button>
-          </div>
-          <p className="trip-detail-period">
-            {detail.destination} · {formatKoreanDate(detail.start_date, true)} —{" "}
-            {formatKoreanDate(detail.end_date, true)}
-          </p>
+          }
+          onClose={() => {
+            setEditor(null);
+            setSelectedTrip(null);
+          }}
+          title={detail.title}
+        >
           <div className="trip-section-tabs" role="tablist" aria-label="여행 상세">
             {TRIP_SECTION_LABELS.map(([id, label]) => (
               <button
@@ -3253,27 +3458,129 @@ function TravelView({
 
           {section === "overview" ? (
             <div className="trip-overview">
-              <div className="trip-overview-counts">
-                <span>
-                  <strong>{detailFlights.length}</strong> 비행기
-                </span>
-                <span>
-                  <strong>{detailAccommodations.length}</strong> 숙소
-                </span>
-                <span>
-                  <strong>
-                    {detailTransportations.length +
-                      detailFoods.length +
-                      detailPlaces.length}
-                  </strong>{" "}
-                  기타 항목
-                </span>
+              <div className="trip-overview-summaries">
+                <section className="trip-overview-summary">
+                  <button
+                    className="trip-overview-summary-head"
+                    onClick={() => setSection("trip_flights")}
+                    type="button"
+                  >
+                    <span aria-hidden="true">✈</span>
+                    <strong>항공</strong>
+                    <small>{detailFlights.length || "미등록"} ›</small>
+                  </button>
+                  {detailFlights.length ? (
+                    <div className="trip-overview-rows">
+                      {detailFlights.map((item) => (
+                        <div className="trip-overview-row" key={item.id}>
+                          <small>
+                            {item.direction}
+                            {item.airline ? ` · ${item.airline}` : ""}
+                            {item.flight_number ? ` ${item.flight_number}` : ""}
+                          </small>
+                          <span className="trip-overview-route">
+                            <strong>
+                              {item.departure_airport ||
+                                item.departure_city ||
+                                "출발지 미정"}
+                            </strong>
+                            <i aria-hidden="true">→</i>
+                            <strong>
+                              {item.arrival_airport ||
+                                item.arrival_city ||
+                                "도착지 미정"}
+                            </strong>
+                          </span>
+                          {item.departure_at || item.arrival_at ? (
+                            <span className="trip-overview-time">
+                              {item.departure_at
+                                ? formatDateTime(item.departure_at)
+                                : "시간 미정"}
+                              {" → "}
+                              {item.arrival_at
+                                ? formatDateTime(item.arrival_at)
+                                : "시간 미정"}
+                            </span>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <button
+                      className="trip-overview-empty"
+                      onClick={() => setSection("trip_flights")}
+                      type="button"
+                    >
+                      + 항공편
+                    </button>
+                  )}
+                </section>
+
+                <section className="trip-overview-summary">
+                  <button
+                    className="trip-overview-summary-head"
+                    onClick={() => setSection("trip_accommodations")}
+                    type="button"
+                  >
+                    <span aria-hidden="true">⌂</span>
+                    <strong>숙소</strong>
+                    <small>{detailAccommodations.length || "미등록"} ›</small>
+                  </button>
+                  {detailAccommodations.length ? (
+                    <div className="trip-overview-rows">
+                      {detailAccommodations.map((item) => (
+                        <div className="trip-overview-row" key={item.id}>
+                          <strong>{item.name}</strong>
+                          {item.check_in_at || item.check_out_at ? (
+                            <span className="trip-overview-time">
+                              {item.check_in_at
+                                ? formatDateTime(item.check_in_at)
+                                : "체크인 미정"}
+                              {" → "}
+                              {item.check_out_at
+                                ? formatDateTime(item.check_out_at)
+                                : "체크아웃 미정"}
+                            </span>
+                          ) : item.address ? (
+                            <span className="trip-overview-time">{item.address}</span>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <button
+                      className="trip-overview-empty"
+                      onClick={() => setSection("trip_accommodations")}
+                      type="button"
+                    >
+                      + 숙소
+                    </button>
+                  )}
+                </section>
               </div>
-              <div className="trip-memo">
-                <span>메모</span>
-                <p>{detail.memo || "등록된 메모가 없습니다."}</p>
-                <small>{USER_META[detail.author_id].name} 작성</small>
+
+              <div className="trip-overview-secondary">
+                <button
+                  onClick={() => setSection("trip_transportations")}
+                  type="button"
+                >
+                  교통 <strong>{detailTransportations.length}</strong>
+                </button>
+                <button onClick={() => setSection("trip_foods")} type="button">
+                  먹을 것 <strong>{detailFoods.length}</strong>
+                </button>
+                <button onClick={() => setSection("trip_places")} type="button">
+                  갈 곳 <strong>{detailPlaces.length}</strong>
+                </button>
               </div>
+
+              {detailMemo ? (
+                <div className="trip-memo">
+                  <span>메모</span>
+                  <p>{detailMemo}</p>
+                  <small>{USER_META[detail.author_id].name}</small>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="trip-detail-section">
@@ -3697,7 +4004,7 @@ function TravelView({
               )}
             </div>
           )}
-        </aside>
+        </Modal>
       ) : null}
 
       {detail && editor ? (
@@ -3707,6 +4014,17 @@ function TravelView({
           onSubmit={onSaveDetail}
           resource={editor.resource}
           trip={detail}
+        />
+      ) : null}
+
+      {countryTrip ? (
+        <CountryPicker
+          onClose={() => setCountryPickerTrip(null)}
+          onSelect={(countryCode) => {
+            onUpdateCountry(countryTrip, countryCode);
+            setCountryPickerTrip(null);
+          }}
+          trip={countryTrip}
         />
       ) : null}
     </section>
@@ -4866,6 +5184,53 @@ export function OipApp({
     void writeRecord("POST", "trips", next);
   }
 
+  function updateTripCountry(item: Trip, countryCode: string) {
+    const cleanMemo = visibleTripMemo(item.memo);
+    const fallbackMemo = memoWithCountryCode(item.memo, countryCode);
+    setTrips((items) =>
+      items.map((entry) =>
+        entry.id === item.id ? { ...entry, country_code: countryCode } : entry,
+      ),
+    );
+    void writeRecord(
+      "PATCH",
+      "trips",
+      { country_code: countryCode, memo: cleanMemo || null },
+      item.id,
+      true,
+    ).then((savedToCountryColumn) => {
+      if (savedToCountryColumn) {
+        setTrips((items) =>
+          items.map((entry) =>
+            entry.id === item.id ? { ...entry, memo: cleanMemo || null } : entry,
+          ),
+        );
+        showToast("저장했어요.");
+        return;
+      }
+
+      setTrips((items) =>
+        items.map((entry) =>
+          entry.id === item.id
+            ? { ...entry, country_code: countryCode, memo: fallbackMemo }
+            : entry,
+        ),
+      );
+      void writeRecord(
+        "PATCH",
+        "trips",
+        { memo: fallbackMemo },
+        item.id,
+      ).then((savedToMemo) => {
+        if (!savedToMemo) {
+          setTrips((items) =>
+            items.map((entry) => (entry.id === item.id ? item : entry)),
+          );
+        }
+      });
+    });
+  }
+
   function saveTripDetail(
     resource: TripDetailResource,
     payload: Record<string, unknown>,
@@ -5291,6 +5656,7 @@ export function OipApp({
               onDeleteTrip={deleteTrip}
               onSaveDetail={saveTripDetail}
               onToggleVisited={toggleTripVisited}
+              onUpdateCountry={updateTripCountry}
               places={tripPlaces}
               transportations={tripTransportations}
               trips={trips}
