@@ -2759,9 +2759,6 @@ function TripDetailForm({
         ...base,
         name,
         category: String(form.get("category") ?? "관광"),
-        location: optionalFormValue(form, "location"),
-        link: optionalFormValue(form, "link"),
-        desired_date: optionalFormValue(form, "desired_date"),
         is_visited: place?.is_visited ?? false,
         memo: optionalFormValue(form, "memo"),
       };
@@ -3029,31 +3026,6 @@ function TripDetailForm({
                   <option>체험</option>
                   <option>기타</option>
                 </select>
-              </label>
-            </div>
-            <label className="field">
-              <span>위치</span>
-              <input defaultValue={place?.location ?? ""} name="location" />
-            </label>
-            <div className="field-row">
-              <label className="field">
-                <span>방문 희망일</span>
-                <input
-                  max={trip.end_date}
-                  min={trip.start_date}
-                  defaultValue={place?.desired_date ?? ""}
-                  name="desired_date"
-                  type="date"
-                />
-              </label>
-              <label className="field">
-                <span>링크</span>
-                <input
-                  defaultValue={place?.link ?? ""}
-                  inputMode="url"
-                  name="link"
-                  type="url"
-                />
               </label>
             </div>
           </>
@@ -4112,10 +4084,6 @@ function TravelView({
                               value: item.link ? "링크 열기" : null,
                               href: item.link,
                             },
-                            {
-                              label: "방문 여부",
-                              value: item.is_visited ? "완료" : "미완료",
-                            },
                             { label: "메모", value: item.memo },
                           ]}
                         />
@@ -4180,22 +4148,6 @@ function TravelView({
                       </div>
                       <TravelDetailFields
                         fields={[
-                          { label: "위치", value: item.location },
-                          {
-                            label: "방문 희망일",
-                            value: item.desired_date
-                              ? formatKoreanDate(item.desired_date, true)
-                              : null,
-                          },
-                          {
-                            label: "링크",
-                            value: item.link ? "링크 열기" : null,
-                            href: item.link,
-                          },
-                          {
-                            label: "방문 여부",
-                            value: item.is_visited ? "완료" : "미완료",
-                          },
                           { label: "메모", value: item.memo },
                         ]}
                       />
