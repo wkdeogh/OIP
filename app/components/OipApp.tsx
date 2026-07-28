@@ -510,228 +510,6 @@ function expiryLabel(value: string) {
   return `${Math.abs(days)}일 지남`;
 }
 
-const seedEvents: CalendarEvent[] = [
-  {
-    id: "event-health",
-    title: "건강검진",
-    start_at: `${addDays(2)}T09:30:00+09:00`,
-    is_all_day: false,
-    visibility: "shared",
-    author_id: "daeho",
-    event_type: "normal",
-    color_mode: "custom",
-  },
-  {
-    id: "event-dinner",
-    title: "저녁 약속",
-    start_at: `${addDays(4)}T18:30:00+09:00`,
-    is_all_day: false,
-    visibility: "shared",
-    author_id: "sanghee",
-    event_type: "normal",
-  },
-  {
-    id: "event-family",
-    title: "가족 모임",
-    start_at: `${addDays(7)}T12:00:00+09:00`,
-    is_all_day: true,
-    visibility: "shared",
-    author_id: "daeho",
-    event_type: "normal",
-  },
-];
-
-const seedDaysOff: DayOff[] = [
-  {
-    id: "off-daeho",
-    date: addDays(5),
-    owner_id: "daeho",
-    day_off_type: "연차",
-  },
-  {
-    id: "off-sanghee",
-    date: addDays(5),
-    owner_id: "sanghee",
-    day_off_type: "해피프라이데이",
-  },
-];
-
-const seedTodos: Todo[] = [
-  {
-    id: "todo-1",
-    title: "자동차 보험 갱신 확인",
-    memo: "주말 전에 비교하기",
-    due_at: addDays(3),
-    is_completed: false,
-    visibility: "shared",
-    author_id: "daeho",
-  },
-  {
-    id: "todo-2",
-    title: "여행용 보조배터리 챙기기",
-    due_at: addDays(9),
-    is_completed: false,
-    visibility: "shared",
-    author_id: "sanghee",
-  },
-  {
-    id: "todo-3",
-    title: "택배 반품",
-    is_completed: true,
-    completed_at: new Date().toISOString(),
-    visibility: "private",
-    author_id: "daeho",
-  },
-];
-
-const seedShopping: ShoppingItem[] = [
-  {
-    id: "shopping-1",
-    name: "우유",
-    quantity: 2,
-    unit: "개",
-    category: "식품",
-    is_purchased: false,
-    added_by: "sanghee",
-  },
-  {
-    id: "shopping-2",
-    name: "세탁세제",
-    quantity: 1,
-    unit: "통",
-    category: "생활용품",
-    is_purchased: false,
-    added_by: "daeho",
-  },
-  {
-    id: "shopping-3",
-    name: "달걀",
-    quantity: 1,
-    unit: "판",
-    category: "식품",
-    is_purchased: true,
-    added_by: "sanghee",
-    purchased_by: "daeho",
-    purchased_at: new Date().toISOString(),
-  },
-];
-
-const seedTrips: Trip[] = [
-  {
-    id: "trip-kyoto",
-    title: "늦여름 교토",
-    destination: "일본 교토",
-    country_code: "JP",
-    start_date: addDays(27),
-    end_date: addDays(30),
-    memo: "오랜만에 천천히 걷는 여행",
-    author_id: "sanghee",
-  },
-  {
-    id: "trip-jeju",
-    title: "제주 봄 여행",
-    destination: "제주",
-    country_code: "KR",
-    start_date: addDays(-92),
-    end_date: addDays(-89),
-    memo: "동쪽 해안 드라이브",
-    author_id: "daeho",
-  },
-];
-
-const seedFridge: FridgeItem[] = [
-  {
-    id: "fridge-1",
-    name: "그릭요거트",
-    quantity: 2,
-    unit: "개",
-    expiration_date: addDays(1),
-    storage_type: "냉장",
-    category: "유제품",
-    author_id: "sanghee",
-  },
-  {
-    id: "fridge-2",
-    name: "두부",
-    quantity: 1,
-    unit: "모",
-    expiration_date: addDays(3),
-    storage_type: "냉장",
-    category: "식재료",
-    author_id: "daeho",
-  },
-  {
-    id: "fridge-3",
-    name: "냉동 만두",
-    quantity: 1,
-    unit: "봉",
-    expiration_date: addDays(42),
-    storage_type: "냉동",
-    category: "간편식",
-    author_id: "daeho",
-  },
-];
-
-const seedParking: ParkingRecord = {
-  id: "parking-1",
-  floor: "B5",
-  pillar_letter: "C",
-  pillar_number: 4,
-  author_id: "daeho",
-  created_at: new Date(Date.now() - 52 * 60 * 1000).toISOString(),
-};
-
-const seedCandidates: RandomCandidate[] = [
-  {
-    id: "candidate-1",
-    type: "destination",
-    name: "강릉",
-    category: "국내",
-    is_active: true,
-    author_id: "daeho",
-  },
-  {
-    id: "candidate-2",
-    type: "destination",
-    name: "타이베이",
-    category: "해외",
-    is_active: true,
-    author_id: "sanghee",
-  },
-  {
-    id: "candidate-3",
-    type: "destination",
-    name: "통영",
-    category: "국내",
-    is_active: true,
-    author_id: "sanghee",
-  },
-  {
-    id: "candidate-4",
-    type: "meal",
-    name: "김치찌개",
-    category: "한식",
-    is_active: true,
-    author_id: "daeho",
-  },
-  {
-    id: "candidate-5",
-    type: "meal",
-    name: "초밥",
-    category: "일식",
-    is_active: true,
-    author_id: "sanghee",
-  },
-  {
-    id: "candidate-6",
-    type: "meal",
-    name: "마라탕",
-    category: "중식",
-    is_active: true,
-    author_id: "daeho",
-  },
-];
-
 function CloverLogo({ large = false }: { large?: boolean }) {
   return (
     <span
@@ -4664,7 +4442,6 @@ export function OipApp({
   const [editingFridge, setEditingFridge] = useState<FridgeItem | null>(null);
   const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
   const [toast, setToast] = useState<string | null>(null);
-  const [demoMode, setDemoMode] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [daysOff, setDaysOff] = useState<DayOff[]>([]);
@@ -4832,29 +4609,29 @@ export function OipApp({
         setCandidates(
           (loaded.random_candidates as RandomCandidate[]) ?? [],
         );
-        setDemoMode(false);
         setIsDataLoading(false);
       })
       .catch((error: Error) => {
         if (!active) return;
-        setEvents(seedEvents);
-        setDaysOff(seedDaysOff);
-        setTodos(seedTodos);
-        setShopping(seedShopping);
-        setTrips(seedTrips);
+        setEvents([]);
+        setDaysOff([]);
+        setTodos([]);
+        setShopping([]);
+        setTrips([]);
         setTripFlights([]);
         setTripAccommodations([]);
         setTripTransportations([]);
         setTripFoods([]);
         setTripPlaces([]);
-        setFridge(seedFridge);
-        setParking(seedParking);
-        setCandidates(seedCandidates);
-        setDemoMode(true);
+        setFridge([]);
+        setParking(null);
+        setCandidates([]);
         setIsDataLoading(false);
-        if (error.message !== "SUPABASE_NOT_CONFIGURED") {
-          showToast("데이터를 불러오지 못해 미리보기로 열었어요.");
-        }
+        showToast(
+          error.message === "SUPABASE_NOT_CONFIGURED"
+            ? "데이터 연결이 필요합니다."
+            : "데이터를 불러오지 못했어요.",
+        );
       });
 
     return () => {
@@ -4932,9 +4709,8 @@ export function OipApp({
           code?: string;
         };
         if (error.code === "SUPABASE_NOT_CONFIGURED") {
-          setDemoMode(true);
-          if (!quiet) showToast("미리보기 데이터에 반영했어요.");
-          return true;
+          if (!quiet) showToast("데이터 연결이 필요합니다.");
+          return false;
         }
         throw new Error("WRITE_FAILED");
       }
@@ -4951,7 +4727,6 @@ export function OipApp({
   function chooseUser(user: UserCode) {
     localStorage.setItem("oip.currentUser", user);
     setIsDataLoading(true);
-    setDemoMode(false);
     setCurrentUser(user);
     setAuthState("ready");
   }
@@ -5667,7 +5442,6 @@ export function OipApp({
           const stored = localStorage.getItem("oip.currentUser");
           if (stored === "daeho" || stored === "sanghee") {
             setIsDataLoading(true);
-            setDemoMode(false);
             setCurrentUser(stored);
             setAuthState("ready");
           } else {
@@ -5751,13 +5525,6 @@ export function OipApp({
             </button>
           </div>
         </header>
-
-        {demoMode ? (
-          <div className="demo-banner" role="status">
-            <span>미리보기</span>
-            Supabase 연결 전이라 변경 내용은 새로고침하면 초기화됩니다.
-          </div>
-        ) : null}
 
         <main
           className={`content${

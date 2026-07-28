@@ -719,7 +719,6 @@ p {
 }
 
 .app-shell--calendar .app-header,
-.app-shell--calendar .demo-banner,
 .app-shell--calendar .mobile-nav,
 .app-shell--calendar .content--calendar > .sub-tabs {
   flex: 0 0 auto;
@@ -759,28 +758,6 @@ p {
 
 .app-shell--calendar .mobile-nav {
   position: relative;
-}
-
-.demo-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 7px 14px;
-  background: #fff5dd;
-  color: #765e30;
-  font-size: 0.74rem;
-  text-align: center;
-}
-
-.demo-banner span {
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: #ebc976;
-  color: #553e13;
-  font-size: 0.64rem;
-  font-weight: 900;
 }
 
 .mobile-nav {
@@ -3737,16 +3714,6 @@ p {
   color: #f0bac1;
 }
 
-[data-theme="dark"] .demo-banner {
-  background: #312a18;
-  color: #e8cf87;
-}
-
-[data-theme="dark"] .demo-banner span {
-  background: #5d4b1e;
-  color: #f4dda0;
-}
-
 [data-theme="dark"] .calendar-weekdays {
   background: var(--surface-soft);
 }
@@ -4112,11 +4079,6 @@ p {
 
   .content--calendar .sub-tabs {
     margin-inline: 30px;
-  }
-
-  .demo-banner {
-    justify-content: flex-start;
-    padding-left: 30px;
   }
 
   .sub-tabs,
