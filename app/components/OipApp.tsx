@@ -2735,17 +2735,8 @@ function TripDetailForm({
       if (!title) return;
       payload = {
         ...base,
-        transport_type: String(form.get("transport_type") ?? "기차"),
+        transport_type: transportation?.transport_type ?? "기타",
         title,
-        departure_location: optionalFormValue(form, "departure_location"),
-        departure_at: toSeoulTimestamp(
-          String(form.get("departure_at") ?? ""),
-        ),
-        arrival_location: optionalFormValue(form, "arrival_location"),
-        arrival_at: toSeoulTimestamp(String(form.get("arrival_at") ?? "")),
-        reservation_info: optionalFormValue(form, "reservation_info"),
-        price: priceFormValue(form),
-        link: optionalFormValue(form, "link"),
         memo: optionalFormValue(form, "memo"),
       };
     } else if (resource === "trip_foods") {
@@ -2959,82 +2950,15 @@ function TripDetailForm({
             </div>
           </>
         ) : resource === "trip_transportations" ? (
-          <>
-            <div className="field-row">
-              <label className="field">
-                <span>교통수단</span>
-                <select
-                  defaultValue={transportation?.transport_type ?? "기차"}
-                  name="transport_type"
-                >
-                  {["기차", "버스", "렌터카", "택시", "선박", "기타"].map(
-                    (option) => (
-                      <option key={option}>{option}</option>
-                    ),
-                  )}
-                </select>
-              </label>
-              <label className="field">
-                <span>제목 *</span>
-                <input
-                  autoFocus
-                  defaultValue={transportation?.title ?? ""}
-                  name="title"
-                  required
-                />
-              </label>
-            </div>
-            <div className="field-row">
-              <label className="field">
-                <span>출발 위치</span>
-                <input
-                  defaultValue={transportation?.departure_location ?? ""}
-                  name="departure_location"
-                />
-              </label>
-              <label className="field">
-                <span>도착 위치</span>
-                <input
-                  defaultValue={transportation?.arrival_location ?? ""}
-                  name="arrival_location"
-                />
-              </label>
-            </div>
-            <div className="field-row">
-              <label className="field">
-                <span>출발 일시</span>
-                <input
-                  defaultValue={toDateTimeInput(transportation?.departure_at)}
-                  name="departure_at"
-                  type="datetime-local"
-                />
-              </label>
-              <label className="field">
-                <span>도착 일시</span>
-                <input
-                  defaultValue={toDateTimeInput(transportation?.arrival_at)}
-                  name="arrival_at"
-                  type="datetime-local"
-                />
-              </label>
-            </div>
-            <label className="field">
-              <span>예약 정보</span>
-              <input
-                defaultValue={transportation?.reservation_info ?? ""}
-                name="reservation_info"
-              />
-            </label>
-            <label className="field">
-              <span>링크</span>
-              <input
-                defaultValue={transportation?.link ?? ""}
-                inputMode="url"
-                name="link"
-                type="url"
-              />
-            </label>
-          </>
+          <label className="field">
+            <span>제목 *</span>
+            <input
+              autoFocus
+              defaultValue={transportation?.title ?? ""}
+              name="title"
+              required
+            />
+          </label>
         ) : resource === "trip_foods" ? (
           <>
             <div className="field-row">
@@ -3135,7 +3059,9 @@ function TripDetailForm({
           </>
         )}
 
-        {resource !== "trip_foods" && resource !== "trip_places" ? (
+        {resource !== "trip_foods" &&
+        resource !== "trip_places" &&
+        resource !== "trip_transportations" ? (
           <label className="field">
             <span>가격</span>
             <input
@@ -3149,7 +3075,16 @@ function TripDetailForm({
         ) : null}
         <label className="field">
           <span>메모</span>
-          <textarea defaultValue={item?.memo ?? ""} name="memo" rows={3} />
+          <textarea
+            defaultValue={item?.memo ?? ""}
+            name="memo"
+            placeholder={
+              resource === "trip_transportations"
+                ? "시간, 위치, 예약 정보 등을 자유롭게 입력"
+                : undefined
+            }
+            rows={resource === "trip_transportations" ? 8 : 3}
+          />
         </label>
         <button className="button button--primary button--full" type="submit">
           저장
@@ -4073,7 +4008,6 @@ function TravelView({
                         <div className="travel-detail-item-head">
                           <span className="travel-detail-icon">↔</span>
                           <div className="travel-detail-summary">
-                            <small>{item.transport_type}</small>
                             <strong>{item.title}</strong>
                           </div>
                           <div className="travel-detail-actions">
@@ -4106,41 +4040,9 @@ function TravelView({
                             </button>
                           </div>
                         </div>
-                        <TravelDetailFields
-                          fields={[
-                            {
-                              label: "출발 위치",
-                              value: item.departure_location,
-                            },
-                            {
-                              label: "출발 일시",
-                              value: item.departure_at
-                                ? formatDateTime(item.departure_at)
-                                : null,
-                            },
-                            {
-                              label: "도착 위치",
-                              value: item.arrival_location,
-                            },
-                            {
-                              label: "도착 일시",
-                              value: item.arrival_at
-                                ? formatDateTime(item.arrival_at)
-                                : null,
-                            },
-                            {
-                              label: "예약 정보",
-                              value: item.reservation_info,
-                            },
-                            { label: "가격", value: formatPrice(item.price) },
-                            {
-                              label: "링크",
-                              value: item.link ? "링크 열기" : null,
-                              href: item.link,
-                            },
-                            { label: "메모", value: item.memo },
-                          ]}
-                        />
+                        {item.memo ? (
+                          <p className="transportation-memo">{item.memo}</p>
+                        ) : null}
                       </article>
                     ))}
                   </div>

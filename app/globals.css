@@ -2293,6 +2293,16 @@ p {
   gap: 4px;
 }
 
+.transportation-memo {
+  margin: 10px 0 0 45px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 .travel-detail-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
