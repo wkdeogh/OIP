@@ -3234,10 +3234,9 @@ p {
 
 .event-color-picker-options > button {
   display: grid;
-  min-height: 86px;
+  min-height: 70px;
   place-items: center;
-  gap: 8px;
-  padding: 10px 6px;
+  padding: 8px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--surface-soft);
@@ -3251,18 +3250,14 @@ p {
 
 .event-color-picker-swatch {
   display: grid;
-  width: 68px;
-  height: 38px;
+  width: 100%;
+  height: 54px;
   place-items: center;
   border-radius: 5px;
   color: #34413a;
   font-size: 0.7rem;
   font-weight: 800;
   box-shadow: inset 0 0 0 1px rgba(37, 48, 42, 0.08);
-}
-
-.event-color-picker-options strong {
-  font-size: 0.7rem;
 }
 
 .event-submit {

@@ -486,7 +486,7 @@ function eventChipTextColor(backgroundColor: string) {
   });
   const luminance =
     channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
-  return luminance < 0.235 ? "#f8fbf9" : "#25302a";
+  return luminance < 0.4 ? "#ffffff" : "#25302a";
 }
 
 function newId() {
@@ -1095,9 +1095,8 @@ function EventColorPicker({
                     color: previewTextColor,
                   }}
                 >
-                  일정
+                  {option.name}
                 </span>
-                <strong>{option.name}</strong>
               </button>
             );
           })}
