@@ -12,6 +12,12 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { SYSTEM_ANNIVERSARIES } from "@/lib/calendar-reminders";
+import {
+  clearOipDataCache,
+  readOipDataCache,
+  type OipDataSnapshot,
+  writeOipDataCache,
+} from "@/lib/client-data-cache";
 import type {
   CalendarDayBackground,
   CalendarEvent,
@@ -4320,6 +4326,7 @@ export function OipApp({
   const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
   const [toast, setToast] = useState<string | null>(null);
   const [pushStatus, setPushStatus] = useState<PushStatus>("checking");
+  const [cacheReadyUser, setCacheReadyUser] = useState<UserCode | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [daysOff, setDaysOff] = useState<DayOff[]>([]);
@@ -4344,6 +4351,41 @@ export function OipApp({
   const loadedHolidayYears = useRef(new Set<number>());
   const pushRegistrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const vapidPublicKeyRef = useRef("");
+
+  const currentDataSnapshot = useMemo<OipDataSnapshot>(
+    () => ({
+      events,
+      daysOff,
+      dayBackgrounds,
+      holidays,
+      todos,
+      shopping,
+      trips,
+      tripFlights,
+      tripAccommodations,
+      tripTransportations,
+      tripFoods,
+      tripPlaces,
+      fridge,
+      parking,
+    }),
+    [
+      events,
+      daysOff,
+      dayBackgrounds,
+      holidays,
+      todos,
+      shopping,
+      trips,
+      tripFlights,
+      tripAccommodations,
+      tripTransportations,
+      tripFoods,
+      tripPlaces,
+      fridge,
+      parking,
+    ],
+  );
 
   const isCalendarPage =
     authState === "ready" && mainTab === "schedule";
@@ -4400,6 +4442,23 @@ export function OipApp({
   const showToast = useCallback((message: string) => {
     setToast(message);
     globalThis.setTimeout(() => setToast(null), 2600);
+  }, []);
+
+  const applyDataSnapshot = useCallback((data: OipDataSnapshot) => {
+    setEvents(data.events ?? []);
+    setDaysOff(data.daysOff ?? []);
+    setDayBackgrounds(data.dayBackgrounds ?? []);
+    setHolidays(data.holidays ?? []);
+    setTodos(data.todos ?? []);
+    setShopping(data.shopping ?? []);
+    setTrips(data.trips ?? []);
+    setTripFlights(data.tripFlights ?? []);
+    setTripAccommodations(data.tripAccommodations ?? []);
+    setTripTransportations(data.tripTransportations ?? []);
+    setTripFoods(data.tripFoods ?? []);
+    setTripPlaces(data.tripPlaces ?? []);
+    setFridge(data.fridge ?? []);
+    setParking(data.parking ?? null);
   }, []);
 
   const savePushSubscription = useCallback(
@@ -4582,6 +4641,7 @@ export function OipApp({
       .then((data: { authenticated?: boolean }) => {
         if (!active) return;
         if (!data.authenticated) {
+          void clearOipDataCache().catch(() => undefined);
           setAuthState("locked");
           return;
         }
@@ -4619,24 +4679,39 @@ export function OipApp({
       "parking_records",
     ] as const;
 
-    Promise.all(
-      resources.map(async (resource) => {
-        const response = await fetch(
-          `/api/records?resource=${resource}&user=${currentUser}`,
-        );
-        if (!response.ok) {
-          const error = (await response.json().catch(() => ({}))) as {
-            code?: string;
-          };
-          if (error.code === "SUPABASE_NOT_CONFIGURED") {
-            throw new Error("SUPABASE_NOT_CONFIGURED");
-          }
-          throw new Error("LOAD_FAILED");
+    async function loadData() {
+      let restoredFromCache = false;
+      try {
+        const cached = await readOipDataCache(currentUser);
+        if (!active) return;
+        if (cached) {
+          applyDataSnapshot(cached.data);
+          restoredFromCache = true;
+          setCacheReadyUser(currentUser);
+          setIsDataLoading(false);
         }
-        return [resource, await response.json()] as const;
-      }),
-    )
-      .then((entries) => {
+      } catch {
+        // IndexedDB may be unavailable in private browsing or restricted modes.
+      }
+
+      try {
+        const entries = await Promise.all(
+          resources.map(async (resource) => {
+            const response = await fetch(
+              `/api/records?resource=${resource}&user=${currentUser}`,
+            );
+            if (!response.ok) {
+              const error = (await response.json().catch(() => ({}))) as {
+                code?: string;
+              };
+              if (error.code === "SUPABASE_NOT_CONFIGURED") {
+                throw new Error("SUPABASE_NOT_CONFIGURED");
+              }
+              throw new Error("LOAD_FAILED");
+            }
+            return [resource, await response.json()] as const;
+          }),
+        );
         if (!active) return;
         const loaded = Object.fromEntries(entries) as Record<string, unknown>;
         setEvents((loaded.calendar_events as CalendarEvent[]) ?? []);
@@ -4657,59 +4732,66 @@ export function OipApp({
         setParking(
           ((loaded.parking_records as ParkingRecord[]) ?? [])[0] ?? null,
         );
+        setCacheReadyUser(currentUser);
         setIsDataLoading(false);
-      })
-      .catch((error: Error) => {
+      } catch (error) {
         if (!active) return;
-        setEvents([]);
-        setDaysOff([]);
-        setTodos([]);
-        setShopping([]);
-        setTrips([]);
-        setTripFlights([]);
-        setTripAccommodations([]);
-        setTripTransportations([]);
-        setTripFoods([]);
-        setTripPlaces([]);
-        setFridge([]);
-        setParking(null);
-        setIsDataLoading(false);
+        if (!restoredFromCache) {
+          setEvents([]);
+          setDaysOff([]);
+          setTodos([]);
+          setShopping([]);
+          setTrips([]);
+          setTripFlights([]);
+          setTripAccommodations([]);
+          setTripTransportations([]);
+          setTripFoods([]);
+          setTripPlaces([]);
+          setFridge([]);
+          setParking(null);
+          setIsDataLoading(false);
+        }
         showToast(
-          error.message === "SUPABASE_NOT_CONFIGURED"
+          error instanceof Error &&
+            error.message === "SUPABASE_NOT_CONFIGURED"
             ? "데이터 연결이 필요합니다."
-            : "데이터를 불러오지 못했어요.",
+            : restoredFromCache
+              ? "저장된 데이터를 표시 중이에요. 최신 데이터는 나중에 다시 확인할게요."
+              : "데이터를 불러오지 못했어요.",
         );
-      });
+      }
+    }
+
+    void loadData();
 
     return () => {
       active = false;
     };
-  }, [authState, currentUser, showToast]);
+  }, [applyDataSnapshot, authState, currentUser, showToast]);
 
   useEffect(() => {
-    if (authState !== "ready") return;
+    if (authState !== "ready" || cacheReadyUser !== currentUser) return;
     let active = true;
     fetch(
       `/api/records?resource=calendar_day_backgrounds&user=${currentUser}`,
     )
       .then(async (response) => {
-        if (!response.ok) return [];
+        if (!response.ok) throw new Error("BACKGROUND_LOAD_FAILED");
         return (await response.json()) as CalendarDayBackground[];
       })
       .then((items) => {
         if (active) setDayBackgrounds(items);
       })
-      .catch(() => {
-        if (active) setDayBackgrounds([]);
-      });
+      .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [authState, currentUser]);
+  }, [authState, cacheReadyUser, currentUser]);
 
   useEffect(() => {
     if (
       authState !== "ready" ||
+      cacheReadyUser !== currentUser ||
       loadedHolidayYears.current.has(holidayYear)
     ) {
       return;
@@ -4734,7 +4816,29 @@ export function OipApp({
         loadedHolidayYears.current.delete(holidayYear);
         showToast("공휴일을 불러오지 못했습니다.");
       });
-  }, [authState, holidayYear, showToast]);
+  }, [authState, cacheReadyUser, currentUser, holidayYear, showToast]);
+
+  useEffect(() => {
+    if (
+      authState !== "ready" ||
+      cacheReadyUser !== currentUser ||
+      isDataLoading
+    ) {
+      return;
+    }
+    const timer = globalThis.setTimeout(() => {
+      void writeOipDataCache(currentUser, currentDataSnapshot).catch(
+        () => undefined,
+      );
+    }, 200);
+    return () => globalThis.clearTimeout(timer);
+  }, [
+    authState,
+    cacheReadyUser,
+    currentDataSnapshot,
+    currentUser,
+    isDataLoading,
+  ]);
 
   async function writeRecord(
     method: "POST" | "PATCH" | "DELETE",
@@ -4773,6 +4877,8 @@ export function OipApp({
 
   function chooseUser(user: UserCode) {
     localStorage.setItem("oip.currentUser", user);
+    loadedHolidayYears.current.clear();
+    setCacheReadyUser(null);
     setIsDataLoading(true);
     setCurrentUser(user);
     setAuthState("ready");
@@ -4780,6 +4886,7 @@ export function OipApp({
 
   async function signOutDevice() {
     await removeDevicePushSubscription().catch(() => undefined);
+    await clearOipDataCache().catch(() => undefined);
     await fetch("/api/auth", { method: "DELETE" }).catch(() => undefined);
     localStorage.removeItem("oip.currentUser");
     setIsDataLoading(true);
@@ -5452,6 +5559,8 @@ export function OipApp({
         onAuthenticated={() => {
           const stored = localStorage.getItem("oip.currentUser");
           if (stored === "daeho" || stored === "sanghee") {
+            loadedHolidayYears.current.clear();
+            setCacheReadyUser(null);
             setIsDataLoading(true);
             setCurrentUser(stored);
             setAuthState("ready");
