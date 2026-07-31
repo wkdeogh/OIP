@@ -1016,21 +1016,37 @@ p {
   color: #d16863;
 }
 
+.calendar-viewport {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.calendar-track {
+  display: flex;
+  width: 100%;
+  backface-visibility: hidden;
+  transform: translate3d(-100%, 0, 0);
+  will-change: transform;
+}
+
+.calendar-month-panel {
+  min-width: 0;
+  flex: 0 0 100%;
+  pointer-events: none;
+}
+
+.calendar-month-panel--active {
+  pointer-events: auto;
+}
+
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   border-top: 1px solid var(--line);
   touch-action: none;
   user-select: none;
-}
-
-.calendar-grid--slide-next {
-  animation: calendar-slide-next 220ms cubic-bezier(0.22, 0.75, 0.32, 1) both;
-}
-
-.calendar-grid--slide-previous {
-  animation: calendar-slide-previous 220ms
-    cubic-bezier(0.22, 0.75, 0.32, 1) both;
 }
 
 .calendar-day {
@@ -3766,20 +3782,6 @@ p {
   from {
     opacity: 0;
     transform: translateY(10px);
-  }
-}
-
-@keyframes calendar-slide-next {
-  from {
-    opacity: 0.45;
-    transform: translateX(30px);
-  }
-}
-
-@keyframes calendar-slide-previous {
-  from {
-    opacity: 0.45;
-    transform: translateX(-30px);
   }
 }
 

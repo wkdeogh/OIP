@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { SYSTEM_ANNIVERSARIES } from "@/lib/calendar-reminders";
 import {
   clearOipDataCache,
@@ -1694,9 +1694,6 @@ function CalendarView({
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(selected.getFullYear(), selected.getMonth(), 1),
   );
-  const [monthMotion, setMonthMotion] = useState<"next" | "previous" | null>(
-    null,
-  );
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
   const [dragRange, setDragRange] = useState<DateRange | null>(null);
   const [rangeSheet, setRangeSheet] = useState<DateRange | null>(null);
@@ -1708,9 +1705,18 @@ function CalendarView({
     pointerId: number;
     longPressTimer: number | null;
     selecting: boolean;
+    swiping: boolean;
+    lastX: number;
+    lastTime: number;
+    velocityX: number;
     target: HTMLDivElement;
   } | null>(null);
   const suppressClickRef = useRef(false);
+  const calendarTrackRef = useRef<HTMLDivElement | null>(null);
+  const swipeAnimationRef = useRef<{
+    token: number;
+    timer: number | null;
+  }>({ token: 0, timer: null });
 
   const systemEvents = useMemo<CalendarEvent[]>(() => {
     const year = visibleMonth.getFullYear();
@@ -1731,35 +1737,10 @@ function CalendarView({
   );
   const year = visibleMonth.getFullYear();
   const month = visibleMonth.getMonth();
-  const days = useMemo(() => {
-    const firstWeekday = new Date(year, month, 1).getDay();
-    const firstCell = new Date(year, month, 1 - firstWeekday, 12);
-    return Array.from({ length: 42 }, (_, index) => {
-      const date = new Date(firstCell);
-      date.setDate(firstCell.getDate() + index);
-      return date;
-    });
-  }, [month, year]);
-  const eventLanes = useMemo(
-    () => buildCalendarEventLanes(allEvents, days),
-    [allEvents, days],
-  );
   const backgroundByDate = useMemo(
     () => new Map(backgrounds.map((item) => [item.date, item])),
     [backgrounds],
   );
-  const holidayWeekIndexes = useMemo(() => {
-    const dayIndexes = new Map(
-      days.map((date, index) => [toDateKey(date), index]),
-    );
-    const indexes = new Set<number>();
-    holidays.forEach((holiday) => {
-      if (!holiday.is_holiday) return;
-      const dayIndex = dayIndexes.get(holiday.date);
-      if (dayIndex !== undefined) indexes.add(Math.floor(dayIndex / 7));
-    });
-    return indexes;
-  }, [days, holidays]);
 
   const selectedEvents = allEvents.filter((event) =>
     eventCoversDate(event, selectedDate),
@@ -1778,21 +1759,87 @@ function CalendarView({
       if (gestureRef.current?.longPressTimer) {
         window.clearTimeout(gestureRef.current.longPressTimer);
       }
+      if (swipeAnimationRef.current.timer !== null) {
+        window.clearTimeout(swipeAnimationRef.current.timer);
+      }
+      swipeAnimationRef.current.token += 1;
     },
     [],
   );
 
+  function settleMonthTrack(
+    direction: -1 | 0 | 1,
+    targetMonth?: Date,
+    targetDate?: string,
+  ) {
+    const track = calendarTrackRef.current;
+    if (!track) return;
+    const activeTrack: HTMLDivElement = track;
+    const animation = swipeAnimationRef.current;
+    animation.token += 1;
+    const token = animation.token;
+    if (animation.timer !== null) window.clearTimeout(animation.timer);
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const duration = reduceMotion ? 1 : direction === 0 ? 220 : 290;
+    const destination =
+      direction > 0 ? "-200%" : direction < 0 ? "0%" : "-100%";
+    let finished = false;
+
+    function finish() {
+      if (finished || swipeAnimationRef.current.token !== token) return;
+      finished = true;
+      if (swipeAnimationRef.current.timer !== null) {
+        window.clearTimeout(swipeAnimationRef.current.timer);
+        swipeAnimationRef.current.timer = null;
+      }
+      activeTrack.removeEventListener("transitionend", handleTransitionEnd);
+      activeTrack.style.transition = "none";
+      if (direction !== 0 && targetMonth) {
+        flushSync(() => {
+          setVisibleMonth(targetMonth);
+          setSelectedDate(targetDate ?? toDateKey(targetMonth));
+          setDragRange(null);
+          setRangeSheet(null);
+        });
+      }
+      activeTrack.style.transform = "translate3d(-100%, 0, 0)";
+      activeTrack.getBoundingClientRect();
+      activeTrack.style.transition = "";
+      suppressClickRef.current = false;
+    }
+
+    function handleTransitionEnd(event: TransitionEvent) {
+      if (event.target === activeTrack && event.propertyName === "transform") {
+        finish();
+      }
+    }
+
+    activeTrack.style.transition = `transform ${duration}ms cubic-bezier(0.22, 0.78, 0.24, 1)`;
+    requestAnimationFrame(() => {
+      if (swipeAnimationRef.current.token !== token) return;
+      activeTrack.style.transform = `translate3d(${destination}, 0, 0)`;
+    });
+    activeTrack.addEventListener("transitionend", handleTransitionEnd);
+    animation.timer = window.setTimeout(finish, duration + 90);
+  }
+
   function moveMonth(offset: number) {
+    if (swipeAnimationRef.current.timer !== null) return;
+    const direction = offset > 0 ? 1 : -1;
     const next = new Date(year, month + offset, 1);
-    setMonthMotion(offset > 0 ? "next" : "previous");
-    setVisibleMonth(next);
-    setSelectedDate(toDateKey(next));
-    setDragRange(null);
-    setRangeSheet(null);
+    suppressClickRef.current = true;
+    settleMonthTrack(direction, next, toDateKey(next));
   }
 
   function startGesture(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.button !== 0) return;
+    if (
+      event.button !== 0 ||
+      swipeAnimationRef.current.timer !== null
+    ) {
+      return;
+    }
     const target = (event.target as Element | null)?.closest<HTMLElement>(
       "[data-calendar-date]",
     );
@@ -1808,10 +1855,14 @@ function CalendarView({
       pointerId: event.pointerId,
       longPressTimer: null as number | null,
       selecting: false,
+      swiping: false,
+      lastX: event.clientX,
+      lastTime: performance.now(),
+      velocityX: 0,
       target: event.currentTarget,
     };
     gesture.longPressTimer = window.setTimeout(() => {
-      if (gestureRef.current !== gesture) return;
+      if (gestureRef.current !== gesture || gesture.swiping) return;
       gesture.selecting = true;
       gesture.longPressTimer = null;
       suppressClickRef.current = true;
@@ -1840,13 +1891,48 @@ function CalendarView({
       return;
     }
 
-    const moved = Math.hypot(
-      event.clientX - gesture.startX,
-      event.clientY - gesture.startY,
-    );
+    const deltaX = event.clientX - gesture.startX;
+    const deltaY = event.clientY - gesture.startY;
+    const moved = Math.hypot(deltaX, deltaY);
     if (moved > 10 && gesture.longPressTimer) {
       window.clearTimeout(gesture.longPressTimer);
       gesture.longPressTimer = null;
+    }
+
+    if (
+      !gesture.swiping &&
+      Math.abs(deltaX) > 8 &&
+      Math.abs(deltaX) > Math.abs(deltaY) * 1.05
+    ) {
+      gesture.swiping = true;
+      suppressClickRef.current = true;
+      setIsDaySheetOpen(false);
+      setRangeSheet(null);
+      setDragRange(null);
+      gesture.target.setPointerCapture?.(gesture.pointerId);
+      if (calendarTrackRef.current) {
+        calendarTrackRef.current.style.transition = "none";
+      }
+    }
+
+    if (!gesture.swiping) return;
+    event.preventDefault();
+    const now = performance.now();
+    const elapsed = Math.max(1, now - gesture.lastTime);
+    const instantaneousVelocity = (event.clientX - gesture.lastX) / elapsed;
+    gesture.velocityX =
+      gesture.velocityX * 0.62 + instantaneousVelocity * 0.38;
+    gesture.lastX = event.clientX;
+    gesture.lastTime = now;
+
+    const width = Math.max(1, gesture.target.clientWidth);
+    const limitedOffset = Math.max(
+      -width * 0.98,
+      Math.min(width * 0.98, deltaX),
+    );
+    if (calendarTrackRef.current) {
+      calendarTrackRef.current.style.transform =
+        `translate3d(calc(-100% + ${limitedOffset}px), 0, 0)`;
     }
   }
 
@@ -1872,13 +1958,30 @@ function CalendarView({
     }
 
     const deltaX = event.clientX - gesture.startX;
-    const deltaY = event.clientY - gesture.startY;
-    if (
-      Math.abs(deltaX) >= 56 &&
-      Math.abs(deltaX) > Math.abs(deltaY) * 1.2
-    ) {
-      suppressClickRef.current = true;
-      moveMonth(deltaX < 0 ? 1 : -1);
+    if (gesture.swiping) {
+      const width = Math.max(1, gesture.target.clientWidth);
+      const distanceThreshold = Math.min(
+        110,
+        Math.max(56, width * 0.2),
+      );
+      const projectedOffset = deltaX + gesture.velocityX * 150;
+      const shouldChangeMonth =
+        Math.abs(deltaX) >= distanceThreshold ||
+        (Math.abs(gesture.velocityX) >= 0.45 && Math.abs(deltaX) >= 16);
+      const direction: -1 | 0 | 1 = shouldChangeMonth
+        ? projectedOffset < 0
+          ? 1
+          : -1
+        : 0;
+      gesture.target.releasePointerCapture?.(gesture.pointerId);
+      gestureRef.current = null;
+      if (direction === 0) {
+        settleMonthTrack(0);
+      } else {
+        const next = new Date(year, month + direction, 1);
+        settleMonthTrack(direction, next, toDateKey(next));
+      }
+      return;
     }
 
     gestureRef.current = null;
@@ -1888,9 +1991,11 @@ function CalendarView({
   }
 
   function cancelGesture() {
-    if (gestureRef.current?.longPressTimer) {
-      window.clearTimeout(gestureRef.current.longPressTimer);
+    const gesture = gestureRef.current;
+    if (gesture?.longPressTimer) {
+      window.clearTimeout(gesture.longPressTimer);
     }
+    if (gesture?.swiping) settleMonthTrack(0);
     gestureRef.current = null;
     setDragRange(null);
   }
@@ -1918,12 +2023,16 @@ function CalendarView({
                 1,
               );
               if (todayMonth.getTime() !== visibleMonth.getTime()) {
-                setMonthMotion(
-                  todayMonth > visibleMonth ? "next" : "previous",
+                const direction = todayMonth > visibleMonth ? 1 : -1;
+                suppressClickRef.current = true;
+                settleMonthTrack(
+                  direction,
+                  todayMonth,
+                  toDateKey(today),
                 );
-                setVisibleMonth(todayMonth);
+              } else {
+                setSelectedDate(toDateKey(today));
               }
-              setSelectedDate(toDateKey(today));
             }}
             type="button"
           >
@@ -1946,180 +2055,266 @@ function CalendarView({
           ))}
         </div>
         <div
-          className={`calendar-grid${
-            monthMotion ? ` calendar-grid--slide-${monthMotion}` : ""
-          }`}
-          key={`${year}-${month}`}
+          className="calendar-viewport"
           onPointerCancel={cancelGesture}
           onPointerDown={startGesture}
           onPointerMove={moveGesture}
           onPointerUp={finishGesture}
           onContextMenu={(event) => event.preventDefault()}
         >
-          {days.map((date, dayIndex) => {
-            const key = toDateKey(date);
-            const weekIndex = Math.floor(dayIndex / 7);
-            const weekHasHoliday = holidayWeekIndexes.has(weekIndex);
-            const dateEvents = allEvents
-              .filter(
-                (event) =>
-                  event.event_type !== "anniversary" &&
-                  eventCoversDate(event, key),
-              )
-              .map((event) => ({
-                event,
-                lane:
-                  eventLanes.get(
-                    calendarEventLaneKey(weekIndex, event.id),
-                  ) ?? 0,
-              }))
-              .sort(
-                (left, right) =>
-                  left.lane - right.lane ||
-                  left.event.start_at.localeCompare(right.event.start_at),
+          <div className="calendar-track" ref={calendarTrackRef}>
+            {([-1, 0, 1] as const).map((monthOffset) => {
+              const panelMonth = new Date(year, month + monthOffset, 1);
+              const panelYear = panelMonth.getFullYear();
+              const panelMonthIndex = panelMonth.getMonth();
+              const panelDays = monthCalendarDays(panelMonth);
+              const panelSystemEvents: CalendarEvent[] =
+                SYSTEM_ANNIVERSARIES.map(
+                ({ day, title }) => ({
+                  id: `system-${panelYear}-${day}`,
+                  title,
+                  start_at: `${panelYear}-${day}T00:00:00+09:00`,
+                  is_all_day: true,
+                  visibility: "shared" as const,
+                  author_id: "system" as const,
+                  event_type: "anniversary" as const,
+                }),
               );
-            const hiddenEventCount = dateEvents.filter(
-              ({ lane }) => lane >= 3,
-            ).length;
-            const dateAnniversaries = systemEvents.filter(
-              (event) => eventCoversDate(event, key),
-            );
-            const dateHolidays = holidays.filter(
-              (holiday) => holiday.is_holiday && holiday.date === key,
-            );
-            const dateDaysOff = daysOff.filter((item) => item.date === key);
-            const dateBackground = backgroundByDate.get(key);
-            const owners = new Set(dateDaysOff.map((item) => item.owner_id));
-            const dayOffBackground =
-              owners.size === 2
-                ? "linear-gradient(135deg, rgba(127,169,155,.16) 0 50%, rgba(233,166,173,.16) 50%)"
-                : owners.has("daeho")
-                  ? "rgba(127,169,155,.15)"
-                  : owners.has("sanghee")
-                    ? "rgba(233,166,173,.15)"
-                    : undefined;
-            const background = dateBackground
-              ? `color-mix(in srgb, ${dateBackground.background_color} 42%, var(--surface))`
-              : dayOffBackground;
-            const isRangeSelected =
-              dragRange && key >= dragRange.start && key <= dragRange.end;
-            const isOutside = date.getMonth() !== month;
-            const isToday = key === toDateKey(new Date());
-            return (
-              <button
-                aria-label={`${formatKoreanDate(key, true)}${
-                  dateEvents.length
-                    ? `, 일정 ${dateEvents.length}개`
-                    : dateHolidays.length
-                      ? `, ${dateHolidays.map((item) => item.name).join(", ")}`
-                      : ""
-                }`}
-                className={[
-                  "calendar-day",
-                  isOutside ? "calendar-day--outside" : "",
-                  isToday ? "calendar-day--today" : "",
-                  dateHolidays.length ? "calendar-day--holiday" : "",
-                  isRangeSelected ? "calendar-day--range-selected" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                data-calendar-date={key}
-                key={key}
-                onClick={() => {
-                  if (suppressClickRef.current) return;
-                  setSelectedDate(key);
-                  setIsDaySheetOpen(true);
-                }}
-                style={{ background }}
-                type="button"
-              >
-                <span className="day-heading">
-                  <span className="day-number">{date.getDate()}</span>
-                  {dateAnniversaries.length ? (
-                    <span className="anniversary-icons">
-                      {dateAnniversaries.map((event) => (
-                        <span key={event.id} title={event.title}>
-                          {anniversaryEmoji(event.title)}
-                        </span>
-                      ))}
-                    </span>
-                  ) : null}
-                </span>
-                {weekHasHoliday ? (
-                  <span
-                    aria-hidden={!dateHolidays.length}
-                    className={`holiday-label${
-                      dateHolidays.length ? "" : " holiday-label--empty"
-                    }`}
-                  >
-                    {dateHolidays.length
-                      ? dateHolidays.map((holiday) => holiday.name).join(" · ")
-                      : "\u00a0"}
-                  </span>
-                ) : null}
-                <span className="day-events">
-                  {dateEvents
-                    .filter(({ lane }) => lane < 3)
-                    .map(({ event, lane }) => {
-                      const range = eventDateRange(event);
-                      const isRange = range.start !== range.end;
-                      const isSegmentStart =
-                        isRange &&
-                        (range.start === key || date.getDay() === 0);
-                      const isSegmentEnd =
-                        isRange && (range.end === key || date.getDay() === 6);
-                      const showTitle = !isRange || isSegmentStart;
-                      const showStartTime =
-                        showTitle &&
-                        !event.is_all_day &&
-                        range.start === key;
+              const panelEvents = [...events, ...panelSystemEvents];
+              const panelEventLanes = buildCalendarEventLanes(
+                panelEvents,
+                panelDays,
+              );
+              const panelDayIndexes = new Map(
+                panelDays.map((date, index) => [toDateKey(date), index]),
+              );
+              const panelHolidayWeekIndexes = new Set<number>();
+              holidays.forEach((holiday) => {
+                if (!holiday.is_holiday) return;
+                const dayIndex = panelDayIndexes.get(holiday.date);
+                if (dayIndex !== undefined) {
+                  panelHolidayWeekIndexes.add(Math.floor(dayIndex / 7));
+                }
+              });
+              const isActivePanel = monthOffset === 0;
 
+              return (
+                <div
+                  aria-hidden={!isActivePanel}
+                  className={`calendar-month-panel${
+                    isActivePanel ? " calendar-month-panel--active" : ""
+                  }`}
+                  key={`${panelYear}-${panelMonthIndex}`}
+                >
+                  <div className="calendar-grid">
+                    {panelDays.map((date, dayIndex) => {
+                      const key = toDateKey(date);
+                      const weekIndex = Math.floor(dayIndex / 7);
+                      const weekHasHoliday =
+                        panelHolidayWeekIndexes.has(weekIndex);
+                      const dateEvents = panelEvents
+                        .filter(
+                          (event) =>
+                            event.event_type !== "anniversary" &&
+                            eventCoversDate(event, key),
+                        )
+                        .map((event) => ({
+                          event,
+                          lane:
+                            panelEventLanes.get(
+                              calendarEventLaneKey(weekIndex, event.id),
+                            ) ?? 0,
+                        }))
+                        .sort(
+                          (left, right) =>
+                            left.lane - right.lane ||
+                            left.event.start_at.localeCompare(
+                              right.event.start_at,
+                            ),
+                        );
+                      const hiddenEventCount = dateEvents.filter(
+                        ({ lane }) => lane >= 3,
+                      ).length;
+                      const dateAnniversaries = panelSystemEvents.filter(
+                        (event) => eventCoversDate(event, key),
+                      );
+                      const dateHolidays = holidays.filter(
+                        (holiday) =>
+                          holiday.is_holiday && holiday.date === key,
+                      );
+                      const dateDaysOff = daysOff.filter(
+                        (item) => item.date === key,
+                      );
+                      const dateBackground = backgroundByDate.get(key);
+                      const owners = new Set(
+                        dateDaysOff.map((item) => item.owner_id),
+                      );
+                      const dayOffBackground =
+                        owners.size === 2
+                          ? "linear-gradient(135deg, rgba(127,169,155,.16) 0 50%, rgba(233,166,173,.16) 50%)"
+                          : owners.has("daeho")
+                            ? "rgba(127,169,155,.15)"
+                            : owners.has("sanghee")
+                              ? "rgba(233,166,173,.15)"
+                              : undefined;
+                      const background = dateBackground
+                        ? `color-mix(in srgb, ${dateBackground.background_color} 42%, var(--surface))`
+                        : dayOffBackground;
+                      const isRangeSelected =
+                        isActivePanel &&
+                        dragRange &&
+                        key >= dragRange.start &&
+                        key <= dragRange.end;
+                      const isOutside =
+                        date.getMonth() !== panelMonthIndex;
+                      const isToday = key === toDateKey(new Date());
                       return (
-                        <span
+                        <button
+                          aria-label={`${formatKoreanDate(key, true)}${
+                            dateEvents.length
+                              ? `, 일정 ${dateEvents.length}개`
+                              : dateHolidays.length
+                                ? `, ${dateHolidays
+                                    .map((item) => item.name)
+                                    .join(", ")}`
+                                : ""
+                          }`}
                           className={[
-                            "event-chip",
-                            `event-chip--${calendarEventColor(event)}`,
-                            isRange ? "event-chip--range" : "",
-                            isSegmentStart
-                              ? "event-chip--segment-start"
+                            "calendar-day",
+                            isOutside ? "calendar-day--outside" : "",
+                            isToday ? "calendar-day--today" : "",
+                            dateHolidays.length
+                              ? "calendar-day--holiday"
                               : "",
-                            isSegmentEnd ? "event-chip--segment-end" : "",
+                            isRangeSelected
+                              ? "calendar-day--range-selected"
+                              : "",
                           ]
                             .filter(Boolean)
                             .join(" ")}
-                          key={event.id}
-                          style={{
-                            gridRow: lane + 1,
-                            ...(event.custom_color
-                              ? {
-                                  backgroundColor: displayedCustomEventColor(
-                                    event.custom_color,
-                                  )!,
-                                  color: "#25302a",
+                          data-calendar-date={
+                            isActivePanel ? key : undefined
+                          }
+                          key={key}
+                          onClick={
+                            isActivePanel
+                              ? () => {
+                                  if (suppressClickRef.current) return;
+                                  setSelectedDate(key);
+                                  setIsDaySheetOpen(true);
                                 }
-                              : {}),
-                          }}
+                              : undefined
+                          }
+                          style={{ background }}
+                          tabIndex={isActivePanel ? undefined : -1}
+                          type="button"
                         >
-                          {showTitle ? (
-                            <>
-                              {showStartTime
-                                ? `${timeInSeoul(event.start_at)} `
-                                : ""}
-                              {event.title}
-                            </>
-                          ) : (
-                            "\u00a0"
-                          )}
-                        </span>
+                          <span className="day-heading">
+                            <span className="day-number">
+                              {date.getDate()}
+                            </span>
+                            {dateAnniversaries.length ? (
+                              <span className="anniversary-icons">
+                                {dateAnniversaries.map((event) => (
+                                  <span key={event.id} title={event.title}>
+                                    {anniversaryEmoji(event.title)}
+                                  </span>
+                                ))}
+                              </span>
+                            ) : null}
+                          </span>
+                          {weekHasHoliday ? (
+                            <span
+                              aria-hidden={!dateHolidays.length}
+                              className={`holiday-label${
+                                dateHolidays.length
+                                  ? ""
+                                  : " holiday-label--empty"
+                              }`}
+                            >
+                              {dateHolidays.length
+                                ? dateHolidays
+                                    .map((holiday) => holiday.name)
+                                    .join(" · ")
+                                : "\u00a0"}
+                            </span>
+                          ) : null}
+                          <span className="day-events">
+                            {dateEvents
+                              .filter(({ lane }) => lane < 3)
+                              .map(({ event, lane }) => {
+                                const range = eventDateRange(event);
+                                const isRange = range.start !== range.end;
+                                const isSegmentStart =
+                                  isRange &&
+                                  (range.start === key ||
+                                    date.getDay() === 0);
+                                const isSegmentEnd =
+                                  isRange &&
+                                  (range.end === key || date.getDay() === 6);
+                                const showTitle =
+                                  !isRange || isSegmentStart;
+                                const showStartTime =
+                                  showTitle &&
+                                  !event.is_all_day &&
+                                  range.start === key;
+
+                                return (
+                                  <span
+                                    className={[
+                                      "event-chip",
+                                      `event-chip--${calendarEventColor(event)}`,
+                                      isRange ? "event-chip--range" : "",
+                                      isSegmentStart
+                                        ? "event-chip--segment-start"
+                                        : "",
+                                      isSegmentEnd
+                                        ? "event-chip--segment-end"
+                                        : "",
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" ")}
+                                    key={event.id}
+                                    style={{
+                                      gridRow: lane + 1,
+                                      ...(event.custom_color
+                                        ? {
+                                            backgroundColor:
+                                              displayedCustomEventColor(
+                                                event.custom_color,
+                                              )!,
+                                            color: "#25302a",
+                                          }
+                                        : {}),
+                                    }}
+                                  >
+                                    {showTitle ? (
+                                      <>
+                                        {showStartTime
+                                          ? `${timeInSeoul(event.start_at)} `
+                                          : ""}
+                                        {event.title}
+                                      </>
+                                    ) : (
+                                      "\u00a0"
+                                    )}
+                                  </span>
+                                );
+                              })}
+                            {hiddenEventCount ? (
+                              <span className="more-events">
+                                +{hiddenEventCount}
+                              </span>
+                            ) : null}
+                          </span>
+                        </button>
                       );
                     })}
-                  {hiddenEventCount ? (
-                    <span className="more-events">+{hiddenEventCount}</span>
-                  ) : null}
-                </span>
-              </button>
-            );
-          })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
