@@ -64,21 +64,17 @@ export async function generateMetadata(): Promise<Metadata> {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f6f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#12161b" },
-  ],
+  themeColor: "#f5f6f8",
 };
 
 const themeScript = `
 (function() {
+  var theme = 'light';
   try {
     var stored = localStorage.getItem('oip.theme');
-    var theme = stored === 'dark' || stored === 'light'
-      ? stored
-      : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
+    if (stored === 'dark' || stored === 'light') theme = stored;
   } catch (e) {}
+  document.documentElement.setAttribute('data-theme', theme);
 })();
 `;
 
@@ -88,7 +84,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html data-theme="light" lang="ko" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
