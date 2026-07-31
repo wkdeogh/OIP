@@ -20,6 +20,7 @@ const DATABASE_NAME = "oip-client-cache";
 const DATABASE_VERSION = 1;
 const SNAPSHOT_STORE = "user-snapshots";
 const SNAPSHOT_SCHEMA_VERSION = 1;
+const LOCAL_SNAPSHOT_PREFIX = "oip-client-snapshot-v1:";
 
 export type OipDataSnapshot = {
   events: CalendarEvent[];
@@ -107,6 +108,33 @@ function isCacheRow(value: unknown, user: UserCode): value is CacheRow {
   );
 }
 
+function localSnapshotKey(user: UserCode) {
+  return `${LOCAL_SNAPSHOT_PREFIX}${user}`;
+}
+
+export function readOipDataCacheSync(user: UserCode) {
+  if (!("localStorage" in globalThis)) return null;
+  try {
+    const serialized = localStorage.getItem(localSnapshotKey(user));
+    if (!serialized) return null;
+    const result: unknown = JSON.parse(serialized);
+    return isCacheRow(result, user)
+      ? ({ savedAt: result.savedAt, data: result.data } satisfies CachedOipData)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeOipDataCacheSync(row: CacheRow) {
+  if (!("localStorage" in globalThis)) return;
+  try {
+    localStorage.setItem(localSnapshotKey(row.user), JSON.stringify(row));
+  } catch {
+    // IndexedDB remains the source of truth if the synchronous mirror is full.
+  }
+}
+
 export async function readOipDataCache(user: UserCode) {
   const database = await openDatabase();
   const transaction = database.transaction(SNAPSHOT_STORE, "readonly");
@@ -124,18 +152,26 @@ export async function writeOipDataCache(
   user: UserCode,
   data: OipDataSnapshot,
 ) {
-  const database = await openDatabase();
-  const transaction = database.transaction(SNAPSHOT_STORE, "readwrite");
-  transaction.objectStore(SNAPSHOT_STORE).put({
+  const row = {
     user,
     schemaVersion: SNAPSHOT_SCHEMA_VERSION,
     savedAt: new Date().toISOString(),
     data,
-  } satisfies CacheRow);
+  } satisfies CacheRow;
+  writeOipDataCacheSync(row);
+  const database = await openDatabase();
+  const transaction = database.transaction(SNAPSHOT_STORE, "readwrite");
+  transaction.objectStore(SNAPSHOT_STORE).put(row);
   await transactionComplete(transaction);
 }
 
 export async function clearOipDataCache() {
+  if ("localStorage" in globalThis) {
+    try {
+      localStorage.removeItem(localSnapshotKey("daeho"));
+      localStorage.removeItem(localSnapshotKey("sanghee"));
+    } catch {}
+  }
   const database = await openDatabase();
   const transaction = database.transaction(SNAPSHOT_STORE, "readwrite");
   transaction.objectStore(SNAPSHOT_STORE).clear();

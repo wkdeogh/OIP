@@ -19,6 +19,7 @@ import { SYSTEM_ANNIVERSARIES } from "@/lib/calendar-reminders";
 import {
   clearOipDataCache,
   readOipDataCache,
+  readOipDataCacheSync,
   type OipDataSnapshot,
   writeOipDataCache,
 } from "@/lib/client-data-cache";
@@ -91,6 +92,15 @@ type TripChecklistItem = {
   title: string;
   is_checked: boolean;
 };
+
+function retainEquivalentValue<T>(current: T, next: T) {
+  if (current === next) return current;
+  try {
+    return JSON.stringify(current) === JSON.stringify(next) ? current : next;
+  } catch {
+    return next;
+  }
+}
 
 const USER_META: Record<
   UserCode,
@@ -1723,6 +1733,65 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
     });
     return result;
   }, [holidays, panelDays]);
+  const panelEventsByDate = useMemo(() => {
+    const result = new Map<
+      string,
+      Array<{ event: CalendarEvent; lane: number }>
+    >();
+    const panelDayKeys = panelDays.map(toDateKey);
+    events.forEach((event) => {
+      if (event.event_type === "anniversary") return;
+      const range = eventDateRange(event);
+      panelDayKeys.forEach((dateKey, dayIndex) => {
+        if (dateKey < range.start || dateKey > range.end) return;
+        const weekIndex = Math.floor(dayIndex / 7);
+        const dateEvents = result.get(dateKey) ?? [];
+        dateEvents.push({
+          event,
+          lane:
+            panelEventLanes.get(calendarEventLaneKey(weekIndex, event.id)) ?? 0,
+        });
+        result.set(dateKey, dateEvents);
+      });
+    });
+    result.forEach((dateEvents) => {
+      dateEvents.sort(
+        (left, right) =>
+          left.lane - right.lane ||
+          left.event.start_at.localeCompare(right.event.start_at),
+      );
+    });
+    return result;
+  }, [events, panelDays, panelEventLanes]);
+  const panelAnniversariesByDate = useMemo(() => {
+    const result = new Map<string, CalendarEvent[]>();
+    panelSystemEvents.forEach((event) => {
+      const dateKey = eventDateRange(event).start;
+      const dateEvents = result.get(dateKey) ?? [];
+      dateEvents.push(event);
+      result.set(dateKey, dateEvents);
+    });
+    return result;
+  }, [panelSystemEvents]);
+  const panelHolidaysByDate = useMemo(() => {
+    const result = new Map<string, PublicHoliday[]>();
+    holidays.forEach((holiday) => {
+      if (!holiday.is_holiday) return;
+      const dateHolidays = result.get(holiday.date) ?? [];
+      dateHolidays.push(holiday);
+      result.set(holiday.date, dateHolidays);
+    });
+    return result;
+  }, [holidays]);
+  const panelDaysOffByDate = useMemo(() => {
+    const result = new Map<string, DayOff[]>();
+    daysOff.forEach((item) => {
+      const dateDaysOff = result.get(item.date) ?? [];
+      dateDaysOff.push(item);
+      result.set(item.date, dateDaysOff);
+    });
+    return result;
+  }, [daysOff]);
   const todayKey = toDateKey(new Date());
 
   return (
@@ -1731,34 +1800,13 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         const key = toDateKey(date);
         const weekIndex = Math.floor(dayIndex / 7);
         const weekHasHoliday = panelHolidayWeekIndexes.has(weekIndex);
-        const dateEvents = panelEvents
-          .filter(
-            (event) =>
-              event.event_type !== "anniversary" &&
-              eventCoversDate(event, key),
-          )
-          .map((event) => ({
-            event,
-            lane:
-              panelEventLanes.get(
-                calendarEventLaneKey(weekIndex, event.id),
-              ) ?? 0,
-          }))
-          .sort(
-            (left, right) =>
-              left.lane - right.lane ||
-              left.event.start_at.localeCompare(right.event.start_at),
-          );
+        const dateEvents = panelEventsByDate.get(key) ?? [];
         const hiddenEventCount = dateEvents.filter(
           ({ lane }) => lane >= 3,
         ).length;
-        const dateAnniversaries = panelSystemEvents.filter((event) =>
-          eventCoversDate(event, key),
-        );
-        const dateHolidays = holidays.filter(
-          (holiday) => holiday.is_holiday && holiday.date === key,
-        );
-        const dateDaysOff = daysOff.filter((item) => item.date === key);
+        const dateAnniversaries = panelAnniversariesByDate.get(key) ?? [];
+        const dateHolidays = panelHolidaysByDate.get(key) ?? [];
+        const dateDaysOff = panelDaysOffByDate.get(key) ?? [];
         const dateBackground = backgroundByDate.get(key);
         const owners = new Set(dateDaysOff.map((item) => item.owner_id));
         const dayOffBackground =
@@ -1886,11 +1934,13 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   );
 });
 
-const CALENDAR_SWIPE_BUFFER_RADIUS = 4;
+const CALENDAR_SWIPE_BUFFER_RADIUS = 8;
 const CALENDAR_SWIPE_CENTER_INDEX = CALENDAR_SWIPE_BUFFER_RADIUS;
-const CALENDAR_SWIPE_PANEL_OFFSETS = [
-  -4, -3, -2, -1, 0, 1, 2, 3, 4,
-] as const;
+const CALENDAR_INITIAL_RENDER_RADIUS = 2;
+const CALENDAR_SWIPE_PANEL_OFFSETS = Array.from(
+  { length: CALENDAR_SWIPE_BUFFER_RADIUS * 2 + 1 },
+  (_, index) => index - CALENDAR_SWIPE_BUFFER_RADIUS,
+);
 const EMPTY_PUBLIC_HOLIDAYS: PublicHoliday[] = [];
 
 function groupPublicHolidaysByYear(items: PublicHoliday[]) {
@@ -1941,6 +1991,20 @@ function CalendarView({
     CALENDAR_SWIPE_PANEL_OFFSETS.map(
       (offset) =>
         new Date(selected.getFullYear(), selected.getMonth() + offset, 1),
+    ),
+  );
+  const [preparedPanelMonths, setPreparedPanelMonths] = useState(() =>
+    new Set(
+      CALENDAR_SWIPE_PANEL_OFFSETS.filter(
+        (offset) => Math.abs(offset) <= CALENDAR_INITIAL_RENDER_RADIUS,
+      ).map(
+        (offset) =>
+          new Date(
+            selected.getFullYear(),
+            selected.getMonth() + offset,
+            1,
+          ).getTime(),
+      ),
     ),
   );
   const [holidaysByYear, setHolidaysByYear] = useState<
@@ -2147,6 +2211,29 @@ function CalendarView({
       });
   }
 
+  function prepareCalendarWindow(index: number) {
+    const panelMonths = calendarPanelMonthsRef.current;
+    const startIndex = Math.max(0, index - CALENDAR_INITIAL_RENDER_RADIUS);
+    const endIndex = Math.min(
+      panelMonths.length - 1,
+      index + CALENDAR_INITIAL_RENDER_RADIUS,
+    );
+    startTransition(() => {
+      setPreparedPanelMonths((current) => {
+        let changed = false;
+        const next = new Set(current);
+        for (let panelIndex = startIndex; panelIndex <= endIndex; panelIndex += 1) {
+          const panelTime = panelMonths[panelIndex].getTime();
+          if (!next.has(panelTime)) {
+            next.add(panelTime);
+            changed = true;
+          }
+        }
+        return changed ? next : current;
+      });
+    });
+  }
+
   function expandCalendarBuffer(direction: -1 | 1) {
     const currentMonths = calendarPanelMonthsRef.current;
     const edgeMonth =
@@ -2169,7 +2256,14 @@ function CalendarView({
     if (direction < 0) {
       pendingPrependedPanelsRef.current += addedMonths.length;
     }
-    flushSync(() => setCalendarPanelMonths(nextMonths));
+    flushSync(() => {
+      setCalendarPanelMonths(nextMonths);
+      setPreparedPanelMonths((current) => {
+        const next = new Set(current);
+        addedMonths.forEach((panelMonth) => next.add(panelMonth.getTime()));
+        return next;
+      });
+    });
   }
 
   function settleMonthTrack(
@@ -2234,6 +2328,7 @@ function CalendarView({
       activeTrack.style.transform = `translate3d(${destination}px, 0, 0)`;
       trackIndexRef.current = destinationTrackIndex;
       syncActiveCalendarPanel(destinationTrackIndex);
+      prepareCalendarWindow(destinationTrackIndex);
       window.requestAnimationFrame(() => {
         if (
           swipeAnimationRef.current.token === token &&
@@ -2523,7 +2618,22 @@ function CalendarView({
                 calendarPanelMonthsRef.current = nextPanelMonths;
                 trackIndexRef.current = CALENDAR_SWIPE_CENTER_INDEX;
                 targetIndex = CALENDAR_SWIPE_CENTER_INDEX;
-                flushSync(() => setCalendarPanelMonths(nextPanelMonths));
+                flushSync(() => {
+                  setCalendarPanelMonths(nextPanelMonths);
+                  setPreparedPanelMonths(
+                    new Set(
+                      nextPanelMonths
+                        .slice(
+                          CALENDAR_SWIPE_CENTER_INDEX -
+                            CALENDAR_INITIAL_RENDER_RADIUS,
+                          CALENDAR_SWIPE_CENTER_INDEX +
+                            CALENDAR_INITIAL_RENDER_RADIUS +
+                            1,
+                        )
+                        .map((panelMonth) => panelMonth.getTime()),
+                    ),
+                  );
+                });
               }
               trackIndexRef.current = targetIndex;
               const track = calendarTrackRef.current;
@@ -2577,6 +2687,9 @@ function CalendarView({
               const panelMonthIndex = panelMonth.getMonth();
               const isActivePanel =
                 panelMonth.getTime() === visibleMonth.getTime();
+              const isPanelPrepared = preparedPanelMonths.has(
+                panelMonth.getTime(),
+              );
 
               return (
                 <div
@@ -2590,17 +2703,24 @@ function CalendarView({
                   inert={!isActivePanel}
                   key={`${panelYear}-${panelMonthIndex}`}
                 >
-                  <CalendarMonthGrid
-                    backgroundByDate={backgroundByDate}
-                    daysOff={daysOff}
-                    events={events}
-                    holidays={
-                      holidaysByYear.get(panelYear) ?? EMPTY_PUBLIC_HOLIDAYS
-                    }
-                    monthIndex={panelMonthIndex}
-                    selectedRange={isActivePanel ? dragRange : null}
-                    year={panelYear}
-                  />
+                  {isPanelPrepared ? (
+                    <CalendarMonthGrid
+                      backgroundByDate={backgroundByDate}
+                      daysOff={daysOff}
+                      events={events}
+                      holidays={
+                        holidaysByYear.get(panelYear) ?? EMPTY_PUBLIC_HOLIDAYS
+                      }
+                      monthIndex={panelMonthIndex}
+                      selectedRange={isActivePanel ? dragRange : null}
+                      year={panelYear}
+                    />
+                  ) : (
+                    <div
+                      aria-hidden="true"
+                      className="calendar-grid calendar-grid--deferred"
+                    />
+                  )}
                 </div>
               );
             })}
@@ -4836,6 +4956,10 @@ export function OipApp({
   const loadedHolidayYears = useRef(new Set<number>());
   const pushRegistrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const vapidPublicKeyRef = useRef("");
+  const restoredCacheUserRef = useRef<UserCode | null>(null);
+  const authenticationRejectedRef = useRef(false);
+  const cacheRestoredAtRef = useRef(0);
+  const lastUiInteractionRef = useRef(0);
 
   const currentDataSnapshot = useMemo<OipDataSnapshot>(
     () => ({
@@ -4915,6 +5039,25 @@ export function OipApp({
   }, [isCalendarPage]);
 
   useEffect(() => {
+    const markInteraction = () => {
+      lastUiInteractionRef.current = performance.now();
+    };
+    window.addEventListener("pointerdown", markInteraction, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("keydown", markInteraction, { capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", markInteraction, {
+        capture: true,
+      });
+      window.removeEventListener("keydown", markInteraction, {
+        capture: true,
+      });
+    };
+  }, []);
+
+  useEffect(() => {
     const targetPath = mainTab === "parking" ? "/parking" : "/";
     if (window.location.pathname === targetPath) return;
     window.history.replaceState(
@@ -4930,21 +5073,71 @@ export function OipApp({
   }, []);
 
   const applyDataSnapshot = useCallback((data: OipDataSnapshot) => {
-    setEvents(data.events ?? []);
-    setDaysOff(data.daysOff ?? []);
-    setDayBackgrounds(data.dayBackgrounds ?? []);
-    setHolidays(data.holidays ?? []);
-    setTodos(data.todos ?? []);
-    setShopping(data.shopping ?? []);
-    setTrips(data.trips ?? []);
-    setTripFlights(data.tripFlights ?? []);
-    setTripAccommodations(data.tripAccommodations ?? []);
-    setTripTransportations(data.tripTransportations ?? []);
-    setTripFoods(data.tripFoods ?? []);
-    setTripPlaces(data.tripPlaces ?? []);
-    setFridge(data.fridge ?? []);
-    setParking(data.parking ?? null);
+    setEvents((current) => retainEquivalentValue(current, data.events ?? []));
+    setDaysOff((current) =>
+      retainEquivalentValue(current, data.daysOff ?? []),
+    );
+    setDayBackgrounds((current) =>
+      retainEquivalentValue(current, data.dayBackgrounds ?? []),
+    );
+    setHolidays((current) =>
+      retainEquivalentValue(current, data.holidays ?? []),
+    );
+    setTodos((current) => retainEquivalentValue(current, data.todos ?? []));
+    setShopping((current) =>
+      retainEquivalentValue(current, data.shopping ?? []),
+    );
+    setTrips((current) => retainEquivalentValue(current, data.trips ?? []));
+    setTripFlights((current) =>
+      retainEquivalentValue(current, data.tripFlights ?? []),
+    );
+    setTripAccommodations((current) =>
+      retainEquivalentValue(current, data.tripAccommodations ?? []),
+    );
+    setTripTransportations((current) =>
+      retainEquivalentValue(current, data.tripTransportations ?? []),
+    );
+    setTripFoods((current) =>
+      retainEquivalentValue(current, data.tripFoods ?? []),
+    );
+    setTripPlaces((current) =>
+      retainEquivalentValue(current, data.tripPlaces ?? []),
+    );
+    setFridge((current) => retainEquivalentValue(current, data.fridge ?? []));
+    setParking((current) =>
+      retainEquivalentValue(current, data.parking ?? null),
+    );
   }, []);
+
+  useLayoutEffect(() => {
+    const stored = localStorage.getItem("oip.currentUser");
+    if (stored !== "daeho" && stored !== "sanghee") return;
+    let active = true;
+
+    const restore = (cached: { data: OipDataSnapshot } | null) => {
+      if (!active || !cached || authenticationRejectedRef.current) return;
+      restoredCacheUserRef.current = stored;
+      cacheRestoredAtRef.current = performance.now();
+      applyDataSnapshot(cached.data);
+      setCurrentUser(stored);
+      setCacheReadyUser(stored);
+      setIsDataLoading(false);
+      setAuthState("ready");
+    };
+
+    const synchronousCache = readOipDataCacheSync(stored);
+    if (synchronousCache) {
+      restore(synchronousCache);
+    } else {
+      void readOipDataCache(stored)
+        .then(restore)
+        .catch(() => undefined);
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [applyDataSnapshot]);
 
   const savePushSubscription = useCallback(
     async (
@@ -5126,10 +5319,14 @@ export function OipApp({
       .then((data: { authenticated?: boolean }) => {
         if (!active) return;
         if (!data.authenticated) {
+          authenticationRejectedRef.current = true;
+          restoredCacheUserRef.current = null;
           void clearOipDataCache().catch(() => undefined);
+          setIsDataLoading(true);
           setAuthState("locked");
           return;
         }
+        authenticationRejectedRef.current = false;
         const stored = localStorage.getItem("oip.currentUser");
         if (stored === "daeho" || stored === "sanghee") {
           setCurrentUser(stored);
@@ -5139,7 +5336,9 @@ export function OipApp({
         }
       })
       .catch(() => {
-        if (active) setAuthState("locked");
+        if (active && restoredCacheUserRef.current === null) {
+          setAuthState("locked");
+        }
       });
     return () => {
       active = false;
@@ -5165,19 +5364,38 @@ export function OipApp({
     ] as const;
 
     async function loadData() {
-      let restoredFromCache = false;
-      try {
-        const cached = await readOipDataCache(currentUser);
-        if (!active) return;
-        if (cached) {
-          applyDataSnapshot(cached.data);
-          restoredFromCache = true;
-          setCacheReadyUser(currentUser);
-          setIsDataLoading(false);
+      let restoredFromCache =
+        restoredCacheUserRef.current === currentUser;
+      if (!restoredFromCache) {
+        try {
+          const cached = await readOipDataCache(currentUser);
+          if (!active) return;
+          if (cached) {
+            applyDataSnapshot(cached.data);
+            restoredCacheUserRef.current = currentUser;
+            cacheRestoredAtRef.current = performance.now();
+            restoredFromCache = true;
+            setCacheReadyUser(currentUser);
+            setIsDataLoading(false);
+          }
+        } catch {
+          // IndexedDB may be unavailable in private browsing or restricted modes.
         }
-      } catch {
-        // IndexedDB may be unavailable in private browsing or restricted modes.
       }
+
+      while (active && restoredFromCache) {
+        const quietSince = Math.max(
+          cacheRestoredAtRef.current,
+          lastUiInteractionRef.current,
+        );
+        const remainingQuietTime =
+          900 - (performance.now() - quietSince);
+        if (remainingQuietTime <= 0) break;
+        await new Promise((resolve) =>
+          window.setTimeout(resolve, Math.min(remainingQuietTime, 300)),
+        );
+      }
+      if (!active) return;
 
       try {
         const entries = await Promise.all(
@@ -5199,26 +5417,79 @@ export function OipApp({
         );
         if (!active) return;
         const loaded = Object.fromEntries(entries) as Record<string, unknown>;
-        setEvents((loaded.calendar_events as CalendarEvent[]) ?? []);
-        setDaysOff((loaded.calendar_days_off as DayOff[]) ?? []);
-        setTodos((loaded.todos as Todo[]) ?? []);
-        setShopping((loaded.shopping_items as ShoppingItem[]) ?? []);
-        setTrips((loaded.trips as Trip[]) ?? []);
-        setTripFlights((loaded.trip_flights as TripFlight[]) ?? []);
-        setTripAccommodations(
-          (loaded.trip_accommodations as TripAccommodation[]) ?? [],
-        );
-        setTripTransportations(
-          (loaded.trip_transportations as TripTransportation[]) ?? [],
-        );
-        setTripFoods((loaded.trip_foods as TripFood[]) ?? []);
-        setTripPlaces((loaded.trip_places as TripPlace[]) ?? []);
-        setFridge((loaded.fridge_items as FridgeItem[]) ?? []);
-        setParking(
-          ((loaded.parking_records as ParkingRecord[]) ?? [])[0] ?? null,
-        );
-        setCacheReadyUser(currentUser);
-        setIsDataLoading(false);
+        startTransition(() => {
+          setEvents((current) =>
+            retainEquivalentValue(
+              current,
+              (loaded.calendar_events as CalendarEvent[]) ?? [],
+            ),
+          );
+          setDaysOff((current) =>
+            retainEquivalentValue(
+              current,
+              (loaded.calendar_days_off as DayOff[]) ?? [],
+            ),
+          );
+          setTodos((current) =>
+            retainEquivalentValue(
+              current,
+              (loaded.todos as Todo[]) ?? [],
+            ),
+          );
+          setShopping((current) =>
+            retainEquivalentValue(
+              current,
+              (loaded.shopping_items as ShoppingItem[]) ?? [],
+            ),
+          );
+          setTrips((current) =>
+            retainEquivalentValue(current, (loaded.trips as Trip[]) ?? []),
+          );
+          setTripFlights((current) =>
+            retainEquivalentValue(
+              current,
+              (loaded.trip_flights as TripFlight[]) ?? [],
+            ),
+          );
+          setTripAccommodations((current) =>
+            retainEquivalentValue(
+              current,
+              (loaded.trip_accommodations as TripAccommodation[]) ?? [],
+            ),
+          );
+          setTripTransportations((current) =>
+            retainEquivalentValue(
+              current,
+              (loaded.trip_transportations as TripTransportation[]) ?? [],
+            ),
+          );
+          setTripFoods((current) =>
+            retainEquivalentValue(
+              current,
+              (loaded.trip_foods as TripFood[]) ?? [],
+            ),
+          );
+          setTripPlaces((current) =>
+            retainEquivalentValue(
+              current,
+              (loaded.trip_places as TripPlace[]) ?? [],
+            ),
+          );
+          setFridge((current) =>
+            retainEquivalentValue(
+              current,
+              (loaded.fridge_items as FridgeItem[]) ?? [],
+            ),
+          );
+          setParking((current) =>
+            retainEquivalentValue(
+              current,
+              ((loaded.parking_records as ParkingRecord[]) ?? [])[0] ?? null,
+            ),
+          );
+          setCacheReadyUser(currentUser);
+          setIsDataLoading(false);
+        });
       } catch (error) {
         if (!active) return;
         if (!restoredFromCache) {
@@ -5265,7 +5536,13 @@ export function OipApp({
         return (await response.json()) as CalendarDayBackground[];
       })
       .then((items) => {
-        if (active) setDayBackgrounds(items);
+        if (active) {
+          startTransition(() => {
+            setDayBackgrounds((current) =>
+              retainEquivalentValue(current, items),
+            );
+          });
+        }
       })
       .catch(() => undefined);
     return () => {
@@ -5289,12 +5566,15 @@ export function OipApp({
         return (await response.json()) as PublicHoliday[];
       })
       .then((rows) => {
-        setHolidays((items) => {
-          const merged = new Map(items.map((item) => [item.date, item]));
-          rows.forEach((item) => merged.set(item.date, item));
-          return [...merged.values()].sort((a, b) =>
-            a.date.localeCompare(b.date),
-          );
+        startTransition(() => {
+          setHolidays((items) => {
+            const merged = new Map(items.map((item) => [item.date, item]));
+            rows.forEach((item) => merged.set(item.date, item));
+            const next = [...merged.values()].sort((a, b) =>
+              a.date.localeCompare(b.date),
+            );
+            return retainEquivalentValue(items, next);
+          });
         });
       })
       .catch(() => {
@@ -5311,11 +5591,18 @@ export function OipApp({
     ) {
       return;
     }
-    const timer = globalThis.setTimeout(() => {
+    const saveCache = () => {
       void writeOipDataCache(currentUser, currentDataSnapshot).catch(
         () => undefined,
       );
-    }, 200);
+    };
+    if ("requestIdleCallback" in window) {
+      const idleCallback = window.requestIdleCallback(saveCache, {
+        timeout: 5000,
+      });
+      return () => window.cancelIdleCallback(idleCallback);
+    }
+    const timer = globalThis.setTimeout(saveCache, 5000);
     return () => globalThis.clearTimeout(timer);
   }, [
     authState,
@@ -5362,6 +5649,8 @@ export function OipApp({
 
   function chooseUser(user: UserCode) {
     localStorage.setItem("oip.currentUser", user);
+    authenticationRejectedRef.current = false;
+    restoredCacheUserRef.current = null;
     loadedHolidayYears.current.clear();
     setCacheReadyUser(null);
     setIsDataLoading(true);
@@ -5370,6 +5659,8 @@ export function OipApp({
   }
 
   async function signOutDevice() {
+    authenticationRejectedRef.current = true;
+    restoredCacheUserRef.current = null;
     await removeDevicePushSubscription().catch(() => undefined);
     await clearOipDataCache().catch(() => undefined);
     await fetch("/api/auth", { method: "DELETE" }).catch(() => undefined);
@@ -6042,6 +6333,7 @@ export function OipApp({
       <PasswordGate
         onToggleTheme={toggleTheme}
         onAuthenticated={() => {
+          authenticationRejectedRef.current = false;
           const stored = localStorage.getItem("oip.currentUser");
           if (stored === "daeho" || stored === "sanghee") {
             loadedHolidayYears.current.clear();
