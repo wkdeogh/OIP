@@ -1713,6 +1713,8 @@ function CalendarView({
   } | null>(null);
   const suppressClickRef = useRef(false);
   const calendarTrackRef = useRef<HTMLDivElement | null>(null);
+  const swipeFrameRef = useRef<number | null>(null);
+  const pendingSwipeOffsetRef = useRef(0);
   const swipeAnimationRef = useRef<{
     token: number;
     timer: number | null;
@@ -1762,10 +1764,42 @@ function CalendarView({
       if (swipeAnimationRef.current.timer !== null) {
         window.clearTimeout(swipeAnimationRef.current.timer);
       }
+      if (swipeFrameRef.current !== null) {
+        window.cancelAnimationFrame(swipeFrameRef.current);
+        swipeFrameRef.current = null;
+      }
       swipeAnimationRef.current.token += 1;
     },
     [],
   );
+
+  function paintSwipeOffset() {
+    const track = calendarTrackRef.current;
+    if (!track) return;
+    const width = Math.max(
+      1,
+      track.parentElement?.clientWidth ?? track.clientWidth,
+    );
+    const x = Math.round(-width + pendingSwipeOffsetRef.current);
+    track.style.transform = `translate3d(${x}px, 0, 0)`;
+  }
+
+  function queueSwipeOffset(offset: number) {
+    pendingSwipeOffsetRef.current = offset;
+    if (swipeFrameRef.current !== null) return;
+    swipeFrameRef.current = window.requestAnimationFrame(() => {
+      swipeFrameRef.current = null;
+      paintSwipeOffset();
+    });
+  }
+
+  function flushSwipeOffset() {
+    if (swipeFrameRef.current !== null) {
+      window.cancelAnimationFrame(swipeFrameRef.current);
+      swipeFrameRef.current = null;
+    }
+    paintSwipeOffset();
+  }
 
   function settleMonthTrack(
     direction: -1 | 0 | 1,
@@ -1774,6 +1808,10 @@ function CalendarView({
   ) {
     const track = calendarTrackRef.current;
     if (!track) return;
+    if (swipeFrameRef.current !== null) {
+      window.cancelAnimationFrame(swipeFrameRef.current);
+      swipeFrameRef.current = null;
+    }
     const activeTrack: HTMLDivElement = track;
     const animation = swipeAnimationRef.current;
     animation.token += 1;
@@ -1783,8 +1821,12 @@ function CalendarView({
       "(prefers-reduced-motion: reduce)",
     ).matches;
     const duration = reduceMotion ? 1 : direction === 0 ? 220 : 290;
+    const width = Math.max(
+      1,
+      activeTrack.parentElement?.clientWidth ?? activeTrack.clientWidth,
+    );
     const destination =
-      direction > 0 ? "-200%" : direction < 0 ? "0%" : "-100%";
+      direction > 0 ? -width * 2 : direction < 0 ? 0 : -width;
     let finished = false;
 
     function finish() {
@@ -1819,7 +1861,7 @@ function CalendarView({
     activeTrack.style.transition = `transform ${duration}ms cubic-bezier(0.22, 0.78, 0.24, 1)`;
     requestAnimationFrame(() => {
       if (swipeAnimationRef.current.token !== token) return;
-      activeTrack.style.transform = `translate3d(${destination}, 0, 0)`;
+      activeTrack.style.transform = `translate3d(${destination}px, 0, 0)`;
     });
     activeTrack.addEventListener("transitionend", handleTransitionEnd);
     animation.timer = window.setTimeout(finish, duration + 90);
@@ -1930,10 +1972,7 @@ function CalendarView({
       -width * 0.98,
       Math.min(width * 0.98, deltaX),
     );
-    if (calendarTrackRef.current) {
-      calendarTrackRef.current.style.transform =
-        `translate3d(calc(-100% + ${limitedOffset}px), 0, 0)`;
-    }
+    queueSwipeOffset(limitedOffset);
   }
 
   function finishGesture(event: ReactPointerEvent<HTMLDivElement>) {
@@ -1959,6 +1998,7 @@ function CalendarView({
 
     const deltaX = event.clientX - gesture.startX;
     if (gesture.swiping) {
+      flushSwipeOffset();
       const width = Math.max(1, gesture.target.clientWidth);
       const distanceThreshold = Math.min(
         110,
@@ -1995,7 +2035,10 @@ function CalendarView({
     if (gesture?.longPressTimer) {
       window.clearTimeout(gesture.longPressTimer);
     }
-    if (gesture?.swiping) settleMonthTrack(0);
+    if (gesture?.swiping) {
+      flushSwipeOffset();
+      settleMonthTrack(0);
+    }
     gestureRef.current = null;
     setDragRange(null);
   }

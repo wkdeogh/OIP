@@ -1018,22 +1018,32 @@ p {
 
 .calendar-viewport {
   position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .calendar-track {
   display: flex;
   width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
   backface-visibility: hidden;
   transform: translate3d(-100%, 0, 0);
   will-change: transform;
 }
 
 .calendar-month-panel {
+  display: flex;
   min-width: 0;
+  min-height: 0;
   flex: 0 0 100%;
+  flex-direction: column;
+  contain: layout paint;
   pointer-events: none;
 }
 
@@ -1043,6 +1053,8 @@ p {
 
 .calendar-grid {
   display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   border-top: 1px solid var(--line);
   touch-action: none;
