@@ -1709,10 +1709,14 @@ function CalendarView({
     lastX: number;
     lastTime: number;
     velocityX: number;
+    width: number;
     target: HTMLDivElement;
   } | null>(null);
   const suppressClickRef = useRef(false);
   const calendarTrackRef = useRef<HTMLDivElement | null>(null);
+  const monthTitleRef = useRef<HTMLElement | null>(null);
+  const pendingMonthRef = useRef<Date | null>(null);
+  const finishSwipeAnimationRef = useRef<(() => void) | null>(null);
   const swipeFrameRef = useRef<number | null>(null);
   const pendingSwipeOffsetRef = useRef(0);
   const swipeAnimationRef = useRef<{
@@ -1768,6 +1772,8 @@ function CalendarView({
         window.cancelAnimationFrame(swipeFrameRef.current);
         swipeFrameRef.current = null;
       }
+      finishSwipeAnimationRef.current = null;
+      pendingMonthRef.current = null;
       swipeAnimationRef.current.token += 1;
     },
     [],
@@ -1776,10 +1782,9 @@ function CalendarView({
   function paintSwipeOffset() {
     const track = calendarTrackRef.current;
     if (!track) return;
-    const width = Math.max(
-      1,
-      track.parentElement?.clientWidth ?? track.clientWidth,
-    );
+    const width =
+      gestureRef.current?.width ??
+      Math.max(1, track.parentElement?.clientWidth ?? track.clientWidth);
     const x = Math.round(-width + pendingSwipeOffsetRef.current);
     track.style.transform = `translate3d(${x}px, 0, 0)`;
   }
@@ -1806,6 +1811,7 @@ function CalendarView({
     targetMonth?: Date,
     targetDate?: string,
   ) {
+    finishSwipeAnimationRef.current?.();
     const track = calendarTrackRef.current;
     if (!track) return;
     if (swipeFrameRef.current !== null) {
@@ -1820,7 +1826,7 @@ function CalendarView({
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    const duration = reduceMotion ? 1 : direction === 0 ? 220 : 290;
+    const duration = reduceMotion ? 1 : direction === 0 ? 170 : 230;
     const width = Math.max(
       1,
       activeTrack.parentElement?.clientWidth ?? activeTrack.clientWidth,
@@ -1829,6 +1835,15 @@ function CalendarView({
       direction > 0 ? -width * 2 : direction < 0 ? 0 : -width;
     let finished = false;
 
+    if (direction !== 0 && targetMonth) {
+      pendingMonthRef.current = targetMonth;
+      suppressClickRef.current = true;
+      if (monthTitleRef.current) {
+        monthTitleRef.current.textContent =
+          `${targetMonth.getFullYear()}년 ${targetMonth.getMonth() + 1}월`;
+      }
+    }
+
     function finish() {
       if (finished || swipeAnimationRef.current.token !== token) return;
       finished = true;
@@ -1836,10 +1851,14 @@ function CalendarView({
         window.clearTimeout(swipeAnimationRef.current.timer);
         swipeAnimationRef.current.timer = null;
       }
+      if (finishSwipeAnimationRef.current === finish) {
+        finishSwipeAnimationRef.current = null;
+      }
       activeTrack.removeEventListener("transitionend", handleTransitionEnd);
       activeTrack.style.transition = "none";
       if (direction !== 0 && targetMonth) {
         flushSync(() => {
+          pendingMonthRef.current = null;
           setVisibleMonth(targetMonth);
           setSelectedDate(targetDate ?? toDateKey(targetMonth));
           setDragRange(null);
@@ -1847,8 +1866,14 @@ function CalendarView({
         });
       }
       activeTrack.style.transform = "translate3d(-100%, 0, 0)";
-      activeTrack.getBoundingClientRect();
-      activeTrack.style.transition = "";
+      window.requestAnimationFrame(() => {
+        if (
+          swipeAnimationRef.current.token === token &&
+          swipeAnimationRef.current.timer === null
+        ) {
+          activeTrack.style.transition = "";
+        }
+      });
       suppressClickRef.current = false;
     }
 
@@ -1859,6 +1884,7 @@ function CalendarView({
     }
 
     activeTrack.style.transition = `transform ${duration}ms cubic-bezier(0.22, 0.78, 0.24, 1)`;
+    finishSwipeAnimationRef.current = finish;
     requestAnimationFrame(() => {
       if (swipeAnimationRef.current.token !== token) return;
       activeTrack.style.transform = `translate3d(${destination}px, 0, 0)`;
@@ -1868,27 +1894,26 @@ function CalendarView({
   }
 
   function moveMonth(offset: number) {
-    if (swipeAnimationRef.current.timer !== null) return;
+    const baseMonth = pendingMonthRef.current ?? visibleMonth;
     const direction = offset > 0 ? 1 : -1;
-    const next = new Date(year, month + offset, 1);
-    suppressClickRef.current = true;
+    const next = new Date(
+      baseMonth.getFullYear(),
+      baseMonth.getMonth() + offset,
+      1,
+    );
     settleMonthTrack(direction, next, toDateKey(next));
   }
 
   function startGesture(event: ReactPointerEvent<HTMLDivElement>) {
-    if (
-      event.button !== 0 ||
-      swipeAnimationRef.current.timer !== null
-    ) {
-      return;
-    }
-    const target = (event.target as Element | null)?.closest<HTMLElement>(
-      "[data-calendar-date]",
-    );
-    if (!target) return;
-
-    const startDate = target.dataset.calendarDate;
-    if (!startDate) return;
+    if (event.button !== 0) return;
+    const interruptedMonth = pendingMonthRef.current;
+    finishSwipeAnimationRef.current?.();
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>("[data-calendar-date]");
+    const targetDate = target?.dataset.calendarDate;
+    const startDate =
+      targetDate ?? toDateKey(interruptedMonth ?? visibleMonth);
     const gesture = {
       startX: event.clientX,
       startY: event.clientY,
@@ -1901,18 +1926,21 @@ function CalendarView({
       lastX: event.clientX,
       lastTime: performance.now(),
       velocityX: 0,
+      width: Math.max(1, event.currentTarget.clientWidth),
       target: event.currentTarget,
     };
-    gesture.longPressTimer = window.setTimeout(() => {
-      if (gestureRef.current !== gesture || gesture.swiping) return;
-      gesture.selecting = true;
-      gesture.longPressTimer = null;
-      suppressClickRef.current = true;
-      setIsDaySheetOpen(false);
-      setDragRange({ start: startDate, end: startDate });
-      gesture.target.setPointerCapture?.(gesture.pointerId);
-      globalThis.navigator?.vibrate?.(18);
-    }, 430);
+    if (targetDate) {
+      gesture.longPressTimer = window.setTimeout(() => {
+        if (gestureRef.current !== gesture || gesture.swiping) return;
+        gesture.selecting = true;
+        gesture.longPressTimer = null;
+        suppressClickRef.current = true;
+        setIsDaySheetOpen(false);
+        setDragRange({ start: startDate, end: startDate });
+        gesture.target.setPointerCapture?.(gesture.pointerId);
+        globalThis.navigator?.vibrate?.(18);
+      }, 430);
+    }
     gestureRef.current = gesture;
   }
 
@@ -1967,7 +1995,7 @@ function CalendarView({
     gesture.lastX = event.clientX;
     gesture.lastTime = now;
 
-    const width = Math.max(1, gesture.target.clientWidth);
+    const width = gesture.width;
     const limitedOffset = Math.max(
       -width * 0.98,
       Math.min(width * 0.98, deltaX),
@@ -1999,7 +2027,7 @@ function CalendarView({
     const deltaX = event.clientX - gesture.startX;
     if (gesture.swiping) {
       flushSwipeOffset();
-      const width = Math.max(1, gesture.target.clientWidth);
+      const width = gesture.width;
       const distanceThreshold = Math.min(
         110,
         Math.max(56, width * 0.2),
@@ -2065,8 +2093,9 @@ function CalendarView({
                 today.getMonth(),
                 1,
               );
-              if (todayMonth.getTime() !== visibleMonth.getTime()) {
-                const direction = todayMonth > visibleMonth ? 1 : -1;
+              const currentMonth = pendingMonthRef.current ?? visibleMonth;
+              if (todayMonth.getTime() !== currentMonth.getTime()) {
+                const direction = todayMonth > currentMonth ? 1 : -1;
                 suppressClickRef.current = true;
                 settleMonthTrack(
                   direction,
@@ -2074,12 +2103,13 @@ function CalendarView({
                   toDateKey(today),
                 );
               } else {
+                finishSwipeAnimationRef.current?.();
                 setSelectedDate(toDateKey(today));
               }
             }}
             type="button"
           >
-            <strong>
+            <strong ref={monthTitleRef}>
               {year}년 {month + 1}월
             </strong>
           </button>
