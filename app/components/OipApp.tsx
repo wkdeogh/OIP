@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { SYSTEM_ANNIVERSARIES } from "@/lib/calendar-reminders";
 import type {
   CalendarDayBackground,
   CalendarEvent,
@@ -38,6 +39,14 @@ type MainTab =
   | "parking";
 type TaskTab = "todo" | "shopping";
 type ThemeMode = "light" | "dark";
+type PushStatus =
+  | "checking"
+  | "unsupported"
+  | "unconfigured"
+  | "disabled"
+  | "denied"
+  | "enabled"
+  | "loading";
 type ModalName =
   | "event"
   | "dayoff"
@@ -286,6 +295,15 @@ function toDateKey(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function initialCalendarDate() {
+  const today = toDateKey(new Date());
+  if (typeof window === "undefined") return today;
+  const requestedDate = new URLSearchParams(window.location.search).get("date");
+  return requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+    ? requestedDate
+    : today;
 }
 
 function addDays(offset: number) {
@@ -1690,12 +1708,7 @@ function CalendarView({
 
   const systemEvents = useMemo<CalendarEvent[]>(() => {
     const year = visibleMonth.getFullYear();
-    return [
-      ["04-15", "대호 생일"],
-      ["05-06", "상희 생일"],
-      ["08-30", "결혼기념일"],
-      ["11-17", "만난 날 기념일"],
-    ].map(([day, title]) => ({
+    return SYSTEM_ANNIVERSARIES.map(({ day, title }) => ({
       id: `system-${year}-${day}`,
       title,
       start_at: `${year}-${day}T00:00:00+09:00`,
@@ -4202,6 +4215,58 @@ function ThemeToggleButton({
   );
 }
 
+function NotificationToggleButton({
+  status,
+  onToggle,
+}: {
+  status: PushStatus;
+  onToggle: () => void;
+}) {
+  const enabled = status === "enabled";
+  const labels: Record<PushStatus, string> = {
+    checking: "일정 알림 확인 중",
+    unsupported: "이 기기에서는 일정 알림을 사용할 수 없음",
+    unconfigured: "일정 알림 서버 설정 필요",
+    disabled: "매일 오전 8시 일정 알림 켜기",
+    denied: "일정 알림 권한이 차단됨",
+    enabled: "매일 오전 8시 일정 알림 켜짐, 끄기",
+    loading: "일정 알림 설정 중",
+  };
+
+  return (
+    <button
+      aria-label={labels[status]}
+      aria-pressed={enabled}
+      className={`notification-toggle-button${enabled ? " is-enabled" : ""}${
+        status === "denied" ? " is-denied" : ""
+      }`}
+      disabled={status === "checking" || status === "loading"}
+      onClick={onToggle}
+      title={labels[status]}
+      type="button"
+    >
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+      </svg>
+    </button>
+  );
+}
+
+function supportsWebPush() {
+  return (
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
+}
+
+function urlBase64ToUint8Array(value: string) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replaceAll("-", "+").replaceAll("_", "/");
+  const rawData = globalThis.atob(base64);
+  return Uint8Array.from(rawData, (character) => character.charCodeAt(0));
+}
+
 export function OipApp({
   initialMainTab = "schedule",
 }: {
@@ -4235,7 +4300,7 @@ export function OipApp({
   const [mainTab, setMainTab] = useState<MainTab>(initialMainTab);
   const [taskTab, setTaskTab] = useState<TaskTab>("todo");
   const [modal, setModal] = useState<ModalName>(null);
-  const [selectedDate, setSelectedDate] = useState(toDateKey(new Date()));
+  const [selectedDate, setSelectedDate] = useState(initialCalendarDate);
   const [eventRange, setEventRange] = useState<DateRange>({
     start: toDateKey(new Date()),
     end: toDateKey(new Date()),
@@ -4254,6 +4319,7 @@ export function OipApp({
   const [editingFridge, setEditingFridge] = useState<FridgeItem | null>(null);
   const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
   const [toast, setToast] = useState<string | null>(null);
+  const [pushStatus, setPushStatus] = useState<PushStatus>("checking");
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [daysOff, setDaysOff] = useState<DayOff[]>([]);
@@ -4276,6 +4342,8 @@ export function OipApp({
   const [fridge, setFridge] = useState<FridgeItem[]>([]);
   const [parking, setParking] = useState<ParkingRecord | null>(null);
   const loadedHolidayYears = useRef(new Set<number>());
+  const pushRegistrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  const vapidPublicKeyRef = useRef("");
 
   const isCalendarPage =
     authState === "ready" && mainTab === "schedule";
@@ -4333,6 +4401,179 @@ export function OipApp({
     setToast(message);
     globalThis.setTimeout(() => setToast(null), 2600);
   }, []);
+
+  const savePushSubscription = useCallback(
+    async (
+      subscription: PushSubscription,
+      user: UserCode,
+      sendTest: boolean,
+    ) => {
+      const response = await fetch("/api/push/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...subscription.toJSON(),
+          user_code: user,
+          send_test: sendTest,
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        saved?: boolean;
+        testSent?: boolean;
+        error?: string;
+      };
+      return { response, data };
+    },
+    [],
+  );
+
+  const removeDevicePushSubscription = useCallback(async () => {
+    if (!("serviceWorker" in navigator)) return;
+    const registration =
+      pushRegistrationRef.current ??
+      (await navigator.serviceWorker.getRegistration("/"));
+    const subscription = await registration?.pushManager.getSubscription();
+    if (!subscription) return;
+    await fetch("/api/push/subscription", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: subscription.endpoint }),
+    }).catch(() => undefined);
+    await subscription.unsubscribe().catch(() => false);
+  }, []);
+
+  useEffect(() => {
+    if (authState !== "ready") return;
+    let active = true;
+
+    async function preparePushNotifications() {
+      if (!supportsWebPush()) {
+        if (active) setPushStatus("unsupported");
+        return;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
+        });
+        const response = await fetch("/api/push/subscription", {
+          cache: "no-store",
+        });
+        const config = (await response.json().catch(() => ({}))) as {
+          configured?: boolean;
+          publicKey?: string | null;
+        };
+        if (!response.ok || !config.configured || !config.publicKey) {
+          if (active) setPushStatus("unconfigured");
+          return;
+        }
+
+        pushRegistrationRef.current = registration;
+        vapidPublicKeyRef.current = config.publicKey;
+        if (Notification.permission === "denied") {
+          if (active) setPushStatus("denied");
+          return;
+        }
+
+        const subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          if (active) setPushStatus("disabled");
+          return;
+        }
+
+        const saved = await savePushSubscription(
+          subscription,
+          currentUser,
+          false,
+        );
+        if (active) {
+          setPushStatus(saved.response.ok ? "enabled" : "unconfigured");
+        }
+      } catch {
+        if (active) setPushStatus("unsupported");
+      }
+    }
+
+    void preparePushNotifications();
+    return () => {
+      active = false;
+    };
+  }, [authState, currentUser, savePushSubscription]);
+
+  async function togglePushNotifications() {
+    if (pushStatus === "unsupported") {
+      showToast("아이폰 홈 화면의 OIP 앱에서 다시 시도해 주세요.");
+      return;
+    }
+    if (pushStatus === "unconfigured") {
+      showToast("푸시 알림 서버 설정을 먼저 완료해 주세요.");
+      return;
+    }
+    if (pushStatus === "denied") {
+      showToast("아이폰 설정 → 알림 → OIP에서 알림을 허용해 주세요.");
+      return;
+    }
+    if (pushStatus === "enabled") {
+      setPushStatus("loading");
+      try {
+        await removeDevicePushSubscription();
+        setPushStatus("disabled");
+        showToast("이 기기의 일정 알림을 껐어요.");
+      } catch {
+        setPushStatus("enabled");
+        showToast("알림을 끄지 못했어요. 다시 시도해 주세요.");
+      }
+      return;
+    }
+    if (pushStatus !== "disabled") return;
+
+    const permissionRequest =
+      Notification.permission === "default"
+        ? Notification.requestPermission()
+        : Promise.resolve(Notification.permission);
+    setPushStatus("loading");
+
+    try {
+      const permission = await permissionRequest;
+      if (permission !== "granted") {
+        setPushStatus(permission === "denied" ? "denied" : "disabled");
+        showToast("일정 알림 권한이 필요해요.");
+        return;
+      }
+      const registration =
+        pushRegistrationRef.current ??
+        (await navigator.serviceWorker.register("/sw.js", { scope: "/" }));
+      const publicKey = vapidPublicKeyRef.current;
+      if (!publicKey) throw new Error("VAPID_PUBLIC_KEY_MISSING");
+
+      const existing = await registration.pushManager.getSubscription();
+      const subscription =
+        existing ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        }));
+      const saved = await savePushSubscription(
+        subscription,
+        currentUser,
+        true,
+      );
+      if (!saved.response.ok && !saved.data.saved) {
+        await subscription.unsubscribe().catch(() => false);
+        throw new Error(saved.data.error ?? "PUSH_SUBSCRIPTION_SAVE_FAILED");
+      }
+
+      setPushStatus("enabled");
+      showToast(
+        saved.data.testSent
+          ? "매일 오전 8시 일정 알림을 켰어요."
+          : "알림은 켰지만 테스트 전송을 확인하지 못했어요.",
+      );
+    } catch {
+      setPushStatus("disabled");
+      showToast("일정 알림을 켜지 못했어요. 다시 시도해 주세요.");
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -4538,6 +4779,7 @@ export function OipApp({
   }
 
   async function signOutDevice() {
+    await removeDevicePushSubscription().catch(() => undefined);
     await fetch("/api/auth", { method: "DELETE" }).catch(() => undefined);
     localStorage.removeItem("oip.currentUser");
     setIsDataLoading(true);
@@ -5275,6 +5517,10 @@ export function OipApp({
             <h1>{activeTab.title}</h1>
           </div>
           <div className="header-actions">
+            <NotificationToggleButton
+              onToggle={togglePushNotifications}
+              status={pushStatus}
+            />
             <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
             <button
               aria-label={`현재 사용자 ${USER_META[currentUser].name}, 사용자 변경`}

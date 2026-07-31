@@ -658,6 +658,46 @@ p {
   color: var(--ink);
 }
 
+.notification-toggle-button {
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: var(--shadow-soft);
+}
+
+.notification-toggle-button svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.notification-toggle-button:hover:not(:disabled) {
+  border-color: var(--green);
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.notification-toggle-button.is-enabled {
+  border-color: var(--green);
+  background: var(--green);
+  color: white;
+}
+
+.notification-toggle-button.is-denied {
+  color: #b45e63;
+}
+
 .theme-toggle-button {
   display: inline-grid;
   width: 42px;
@@ -1073,7 +1113,7 @@ p {
   min-width: 0;
   align-items: center;
   padding-right: 1px;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   letter-spacing: -0.28em;
   line-height: 1;
 }
@@ -1113,7 +1153,7 @@ p {
   padding: 3px 4px;
   border-radius: 3px;
   color: #34413a;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 800;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -1163,7 +1203,7 @@ p {
 .event-chip--daeho,
 .event-chip--sanghee,
 .event-chip--private {
-  font-size: 0.64rem;
+  font-size: 0.7rem;
 }
 
 .event-chip--system {
@@ -1351,7 +1391,7 @@ p {
   padding: 3px 6px;
   border-radius: 999px;
   background: white;
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   font-weight: 850;
 }
 
@@ -3449,6 +3489,7 @@ p {
 [data-theme="dark"] .gate-card,
 [data-theme="dark"] .user-choice,
 [data-theme="dark"] .icon-button,
+[data-theme="dark"] .notification-toggle-button,
 [data-theme="dark"] .theme-toggle-button,
 [data-theme="dark"] .trip-card,
 [data-theme="dark"] .trip-card-menu,
@@ -3963,6 +4004,18 @@ p {
     flex-basis: 32px;
     font-size: 0.88rem;
     box-shadow: none;
+  }
+
+  .notification-toggle-button {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+    box-shadow: none;
+  }
+
+  .notification-toggle-button svg {
+    width: 16px;
+    height: 16px;
   }
 
   .user-pill {

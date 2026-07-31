@@ -21,6 +21,12 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description,
     applicationName: "OIP",
+    manifest: "/manifest.webmanifest",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "OIP",
+    },
     icons: {
       icon: [
         {

@@ -78,6 +78,35 @@ create table if not exists public.calendar_day_backgrounds (
 create index if not exists calendar_day_backgrounds_date_idx
   on public.calendar_day_backgrounds (date);
 
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_code text not null references public.profiles(code) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  user_agent text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists push_subscriptions_user_code_idx
+  on public.push_subscriptions (user_code);
+
+create table if not exists public.push_delivery_log (
+  id uuid primary key default gen_random_uuid(),
+  subscription_id uuid not null
+    references public.push_subscriptions(id) on delete cascade,
+  delivery_date date not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'sent')),
+  created_at timestamptz not null default now(),
+  sent_at timestamptz,
+  unique (subscription_id, delivery_date)
+);
+
+create index if not exists push_delivery_log_date_idx
+  on public.push_delivery_log (delivery_date desc);
+
 create table if not exists public.public_holidays (
   date date primary key,
   name text not null,
@@ -300,6 +329,7 @@ begin
     'calendar_events',
     'calendar_days_off',
     'calendar_day_backgrounds',
+    'push_subscriptions',
     'todos',
     'shopping_items',
     'trips',
@@ -329,6 +359,8 @@ begin
     'calendar_events',
     'calendar_days_off',
     'calendar_day_backgrounds',
+    'push_subscriptions',
+    'push_delivery_log',
     'public_holidays',
     'todos',
     'shopping_items',

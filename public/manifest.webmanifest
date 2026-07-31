@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "OIP",
+  "short_name": "OIP",
+  "description": "대호와 상희가 함께 사용하는 생활 관리 앱",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#f5f6f8",
+  "icons": [
+    {
+      "src": "/oip_logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

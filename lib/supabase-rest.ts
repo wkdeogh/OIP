@@ -196,6 +196,10 @@ export const resourceConfigs = {
 } as const satisfies Record<string, ResourceConfig>;
 
 export type ResourceName = keyof typeof resourceConfigs;
+export type InternalTableName =
+  | ResourceName
+  | "push_subscriptions"
+  | "push_delivery_log";
 
 export function isResourceName(value: string): value is ResourceName {
   return value in resourceConfigs;
@@ -221,14 +225,21 @@ export async function supabaseRest(
   search: URLSearchParams,
   init?: RequestInit,
 ) {
+  return supabaseTableRest(resourceConfigs[resource].table, search, init);
+}
+
+export async function supabaseTableRest(
+  table: InternalTableName,
+  search: URLSearchParams,
+  init?: RequestInit,
+) {
   const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!baseUrl || !serviceKey) {
     throw new Error("SUPABASE_NOT_CONFIGURED");
   }
 
-  const config = resourceConfigs[resource];
-  const url = new URL(`${baseUrl}/rest/v1/${config.table}`);
+  const url = new URL(`${baseUrl}/rest/v1/${table}`);
   search.forEach((value, key) => url.searchParams.set(key, value));
 
   return fetch(url, {

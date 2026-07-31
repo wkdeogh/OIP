@@ -31,6 +31,7 @@ test("server-renders the OIP application shell", async () => {
   assert.match(html, /<html[^>]+lang="ko"/i);
   assert.match(html, /<title>OIP<\/title>/i);
   assert.match(html, /oip_logo\.png/i);
+  assert.match(html, /manifest\.webmanifest/i);
   assert.match(html, /oip\.theme/i);
   assert.match(html, /prefers-color-scheme:\s*dark/i);
   assert.match(html, /불러오는 중/);
@@ -45,4 +46,12 @@ test("server-renders the direct parking route", async () => {
   const html = await response.text();
   assert.match(html, /불러오는 중/);
   assert.match(html, /parking/i);
+});
+
+test("protects push subscription and reminder endpoints", async () => {
+  const subscription = await render("/api/push/subscription");
+  assert.equal(subscription.status, 401);
+
+  const reminders = await render("/api/cron/calendar-reminders");
+  assert.equal(reminders.status, 401);
 });
