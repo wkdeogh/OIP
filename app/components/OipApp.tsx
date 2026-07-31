@@ -1073,6 +1073,9 @@ function EventColorPicker({
         <div className="event-color-picker-options">
           {EVENT_COLOR_OPTIONS.map((option) => {
             const previewColor = option.value || defaultColor;
+            const previewTextColor = option.value
+              ? eventChipTextColor(previewColor)
+              : undefined;
             const isSelected = option.value === value;
             return (
               <button
@@ -1087,9 +1090,12 @@ function EventColorPicker({
               >
                 <span
                   className="event-color-picker-swatch"
-                  style={{ backgroundColor: previewColor }}
+                  style={{
+                    backgroundColor: previewColor,
+                    color: previewTextColor,
+                  }}
                 >
-                  {isSelected ? "✓" : ""}
+                  일정
                 </span>
                 <strong>{option.name}</strong>
               </button>
@@ -1135,6 +1141,7 @@ function EventForm({
   );
   const [color, setColor] = useState(initialEvent?.custom_color ?? "");
   const baseColor = defaultEventColor(scope, currentUser);
+  const displayedColor = displayedCustomEventColor(color);
   const selectedColorName =
     EVENT_COLOR_OPTIONS.find((option) => option.value === color)?.name ??
     "기본색";
@@ -1270,8 +1277,10 @@ function EventForm({
               setIsColorPickerOpen(true);
             }}
             style={{
-              backgroundColor: color || baseColor,
-              color: color ? "#25302a" : "var(--ink)",
+              backgroundColor: displayedColor || baseColor,
+              color: displayedColor
+                ? eventChipTextColor(displayedColor)
+                : "var(--ink)",
             }}
             type="button"
           >
