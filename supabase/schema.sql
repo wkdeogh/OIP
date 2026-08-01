@@ -10,8 +10,8 @@ create table if not exists public.profiles (
 
 insert into public.profiles (code, display_name, event_color, day_off_color)
 values
-  ('daeho', '대호', '#7FA99B', '#E1EEEA'),
-  ('sanghee', '상희', '#E9A6AD', '#FAE4E6')
+  ('daeho', '대호', '#34C77B', '#E1EEEA'),
+  ('sanghee', '상희', '#FF829B', '#FAE4E6')
 on conflict (code) do update set
   display_name = excluded.display_name,
   event_color = excluded.event_color,
@@ -19,13 +19,13 @@ on conflict (code) do update set
 
 create table if not exists public.calendar_color_settings (
   id text primary key default 'calendar' check (id = 'calendar'),
-  daeho_color text not null default '#7FA99B'
+  daeho_color text not null default '#34C77B'
     check (daeho_color ~ '^#[0-9A-Fa-f]{6}$'),
-  sanghee_color text not null default '#E9A6AD'
+  sanghee_color text not null default '#FF829B'
     check (sanghee_color ~ '^#[0-9A-Fa-f]{6}$'),
-  shared_color text not null default '#FFD43B'
+  shared_color text not null default '#FFC928'
     check (shared_color ~ '^#[0-9A-Fa-f]{6}$'),
-  private_color text not null default '#845EF7'
+  private_color text not null default '#9C6ADE'
     check (private_color ~ '^#[0-9A-Fa-f]{6}$'),
   updated_at timestamptz not null default now()
 );
@@ -37,7 +37,7 @@ insert into public.calendar_color_settings (
   shared_color,
   private_color
 )
-values ('calendar', '#7FA99B', '#E9A6AD', '#FFD43B', '#845EF7')
+values ('calendar', '#34C77B', '#FF829B', '#FFC928', '#9C6ADE')
 on conflict (id) do nothing;
 
 create table if not exists public.calendar_events (

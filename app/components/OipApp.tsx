@@ -108,8 +108,8 @@ const USER_META: Record<
   UserCode,
   { name: string; short: string; color: string }
 > = {
-  daeho: { name: "대호", short: "대", color: "#7fa99b" },
-  sanghee: { name: "상희", short: "상", color: "#e9a6ad" },
+  daeho: { name: "대호", short: "대", color: "#34c77b" },
+  sanghee: { name: "상희", short: "상", color: "#ff829b" },
 };
 
 /*
@@ -119,35 +119,35 @@ const USER_META: Record<
  * 회색 #AEB8C4
  */
 const EVENT_COLOR_OPTIONS = [
-  { name: "노랑", value: "#FFD43B" },
-  { name: "라임", value: "#A9E34B" },
-  { name: "초록", value: "#40C057" },
-  { name: "연녹", value: "#7FA99B" },
-  { name: "민트", value: "#38D9A9" },
-  { name: "청록", value: "#22B8CF" },
-  { name: "하늘", value: "#4DABF7" },
-  { name: "파랑", value: "#3B82F6" },
-  { name: "남색", value: "#4263EB" },
-  { name: "보라", value: "#845EF7" },
-  { name: "연보라", value: "#B197FC" },
-  { name: "분홍", value: "#F06595" },
-  { name: "연분홍", value: "#E9A6AD" },
-  { name: "코랄", value: "#FF6B6B" },
-  { name: "빨강", value: "#F03E3E" },
-  { name: "와인", value: "#A61E4D" },
-  { name: "주황", value: "#FF922B" },
-  { name: "브라운", value: "#A66A3F" },
-  { name: "회색", value: "#98A2B3" },
-  { name: "차콜", value: "#34413A" },
+  { name: "노랑", value: "#FFC928" },
+  { name: "라임", value: "#D7DC45" },
+  { name: "초록", value: "#65D13F" },
+  { name: "연녹", value: "#34C77B" },
+  { name: "민트", value: "#20C7A5" },
+  { name: "청록", value: "#08B59C" },
+  { name: "하늘", value: "#42A5E9" },
+  { name: "파랑", value: "#4285F4" },
+  { name: "남색", value: "#5A72DB" },
+  { name: "보라", value: "#9C6ADE" },
+  { name: "연보라", value: "#B978D0" },
+  { name: "분홍", value: "#EC5F91" },
+  { name: "연분홍", value: "#FF829B" },
+  { name: "코랄", value: "#FF675E" },
+  { name: "빨강", value: "#FF3045" },
+  { name: "와인", value: "#C83C68" },
+  { name: "주황", value: "#FF9D19" },
+  { name: "브라운", value: "#B8774B" },
+  { name: "회색", value: "#819DB9" },
+  { name: "차콜", value: "#53665F" },
 ] as const;
 
 type CalendarColorDefaultKey = keyof CalendarColorDefaults;
 
 const FALLBACK_CALENDAR_COLOR_DEFAULTS: CalendarColorDefaults = {
-  daeho: "#7FA99B",
-  sanghee: "#E9A6AD",
-  shared: "#FFD43B",
-  private: "#845EF7",
+  daeho: "#34C77B",
+  sanghee: "#FF829B",
+  shared: "#FFC928",
+  private: "#9C6ADE",
 };
 const EVENT_CHIP_TEXT_COLOR = "#ffffff";
 
@@ -162,9 +162,11 @@ const CALENDAR_COLOR_DEFAULT_OPTIONS: Array<{
 ];
 
 function validCalendarColor(value: unknown, fallback: string) {
-  return typeof value === "string" && /^#[0-9A-Fa-f]{6}$/.test(value)
-    ? value.toUpperCase()
-    : fallback;
+  if (typeof value !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(value)) {
+    return fallback;
+  }
+  const normalized = value.toUpperCase();
+  return LEGACY_EVENT_COLOR_DISPLAY[normalized] ?? normalized;
 }
 
 function calendarColorDefaultsFromSettings(
@@ -355,22 +357,60 @@ const DAY_BACKGROUND_OPTIONS = [
 ] as const;
 
 const LEGACY_EVENT_COLOR_DISPLAY: Record<string, string> = {
-  "#F6D875": "#FFD43B",
-  "#EBC44F": "#FFD43B",
-  "#A8D5F2": "#3B82F6",
-  "#7FC1EB": "#3B82F6",
-  "#A8DDB8": "#40C057",
-  "#82CE99": "#40C057",
-  "#CEB7EC": "#845EF7",
-  "#B596DE": "#845EF7",
-  "#F5B7C3": "#F06595",
-  "#EC91A5": "#F06595",
-  "#F7C49A": "#FF922B",
-  "#EFA966": "#FF922B",
-  "#F4A6A0": "#FF6B6B",
-  "#EB7F78": "#FF6B6B",
-  "#CCD3DB": "#98A2B3",
-  "#AEB8C4": "#98A2B3",
+  "#F6D875": "#FFC928",
+  "#EBC44F": "#FFC928",
+  "#FFD43B": "#FFC928",
+  "#B97800": "#FFC928",
+  "#A9E34B": "#D7DC45",
+  "#5C940D": "#D7DC45",
+  "#A8DDB8": "#65D13F",
+  "#82CE99": "#65D13F",
+  "#40C057": "#65D13F",
+  "#238636": "#65D13F",
+  "#7FA99B": "#34C77B",
+  "#12805C": "#34C77B",
+  "#38D9A9": "#20C7A5",
+  "#087F61": "#20C7A5",
+  "#22B8CF": "#08B59C",
+  "#087E8B": "#08B59C",
+  "#4DABF7": "#42A5E9",
+  "#1971C2": "#42A5E9",
+  "#A8D5F2": "#4285F4",
+  "#7FC1EB": "#4285F4",
+  "#3B82F6": "#4285F4",
+  "#2563EB": "#4285F4",
+  "#4263EB": "#5A72DB",
+  "#364FC7": "#5A72DB",
+  "#CEB7EC": "#9C6ADE",
+  "#B596DE": "#9C6ADE",
+  "#845EF7": "#9C6ADE",
+  "#7048E8": "#9C6ADE",
+  "#B197FC": "#B978D0",
+  "#7950F2": "#B978D0",
+  "#F5B7C3": "#EC5F91",
+  "#EC91A5": "#EC5F91",
+  "#F06595": "#EC5F91",
+  "#C2255C": "#EC5F91",
+  "#E9A6AD": "#FF829B",
+  "#D6336C": "#FF829B",
+  "#F4A6A0": "#FF675E",
+  "#EB7F78": "#FF675E",
+  "#FF6B6B": "#FF675E",
+  "#CF3F38": "#FF675E",
+  "#F03E3E": "#FF3045",
+  "#D92D20": "#FF3045",
+  "#A61E4D": "#C83C68",
+  "#F7C49A": "#FF9D19",
+  "#EFA966": "#FF9D19",
+  "#FF922B": "#FF9D19",
+  "#C94F00": "#FF9D19",
+  "#A66A3F": "#B8774B",
+  "#9C5429": "#B8774B",
+  "#CCD3DB": "#819DB9",
+  "#AEB8C4": "#819DB9",
+  "#98A2B3": "#819DB9",
+  "#667085": "#819DB9",
+  "#34413A": "#53665F",
 };
 
 const MAIN_TABS: Array<{
