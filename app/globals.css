@@ -1179,7 +1179,7 @@ p {
   display: block;
   overflow: hidden;
   margin-inline: calc(1px - var(--calendar-day-inline-padding));
-  padding: 3px 4px;
+  padding: 3.5px 4px;
   border-radius: 3px;
   color: #ffffff;
   font-size: 0.75rem;

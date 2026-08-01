@@ -2245,11 +2245,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                   const isSegmentEnd =
                     isRange && (range.end === key || date.getDay() === 6);
                   const showTitle = !isRange || isSegmentStart;
-                  const showStartTime =
-                    showTitle && !event.is_all_day && range.start === key;
-                  const chipText = showTitle
-                    ? `${showStartTime ? `${timeInSeoul(event.start_at)} ` : ""}${event.title}`
-                    : "\u00a0";
+                  const chipText = showTitle ? event.title : "\u00a0";
 
                   return (
                     <span
