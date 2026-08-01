@@ -2226,12 +2226,6 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         const dateDaysOff = panelDaysOffByDate.get(key) ?? [];
         const dateBackground = backgroundByDate.get(key);
         const owners = new Set(dateDaysOff.map((item) => item.owner_id));
-        const isDefaultPublicHoliday =
-          date.getDay() === 0 || date.getDay() === 6 || dateHolidays.length > 0;
-        if (isDefaultPublicHoliday) {
-          owners.add("daeho");
-          owners.add("sanghee");
-        }
         const dayOffBackground =
           owners.size === 2
             ? "color-mix(in srgb, rgb(233 166 173) 15%, var(--surface))"
