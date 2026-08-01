@@ -2367,6 +2367,10 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
 
 const CALENDAR_SWIPE_BUFFER_RADIUS = 1;
 const CALENDAR_SWIPE_CENTER_INDEX = CALENDAR_SWIPE_BUFFER_RADIUS;
+const CALENDAR_YEAR_OPTIONS = Array.from(
+  { length: 201 },
+  (_, index) => 1900 + index,
+);
 const CALENDAR_SWIPE_PANEL_OFFSETS = Array.from(
   { length: CALENDAR_SWIPE_BUFFER_RADIUS * 2 + 1 },
   (_, index) => index - CALENDAR_SWIPE_BUFFER_RADIUS,
@@ -2431,6 +2435,10 @@ function CalendarView({
   const indexedHolidaysRef = useRef(holidays);
   const lastCalendarInteractionRef = useRef(0);
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [monthPickerYear, setMonthPickerYear] = useState(
+    selected.getFullYear(),
+  );
   const [dragRange, setDragRange] = useState<DateRange | null>(null);
   const [rangeSheet, setRangeSheet] = useState<DateRange | null>(null);
   const gestureRef = useRef<{
@@ -2715,6 +2723,45 @@ function CalendarView({
     settleMonthTrack(direction, next, toDateKey(next));
   }
 
+  function jumpToMonth(targetMonth: Date, targetDate = toDateKey(targetMonth)) {
+    lastCalendarInteractionRef.current = performance.now();
+    finishSwipeAnimationRef.current?.();
+    setIsDaySheetOpen(false);
+    setRangeSheet(null);
+    setDragRange(null);
+    activeMonthRef.current = targetMonth;
+    const nextPanelMonths = CALENDAR_SWIPE_PANEL_OFFSETS.map(
+      (offset) =>
+        new Date(
+          targetMonth.getFullYear(),
+          targetMonth.getMonth() + offset,
+          1,
+        ),
+    );
+    calendarPanelMonthsRef.current = nextPanelMonths;
+    trackIndexRef.current = CALENDAR_SWIPE_CENTER_INDEX;
+    pendingSwipeOffsetRef.current = 0;
+    const track = calendarTrackRef.current;
+    const width = Math.max(
+      1,
+      track?.parentElement?.clientWidth ?? track?.clientWidth ?? 1,
+    );
+    if (track) track.style.transition = "none";
+    flushSync(() => {
+      setCalendarPanelMonths(nextPanelMonths);
+      setVisibleMonth(targetMonth);
+      setSelectedDate(targetDate);
+    });
+    if (track) {
+      track.style.transform =
+        `translate3d(${-width * CALENDAR_SWIPE_CENTER_INDEX}px, 0, 0)`;
+      window.requestAnimationFrame(() => {
+        track.style.transition = "";
+      });
+    }
+    syncActiveCalendarPanel(CALENDAR_SWIPE_CENTER_INDEX);
+  }
+
   function startGesture(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
     lastCalendarInteractionRef.current = performance.now();
@@ -2932,44 +2979,11 @@ function CalendarView({
             ‹
           </button>
           <button
-            aria-label="이번 달에서 오늘로 이동"
+            aria-label="연도와 월 선택"
             className="month-title"
             onClick={() => {
-              const today = new Date();
-              const todayMonth = new Date(
-                today.getFullYear(),
-                today.getMonth(),
-                1,
-              );
-              finishSwipeAnimationRef.current?.();
-              activeMonthRef.current = todayMonth;
-              const nextPanelMonths = CALENDAR_SWIPE_PANEL_OFFSETS.map(
-                (offset) =>
-                  new Date(
-                    todayMonth.getFullYear(),
-                    todayMonth.getMonth() + offset,
-                    1,
-                  ),
-              );
-              calendarPanelMonthsRef.current = nextPanelMonths;
-              trackIndexRef.current = CALENDAR_SWIPE_CENTER_INDEX;
-              pendingSwipeOffsetRef.current = 0;
-              const track = calendarTrackRef.current;
-              const width = Math.max(
-                1,
-                track?.parentElement?.clientWidth ?? track?.clientWidth ?? 1,
-              );
-              if (track) track.style.transition = "none";
-              flushSync(() => {
-                setCalendarPanelMonths(nextPanelMonths);
-                setVisibleMonth(todayMonth);
-                setSelectedDate(toDateKey(today));
-              });
-              if (track) {
-                track.style.transform =
-                  `translate3d(${-width * CALENDAR_SWIPE_CENTER_INDEX}px, 0, 0)`;
-              }
-              syncActiveCalendarPanel(CALENDAR_SWIPE_CENTER_INDEX);
+              setMonthPickerYear(activeMonthRef.current.getFullYear());
+              setIsMonthPickerOpen(true);
             }}
             type="button"
           >
@@ -3073,6 +3087,55 @@ function CalendarView({
           }}
           range={rangeSheet}
         />
+      ) : null}
+
+      {isMonthPickerOpen ? (
+        <Modal
+          className="modal-card--month-picker"
+          description="이동할 연도와 월을 선택하세요."
+          onClose={() => setIsMonthPickerOpen(false)}
+          title="날짜 이동"
+        >
+          <div className="month-picker-body">
+            <label className="field">
+              <span>연도</span>
+              <select
+                aria-label="이동할 연도"
+                onChange={(event) =>
+                  setMonthPickerYear(Number(event.target.value))
+                }
+                value={monthPickerYear}
+              >
+                {CALENDAR_YEAR_OPTIONS.map((optionYear) => (
+                  <option key={optionYear} value={optionYear}>
+                    {optionYear}년
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div aria-label="이동할 월" className="month-picker-months">
+              {Array.from({ length: 12 }, (_, monthIndex) => {
+                const isCurrent =
+                  monthPickerYear === activeMonthRef.current.getFullYear() &&
+                  monthIndex === activeMonthRef.current.getMonth();
+                return (
+                  <button
+                    aria-pressed={isCurrent}
+                    className={isCurrent ? "is-selected" : ""}
+                    key={monthIndex}
+                    onClick={() => {
+                      setIsMonthPickerOpen(false);
+                      jumpToMonth(new Date(monthPickerYear, monthIndex, 1));
+                    }}
+                    type="button"
+                  >
+                    {monthIndex + 1}월
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Modal>
       ) : null}
     </div>
   );
@@ -5218,6 +5281,7 @@ export function OipApp({
   >("checking");
   const [currentUser, setCurrentUser] = useState<UserCode>("daeho");
   const [mainTab, setMainTab] = useState<MainTab>(initialMainTab);
+  const [calendarResetKey, setCalendarResetKey] = useState(0);
   const [taskTab, setTaskTab] = useState<TaskTab>("todo");
   const [modal, setModal] = useState<ModalName>(null);
   const [selectedDate, setSelectedDate] = useState(initialCalendarDate);
@@ -6043,6 +6107,14 @@ export function OipApp({
     setAuthState("ready");
   }
 
+  function selectMainTab(tab: MainTab) {
+    if (tab === "schedule" && mainTab === "schedule") {
+      setSelectedDate(toDateKey(new Date()));
+      setCalendarResetKey((current) => current + 1);
+    }
+    setMainTab(tab);
+  }
+
   async function signOutDevice() {
     authenticationRejectedRef.current = true;
     restoredCacheUserRef.current = null;
@@ -6766,7 +6838,7 @@ export function OipApp({
               aria-current={mainTab === tab.id ? "page" : undefined}
               className={mainTab === tab.id ? "is-active" : ""}
               key={tab.id}
-              onClick={() => setMainTab(tab.id)}
+              onClick={() => selectMainTab(tab.id)}
               type="button"
             >
               <span>{tab.icon}</span>
@@ -6831,6 +6903,7 @@ export function OipApp({
               daysOff={daysOff}
               events={events}
               holidays={holidays}
+              key={`calendar-${calendarResetKey}`}
               onAddDayOff={openDayOffModal}
               onAddEvent={openEventModal}
               onDeleteDayOff={deleteDayOff}
@@ -6947,7 +7020,7 @@ export function OipApp({
               aria-current={mainTab === tab.id ? "page" : undefined}
               className={mainTab === tab.id ? "is-active" : ""}
               key={tab.id}
-              onClick={() => setMainTab(tab.id)}
+              onClick={() => selectMainTab(tab.id)}
               type="button"
             >
               <span>{tab.icon}</span>

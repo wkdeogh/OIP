@@ -997,6 +997,39 @@ p {
   font-size: 0.62rem;
 }
 
+.modal-card--month-picker {
+  width: min(100%, 390px);
+}
+
+.month-picker-body {
+  display: grid;
+  gap: 18px;
+  padding-top: 8px;
+}
+
+.month-picker-months {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.month-picker-months button {
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.month-picker-months button.is-selected {
+  border-color: var(--green);
+  background: var(--green);
+  color: white;
+  box-shadow: 0 6px 16px rgba(77, 118, 103, 0.2);
+}
+
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
