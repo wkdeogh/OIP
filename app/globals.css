@@ -1097,10 +1097,10 @@ p {
 .calendar-day--range-selected::after {
   position: absolute;
   z-index: 6;
-  inset: 2px;
-  border: 2px solid var(--green);
-  border-radius: 7px;
-  background: rgba(77, 118, 103, 0.13);
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(66, 165, 233, 0.2);
   content: "";
   pointer-events: none;
 }
@@ -3771,7 +3771,7 @@ p {
 }
 
 [data-theme="dark"] .calendar-day--range-selected::after {
-  background: rgba(129, 179, 161, 0.17);
+  background: rgba(66, 165, 233, 0.27);
 }
 
 [data-theme="dark"] .trip-card:hover,
