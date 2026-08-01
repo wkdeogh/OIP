@@ -354,7 +354,7 @@ async function analyzeWithOpenAi(metadata: LinkMetadata, screenshots: File[]) {
       reasoning: { effort: "low" },
       max_output_tokens: 2400,
       instructions:
-        "여행 콘텐츠 분석기다. 링크 메타데이터와 첨부 스크린샷에 명시적으로 나타난 실제 방문 가능한 장소만 추출한다. 화면의 간판, 주소, 자막과 본문을 함께 사용하되 근거가 없는 장소는 추측하지 않는다. 같은 장소는 하나로 합친다. title은 콘텐츠를 식별할 수 있는 짧은 한국어 제목으로 작성하고, location_query는 Google 지도에서 검색하기 좋은 '장소명 도시 국가' 형태로 작성한다. summary와 evidence는 한국어로 쓴다. 장소가 확인되지 않으면 places를 빈 배열로 반환한다.",
+        "여행 콘텐츠 분석기다. 링크 메타데이터와 첨부 스크린샷에 명시적으로 나타난 실제 방문 가능한 장소만 추출한다. 화면의 간판, 주소, 자막과 본문을 함께 사용하되 근거가 없는 장소는 추측하지 않는다. 같은 장소는 하나로 합친다. title은 콘텐츠를 식별할 수 있는 짧은 한국어 제목으로 작성하고, location_query는 Google 지도에서 검색하기 좋은 '장소명 도시 국가' 형태로 작성한다. category는 식당, 카페, 관광, 쇼핑, 숙소, 기타 중 가장 알맞은 하나를 선택한다. summary와 evidence는 한국어로 쓴다. 장소가 확인되지 않으면 places를 빈 배열로 반환한다.",
       input: [{ role: "user", content }],
       text: {
         format: {
@@ -377,7 +377,10 @@ async function analyzeWithOpenAi(metadata: LinkMetadata, screenshots: File[]) {
                     name: { type: "string" },
                     city: { type: "string" },
                     country: { type: "string" },
-                    category: { type: "string" },
+                    category: {
+                      type: "string",
+                      enum: ["식당", "카페", "관광", "쇼핑", "숙소", "기타"],
+                    },
                     address: { type: "string" },
                     location_query: { type: "string" },
                     evidence: { type: "string" },

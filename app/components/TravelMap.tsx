@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   TravelLinkPlace,
   TravelLinkSource,
+  Trip,
   TripAccommodation,
   TripFood,
   TripPlace,
@@ -18,40 +19,63 @@ type MapStatus =
   | "error"
   | "unlocated"
   | "unconfigured";
-type MapEntryKind = "accommodation" | "food" | "place" | "link";
+type MapEntryKind = "accommodation" | "food" | "place";
+type MapEntrySource = "trip" | "link";
 
 type MapEntry = {
+  countryCode?: string | null;
   detail: string;
+  fallbackDestination?: string;
   href?: string | null;
   id: string;
   kind: MapEntryKind;
   query: string;
+  source: MapEntrySource;
   title: string;
 };
 
 type MapLocationGroup = {
   entries: MapEntry[];
   query: string;
+  source: MapEntrySource;
 };
 
 const DEFAULT_CENTER = { lat: 20, lng: 15 };
+const WATERDROP_PATH =
+  "M 0,-22 C -12,-22 -20,-13 -20,-2 C -20,11 -8,21 0,29 C 8,21 20,11 20,-2 C 20,-13 12,-22 0,-22 Z";
 
-const MARKER_META: Record<
+const MARKER_KIND_META: Record<
   MapEntryKind,
-  { color: string; icon: string; label: string }
+  { icon: string; label: string }
 > = {
-  accommodation: { color: "#4285f4", icon: "🏨", label: "숙소" },
-  food: { color: "#f59e0b", icon: "🍴", label: "먹을 것" },
-  place: { color: "#8b5cf6", icon: "📍", label: "갈 곳" },
-  link: { color: "#4d7667", icon: "✨", label: "AI 링크" },
+  accommodation: { icon: "🏨", label: "숙소" },
+  food: { icon: "🍴", label: "식당·음식" },
+  place: { icon: "📍", label: "일반 장소" },
+};
+
+const MARKER_SOURCE_META: Record<
+  MapEntrySource,
+  { color: string; label: string }
+> = {
+  trip: { color: "#4d73d8", label: "여행 연결" },
+  link: { color: "#4d8b70", label: "링크 분석" },
 };
 
 const MARKER_KIND_ORDER: MapEntryKind[] = [
   "accommodation",
   "food",
   "place",
-  "link",
 ];
+const MARKER_SOURCE_ORDER: MapEntrySource[] = ["trip", "link"];
+const GENERIC_LOCATION_TYPES = new Set([
+  "administrative_area_level_1",
+  "administrative_area_level_2",
+  "administrative_area_level_3",
+  "country",
+  "locality",
+  "postal_code",
+  "political",
+]);
 
 const DARK_MAP_STYLES: google.maps.MapTypeStyle[] = [
   { elementType: "geometry", stylers: [{ color: "#1d252d" }] },
@@ -122,30 +146,115 @@ function configureMapsApi(apiKey: string) {
   configuredApiKey = apiKey;
 }
 
+function linkPlaceKind(category: string): MapEntryKind {
+  if (/숙소|호텔|리조트|호스텔|게스트하우스|hotel|resort|hostel/i.test(category)) {
+    return "accommodation";
+  }
+  return /식당|음식|맛집|카페|디저트|베이커리|술집|이자카야|야키니쿠|라멘|스시|레스토랑|food|restaurant|cafe|dining|bakery|dessert|bar/i.test(
+    category,
+  )
+    ? "food"
+    : "place";
+}
+
 function groupEntriesByQuery(entries: MapEntry[]) {
   const groups = new Map<string, MapLocationGroup>();
   entries.forEach((entry) => {
     const query = entry.query.trim();
     if (!query) return;
-    const key = query.toLocaleLowerCase("ko-KR");
+    const key = `${entry.source}:${query.toLocaleLowerCase("ko-KR")}`;
     const existing = groups.get(key);
     if (existing) {
       existing.entries.push(entry);
       return;
     }
-    groups.set(key, { entries: [entry], query });
+    groups.set(key, { entries: [entry], query, source: entry.source });
   });
   return [...groups.values()];
+}
+
+function normalizedLocationText(value: string) {
+  return value
+    .toLocaleLowerCase("ko-KR")
+    .replace(/여행/g, "")
+    .replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+function resultTextMatchesDestination(
+  destination: string,
+  result: google.maps.GeocoderResult,
+) {
+  const expected = normalizedLocationText(destination);
+  if (!expected) return false;
+  const resultText = normalizedLocationText(
+    [
+      result.formatted_address,
+      ...result.address_components.flatMap((component) => [
+        component.long_name,
+        component.short_name,
+      ]),
+    ].join(" "),
+  );
+  return resultText.includes(expected);
+}
+
+function isSpecificPlaceResult(result: google.maps.GeocoderResult) {
+  return (
+    !result.partial_match &&
+    result.types.some((type) => !GENERIC_LOCATION_TYPES.has(type))
+  );
+}
+
+async function fallbackResultMatchesDestination(
+  geocoder: google.maps.Geocoder,
+  entry: MapEntry,
+  result: google.maps.GeocoderResult,
+  destinationBoundsCache: Map<string, google.maps.LatLngBounds | null>,
+) {
+  if (!entry.fallbackDestination || !isSpecificPlaceResult(result)) {
+    return false;
+  }
+  if (resultTextMatchesDestination(entry.fallbackDestination, result)) {
+    return true;
+  }
+
+  const cacheKey = `${entry.countryCode ?? ""}:${entry.fallbackDestination}`;
+  let destinationBounds = destinationBoundsCache.get(cacheKey);
+  if (destinationBounds === undefined) {
+    try {
+      const response = await geocoder.geocode({
+        address: entry.fallbackDestination,
+        language: "ko",
+        ...(entry.countryCode
+          ? { componentRestrictions: { country: entry.countryCode } }
+          : {}),
+      });
+      const destinationResult = response.results[0];
+      destinationBounds = destinationResult
+        ? destinationResult.geometry.bounds ??
+          destinationResult.geometry.viewport ??
+          null
+        : null;
+    } catch {
+      destinationBounds = null;
+    }
+    destinationBoundsCache.set(cacheKey, destinationBounds);
+  }
+
+  return destinationBounds?.contains(result.geometry.location) ?? false;
+}
+
+function infoWindowHeader(group: MapLocationGroup) {
+  const header = document.createElement("strong");
+  header.className = "travel-map-info-title";
+  header.textContent =
+    group.entries.length === 1 ? group.entries[0].title : group.query;
+  return header;
 }
 
 function infoWindowContent(group: MapLocationGroup) {
   const content = document.createElement("div");
   content.className = "travel-map-info";
-
-  const title = document.createElement("strong");
-  title.textContent =
-    group.entries.length === 1 ? group.entries[0].title : group.query;
-  content.append(title);
 
   const list = document.createElement("div");
   list.className = "travel-map-info-list";
@@ -153,8 +262,13 @@ function infoWindowContent(group: MapLocationGroup) {
     const item = document.createElement("span");
     const entryTitle = document.createElement("b");
     const detail = document.createElement("small");
-    entryTitle.textContent = `${MARKER_META[entry.kind].icon} ${entry.title}`;
-    detail.textContent = `${entry.detail} · ${entry.query}`;
+    entryTitle.textContent =
+      group.entries.length === 1
+        ? `${MARKER_KIND_META[entry.kind].icon} ${entry.detail}`
+        : `${MARKER_KIND_META[entry.kind].icon} ${entry.title}`;
+    detail.textContent = entry.fallbackDestination
+      ? `이름으로 자동 검색 · ${entry.fallbackDestination}`
+      : entry.query;
     item.append(entryTitle, detail);
 
     if (entry.href) {
@@ -172,15 +286,72 @@ function infoWindowContent(group: MapLocationGroup) {
   return content;
 }
 
-function makeMarkerIcon(kind: MapEntryKind) {
+function makeMarkerIcon(source: MapEntrySource) {
   return {
-    path: google.maps.SymbolPath.CIRCLE,
-    fillColor: MARKER_META[kind].color,
-    fillOpacity: 1,
-    scale: 18,
+    anchor: new google.maps.Point(0, 29),
+    fillColor: MARKER_SOURCE_META[source].color,
+    fillOpacity: 0.78,
+    labelOrigin: new google.maps.Point(0, -2),
+    path: WATERDROP_PATH,
+    scale: 0.9,
     strokeColor: "#ffffff",
-    strokeWeight: 2,
+    strokeOpacity: 0.96,
+    strokeWeight: 2.3,
   } satisfies google.maps.Symbol;
+}
+
+function UnlocatedDialog({
+  entries,
+  onClose,
+}: {
+  entries: MapEntry[];
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        aria-labelledby="travel-map-unlocated-title"
+        aria-modal="true"
+        className="modal-card travel-map-unlocated-modal"
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className="modal-head">
+          <div>
+            <h2 id="travel-map-unlocated-title">위치를 찾지 못한 항목</h2>
+            <p>검색어를 더 구체적인 상호명이나 주소로 수정해 주세요.</p>
+          </div>
+          <button
+            aria-label="닫기"
+            className="icon-button"
+            onClick={onClose}
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+        <div className="travel-map-unlocated-list">
+          {entries.map((entry) => (
+            <article key={`${entry.source}:${entry.id}`}>
+              <span aria-hidden="true">
+                {MARKER_KIND_META[entry.kind].icon}
+              </span>
+              <div>
+                <strong>{entry.title}</strong>
+                <small>
+                  {MARKER_SOURCE_META[entry.source].label} · {entry.detail}
+                </small>
+                <p>
+                  {entry.fallbackDestination ? "자동 검색" : "입력 위치"}: {" "}
+                  {entry.query}
+                </p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
 }
 
 export function TravelMap({
@@ -193,6 +364,7 @@ export function TravelMap({
   linkSources = [],
   places = [],
   theme,
+  trips = [],
 }: {
   accommodations?: TripAccommodation[];
   apiKey: string;
@@ -203,10 +375,12 @@ export function TravelMap({
   linkSources?: TravelLinkSource[];
   places?: TripPlace[];
   theme: ThemeMode;
+  trips?: Trip[];
 }) {
   const mapElementRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<MapStatus>("loading");
-  const [unlocatedCount, setUnlocatedCount] = useState(0);
+  const [unlocatedEntries, setUnlocatedEntries] = useState<MapEntry[]>([]);
+  const [unlocatedDialogOpen, setUnlocatedDialogOpen] = useState(false);
 
   const locationGroups = useMemo(() => {
     const visibleSources = new Map(
@@ -214,6 +388,7 @@ export function TravelMap({
         .filter((source) => source.is_map_visible)
         .map((source) => [source.id, source]),
     );
+    const tripsById = new Map(trips.map((trip) => [trip.id, trip]));
     const entries: MapEntry[] = [
       ...accommodations.flatMap((item) =>
         item.address?.trim()
@@ -223,6 +398,7 @@ export function TravelMap({
                 id: item.id,
                 kind: "accommodation" as const,
                 query: item.address.trim(),
+                source: "trip" as const,
                 title: item.name,
               },
             ]
@@ -237,25 +413,36 @@ export function TravelMap({
                 id: item.id,
                 kind: "food" as const,
                 query: item.location.trim(),
+                source: "trip" as const,
                 title: item.name,
               },
             ]
           : [],
       ),
-      ...places.flatMap((item) =>
-        item.location?.trim()
+      ...places.flatMap((item) => {
+        const explicitLocation = item.location?.trim();
+        const trip = tripsById.get(item.trip_id);
+        const destination = trip?.destination.trim();
+        const query = explicitLocation ||
+          (destination ? `${item.name}, ${destination}` : "");
+        return query
           ? [
               {
+                countryCode: trip?.country_code,
                 detail: `갈 곳 · ${item.category}`,
+                fallbackDestination: explicitLocation
+                  ? undefined
+                  : destination,
                 href: item.link,
                 id: item.id,
                 kind: "place" as const,
-                query: item.location.trim(),
+                query,
+                source: "trip" as const,
                 title: item.name,
               },
             ]
-          : [],
-      ),
+          : [];
+      }),
       ...linkPlaces.flatMap((place) => {
         const source = visibleSources.get(place.source_id);
         return source
@@ -264,8 +451,9 @@ export function TravelMap({
                 detail: `AI 링크 · ${place.category}`,
                 href: source.url,
                 id: place.id,
-                kind: "link" as const,
+                kind: linkPlaceKind(place.category),
                 query: place.location_query,
+                source: "link" as const,
                 title: place.name,
               },
             ]
@@ -273,7 +461,7 @@ export function TravelMap({
       }),
     ];
     return groupEntriesByQuery(entries);
-  }, [accommodations, foods, linkPlaces, linkSources, places]);
+  }, [accommodations, foods, linkPlaces, linkSources, places, trips]);
 
   const visibleKinds = useMemo(() => {
     const kinds = new Set<MapEntryKind>();
@@ -281,6 +469,13 @@ export function TravelMap({
       group.entries.forEach((entry) => kinds.add(entry.kind)),
     );
     return MARKER_KIND_ORDER.filter((kind) => kinds.has(kind));
+  }, [locationGroups]);
+
+  const visibleSources = useMemo(() => {
+    const sources = new Set(
+      locationGroups.map((group) => group.source),
+    );
+    return MARKER_SOURCE_ORDER.filter((source) => sources.has(source));
   }, [locationGroups]);
 
   useEffect(() => {
@@ -293,7 +488,8 @@ export function TravelMap({
 
     async function renderMap() {
       setStatus("loading");
-      setUnlocatedCount(0);
+      setUnlocatedEntries([]);
+      setUnlocatedDialogOpen(false);
       configureMapsApi(apiKey);
       const [{ Map, InfoWindow }, { Geocoder }, { Marker }] =
         await Promise.all([
@@ -323,21 +519,54 @@ export function TravelMap({
 
       const geocoder = new Geocoder();
       const infoWindow = new InfoWindow();
+      const destinationBoundsCache = new globalThis.Map<
+        string,
+        google.maps.LatLngBounds | null
+      >();
       const located: Array<{
         group: MapLocationGroup;
         location: google.maps.LatLngLiteral;
       }> = [];
+      const failedEntries: MapEntry[] = [];
 
       for (const group of locationGroups) {
         try {
+          const countryCode = group.entries[0].countryCode;
           const response = await geocoder.geocode({
             address: group.query,
             language: "ko",
+            ...(countryCode
+              ? { componentRestrictions: { country: countryCode } }
+              : {}),
           });
-          const location = response.results[0]?.geometry.location.toJSON();
-          if (location) located.push({ group, location });
+          const result = response.results[0];
+          if (!result) {
+            failedEntries.push(...group.entries);
+            continue;
+          }
+
+          const acceptedEntries: MapEntry[] = [];
+          for (const entry of group.entries) {
+            const isAccepted = entry.fallbackDestination
+              ? await fallbackResultMatchesDestination(
+                  geocoder,
+                  entry,
+                  result,
+                  destinationBoundsCache,
+                )
+              : true;
+            if (isAccepted) acceptedEntries.push(entry);
+            else failedEntries.push(entry);
+          }
+
+          if (acceptedEntries.length) {
+            located.push({
+              group: { ...group, entries: acceptedEntries },
+              location: result.geometry.location.toJSON(),
+            });
+          }
         } catch {
-          // An ambiguous location should not prevent the remaining entries from rendering.
+          failedEntries.push(...group.entries);
         }
         if (isCancelled) return;
       }
@@ -345,12 +574,12 @@ export function TravelMap({
       located.forEach(({ group, location }) => {
         const kind = group.entries[0].kind;
         const marker = new Marker({
-          icon: makeMarkerIcon(kind),
+          icon: makeMarkerIcon(group.source),
           label: {
             color: "#ffffff",
             fontSize: "15px",
             fontWeight: "700",
-            text: MARKER_META[kind].icon,
+            text: MARKER_KIND_META[kind].icon,
           },
           map,
           position: location,
@@ -360,6 +589,7 @@ export function TravelMap({
         markers.push(marker);
         listeners.push(
           marker.addListener("click", () => {
+            infoWindow.setHeaderContent(infoWindowHeader(group));
             infoWindow.setContent(infoWindowContent(group));
             infoWindow.open({ anchor: marker, map });
           }),
@@ -389,7 +619,7 @@ export function TravelMap({
       }
 
       if (!isCancelled) {
-        setUnlocatedCount(locationGroups.length - located.length);
+        setUnlocatedEntries(failedEntries);
         setStatus(located.length ? "ready" : "unlocated");
       }
     }
@@ -423,7 +653,7 @@ export function TravelMap({
           ? {
               icon: "?",
               title: "입력한 위치를 지도에서 찾지 못했습니다",
-              detail: "상호명과 도시 또는 상세 주소를 확인해 주세요.",
+              detail: "아래 안내에서 찾지 못한 항목을 확인해 주세요.",
             }
           : visibleStatus === "empty"
             ? {
@@ -438,46 +668,72 @@ export function TravelMap({
               };
 
   return (
-    <section className="travel-map-panel" aria-label="여행 지도">
-      <div
-        aria-label="저장된 숙소와 여행지를 표시하는 Google 지도"
-        className="travel-map-canvas"
-        ref={mapElementRef}
-        role="region"
-      />
-      {visibleStatus === "ready" && visibleKinds.length ? (
-        <div className="travel-map-legend" aria-label="지도 마커 범례">
-          {visibleKinds.map((kind) => (
-            <span key={kind}>
-              <i
-                aria-hidden="true"
-                style={{ backgroundColor: MARKER_META[kind].color }}
-              >
-                {MARKER_META[kind].icon}
-              </i>
-              {MARKER_META[kind].label}
-            </span>
-          ))}
-        </div>
+    <div className="travel-map-block">
+      <section className="travel-map-panel" aria-label="여행 지도">
+        <div
+          aria-label="저장된 숙소와 여행지를 표시하는 Google 지도"
+          className="travel-map-canvas"
+          ref={mapElementRef}
+          role="region"
+        />
+        {visibleStatus === "ready" &&
+        (visibleSources.length || visibleKinds.length) ? (
+          <div className="travel-map-legend" aria-label="지도 마커 범례">
+            <div className="travel-map-legend-sources">
+              {visibleSources.map((source) => (
+                <span key={source}>
+                  <i
+                    aria-hidden="true"
+                    style={{ backgroundColor: MARKER_SOURCE_META[source].color }}
+                  />
+                  {MARKER_SOURCE_META[source].label}
+                </span>
+              ))}
+            </div>
+            <div className="travel-map-legend-kinds">
+              {visibleKinds.map((kind) => (
+                <span key={kind}>
+                  {MARKER_KIND_META[kind].icon} {MARKER_KIND_META[kind].label}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {visibleStatus !== "ready" ? (
+          <div
+            className={`travel-map-status travel-map-status--${visibleStatus}`}
+          >
+            {visibleStatus === "loading" ? (
+              <span aria-hidden="true" className="travel-map-spinner" />
+            ) : (
+              <span aria-hidden="true" className="travel-map-status-icon">
+                {statusCopy.icon}
+              </span>
+            )}
+            <strong>{statusCopy.title}</strong>
+            <small>{statusCopy.detail}</small>
+          </div>
+        ) : null}
+      </section>
+
+      {unlocatedEntries.length ? (
+        <button
+          className="travel-map-unlocated-button"
+          onClick={() => setUnlocatedDialogOpen(true)}
+          type="button"
+        >
+          <span aria-hidden="true">!</span>
+          위치를 찾지 못한 항목 {unlocatedEntries.length}개
+          <small>확인 ›</small>
+        </button>
       ) : null}
-      {visibleStatus !== "ready" ? (
-        <div className={`travel-map-status travel-map-status--${visibleStatus}`}>
-          {visibleStatus === "loading" ? (
-            <span aria-hidden="true" className="travel-map-spinner" />
-          ) : (
-            <span aria-hidden="true" className="travel-map-status-icon">
-              {statusCopy.icon}
-            </span>
-          )}
-          <strong>{statusCopy.title}</strong>
-          <small>{statusCopy.detail}</small>
-        </div>
+
+      {unlocatedDialogOpen ? (
+        <UnlocatedDialog
+          entries={unlocatedEntries}
+          onClose={() => setUnlocatedDialogOpen(false)}
+        />
       ) : null}
-      {visibleStatus === "ready" && unlocatedCount ? (
-        <span className="travel-map-notice">
-          위치를 찾지 못한 항목 {unlocatedCount}개
-        </span>
-      ) : null}
-    </section>
+    </div>
   );
 }

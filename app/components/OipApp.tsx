@@ -4388,8 +4388,9 @@ function TravelView({
     (item) => activeMapTripIdSet.has(item.trip_id) && item.location?.trim(),
   );
   const mapPlaces = places.filter(
-    (item) => activeMapTripIdSet.has(item.trip_id) && item.location?.trim(),
+    (item) => activeMapTripIdSet.has(item.trip_id),
   );
+  const mapTrips = trips.filter((trip) => activeMapTripIdSet.has(trip.id));
   const selectedLinkSource = travelLinkSources.find(
     (source) => source.id === selectedLinkSourceId,
   );
@@ -4634,7 +4635,7 @@ function TravelView({
           <TravelMap
             accommodations={mapAccommodations}
             apiKey={googleMapsApiKey}
-            emptyDetail="선택한 여행의 숙소 주소와 먹을 것·갈 곳의 지도 위치를 입력해 주세요."
+            emptyDetail="숙소·먹을 것의 위치를 입력하거나 갈 곳을 추가해 주세요."
             emptyTitle={
               trips.length || travelLinkSources.length
                 ? "지도에 표시할 상세 위치가 없습니다"
@@ -4645,6 +4646,7 @@ function TravelView({
             linkSources={travelLinkSources}
             places={mapPlaces}
             theme={theme}
+            trips={mapTrips}
           />
 
           <div className="travel-map-actions">

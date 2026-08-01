@@ -2230,12 +2230,16 @@ p {
   font-size: 1.3rem;
 }
 
+.travel-map-block {
+  min-width: 0;
+  grid-area: map;
+}
+
 .travel-map-panel {
   position: relative;
   left: 50%;
   width: 100vw;
   aspect-ratio: 1;
-  grid-area: map;
   margin: 0 0 10px -50vw;
   overflow: hidden;
   border-block: 1px solid var(--line);
@@ -2318,32 +2322,15 @@ p {
   animation: travel-map-spin 800ms linear infinite;
 }
 
-.travel-map-notice {
-  position: absolute;
-  z-index: 3;
-  right: 10px;
-  bottom: 24px;
-  padding: 7px 10px;
-  border: 1px solid rgba(225, 228, 232, 0.9);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #525a64;
-  font-size: 0.65rem;
-  font-weight: 800;
-  box-shadow: 0 5px 16px rgba(28, 34, 43, 0.14);
-  pointer-events: none;
-}
-
 .travel-map-legend {
   position: absolute;
   z-index: 3;
   top: 10px;
   left: 10px;
-  display: flex;
+  display: grid;
   max-width: calc(100% - 78px);
-  flex-wrap: wrap;
   gap: 5px;
-  padding: 6px;
+  padding: 7px 8px;
   border: 1px solid rgba(225, 228, 232, 0.9);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.9);
@@ -2352,44 +2339,153 @@ p {
   backdrop-filter: blur(8px);
 }
 
-.travel-map-legend > span {
+.travel-map-legend-sources,
+.travel-map-legend-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+}
+
+.travel-map-legend-sources {
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(225, 228, 232, 0.9);
+}
+
+.travel-map-legend-sources > span,
+.travel-map-legend-kinds > span {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding-right: 3px;
   color: #525a64;
   font-size: 0.59rem;
   font-weight: 850;
   white-space: nowrap;
 }
 
-.travel-map-legend i {
+.travel-map-legend-sources i {
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50% 50% 50% 0;
+  box-shadow: 0 2px 5px rgba(28, 34, 43, 0.18);
+  opacity: 0.82;
+  transform: rotate(-45deg);
+}
+
+.travel-map-unlocated-button {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border: 1px solid #ead9b5;
+  border-radius: 12px;
+  background: #fffaf0;
+  color: #77581e;
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-align: left;
+}
+
+.travel-map-unlocated-button:hover {
+  border-color: #dcc184;
+  background: #fff6e3;
+}
+
+.travel-map-unlocated-button > span {
   display: grid;
   width: 22px;
   height: 22px;
+  flex: 0 0 auto;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.92);
   border-radius: 50%;
+  background: #e3b85c;
   color: white;
-  font-size: 0.72rem;
-  font-style: normal;
-  box-shadow: 0 2px 5px rgba(28, 34, 43, 0.18);
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
+.travel-map-unlocated-button small {
+  margin-left: auto;
+  color: #94743b;
+  font-size: 0.62rem;
+}
+
+.travel-map-unlocated-modal {
+  width: min(100%, 500px);
+}
+
+.travel-map-unlocated-list {
+  display: grid;
+  gap: 8px;
+}
+
+.travel-map-unlocated-list article {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.travel-map-unlocated-list article > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: white;
+  font-size: 1rem;
+}
+
+.travel-map-unlocated-list article > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.travel-map-unlocated-list strong {
+  font-size: 0.76rem;
+}
+
+.travel-map-unlocated-list small {
+  color: var(--muted);
+  font-size: 0.61rem;
+  font-weight: 750;
+}
+
+.travel-map-unlocated-list p {
+  overflow-wrap: anywhere;
+  color: #77581e;
+  font-size: 0.64rem;
+  line-height: 1.45;
 }
 
 .travel-map-info {
   display: grid;
   min-width: 160px;
   max-width: 230px;
-  gap: 8px;
-  padding: 3px 2px 2px;
+  padding: 0 2px 2px;
   color: #252a31;
   font-family:
     Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
     "Noto Sans KR", "Segoe UI", sans-serif;
 }
 
-.travel-map-info > strong {
+.travel-map-info-title {
+  display: block;
+  min-width: 155px;
+  padding: 2px 4px 0 0;
+  color: #252a31;
+  font-family:
+    Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Noto Sans KR", "Segoe UI", sans-serif;
   font-size: 0.9rem;
+  line-height: 1.35;
   letter-spacing: -0.025em;
 }
 
@@ -4670,19 +4766,38 @@ p {
   background: rgba(18, 22, 27, 0.58);
 }
 
-[data-theme="dark"] .travel-map-notice {
-  border-color: #39434f;
-  background: rgba(26, 32, 39, 0.92);
-  color: #c2c9d1;
-}
-
 [data-theme="dark"] .travel-map-legend {
   border-color: #39434f;
   background: rgba(26, 32, 39, 0.92);
 }
 
-[data-theme="dark"] .travel-map-legend > span {
+[data-theme="dark"] .travel-map-legend-sources > span,
+[data-theme="dark"] .travel-map-legend-kinds > span {
   color: #c2c9d1;
+}
+
+[data-theme="dark"] .travel-map-legend-sources {
+  border-color: #39434f;
+}
+
+[data-theme="dark"] .travel-map-unlocated-button {
+  border-color: #685a37;
+  background: #2c281e;
+  color: #e8cd91;
+}
+
+[data-theme="dark"] .travel-map-unlocated-button:hover {
+  border-color: #7b6840;
+  background: #332d20;
+}
+
+[data-theme="dark"] .travel-map-unlocated-button small,
+[data-theme="dark"] .travel-map-unlocated-list p {
+  color: #d4b879;
+}
+
+[data-theme="dark"] .travel-map-unlocated-list article > span {
+  background: var(--surface);
 }
 
 [data-theme="dark"] .fridge-card--urgent {
@@ -5006,9 +5121,13 @@ p {
     align-items: start;
   }
 
-  .travel-map-panel {
+  .travel-map-block {
     position: sticky;
     top: 146px;
+  }
+
+  .travel-map-panel {
+    position: relative;
     aspect-ratio: 1;
     margin-top: 0;
   }
