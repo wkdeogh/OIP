@@ -2174,7 +2174,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         const owners = new Set(dateDaysOff.map((item) => item.owner_id));
         const dayOffBackground =
           owners.size === 2
-            ? "linear-gradient(135deg, rgba(127,169,155,.2) 0 44%, rgba(180,168,164,.18) 50%, rgba(233,166,173,.2) 56% 100%)"
+            ? "color-mix(in srgb, rgb(233 166 173) 20%, var(--surface))"
             : owners.has("daeho")
               ? "rgba(127,169,155,.15)"
               : owners.has("sanghee")
@@ -2189,6 +2189,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
           key <= selectedRange.end;
         const isOutside = date.getMonth() !== monthIndex;
         const isToday = key === todayKey;
+        const hasSplitDayOffBackground = owners.size === 2 && !dateBackground;
 
         return (
           <button
@@ -2204,6 +2205,9 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
               isOutside ? "calendar-day--outside" : "",
               isToday ? "calendar-day--today" : "",
               dateHolidays.length ? "calendar-day--holiday" : "",
+              hasSplitDayOffBackground
+                ? "calendar-day--split-day-off"
+                : "",
               isRangeSelected ? "calendar-day--range-selected" : "",
             ]
               .filter(Boolean)
