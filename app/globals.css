@@ -1192,6 +1192,13 @@ p {
   white-space: nowrap;
 }
 
+.event-chip-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 .event-chip.event-chip--range {
   position: relative;
   z-index: 2;

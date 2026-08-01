@@ -604,6 +604,70 @@ function displayedCustomEventColor(color?: string | null) {
   return LEGACY_EVENT_COLOR_DISPLAY[color.toUpperCase()] ?? color;
 }
 
+const eventChipFitCache = new Map<string, string>();
+
+function eventLabelGraphemes(value: string) {
+  if (typeof Intl.Segmenter === "function") {
+    const segmenter = new Intl.Segmenter("ko", { granularity: "grapheme" });
+    return Array.from(segmenter.segment(value), ({ segment }) => segment);
+  }
+  return Array.from(value);
+}
+
+function fitCalendarEventLabels(container: HTMLElement) {
+  const labels = Array.from(
+    container.querySelectorAll<HTMLElement>(".event-chip-label[data-full-text]"),
+  );
+  if (!labels.length) return;
+
+  const context = document.createElement("canvas").getContext("2d");
+  if (!context) return;
+
+  labels.forEach((label) => {
+    const fullText = label.dataset.fullText ?? "";
+    const chip = label.closest<HTMLElement>(".event-chip");
+    if (!chip) return;
+
+    const style = window.getComputedStyle(chip);
+    const availableWidth = Math.max(
+      0,
+      chip.clientWidth -
+        Number.parseFloat(style.paddingLeft) -
+        Number.parseFloat(style.paddingRight),
+    );
+    const font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const letterSpacing = Number.parseFloat(style.letterSpacing) || 0;
+    const cacheKey = `${fullText}\u0000${Math.floor(availableWidth * 10)}\u0000${font}\u0000${letterSpacing}`;
+    const cached = eventChipFitCache.get(cacheKey);
+    if (cached !== undefined) {
+      label.textContent = cached;
+      return;
+    }
+
+    context.font = font;
+    const graphemes = eventLabelGraphemes(fullText);
+    let low = 0;
+    let high = graphemes.length;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      const candidate = graphemes.slice(0, middle).join("");
+      const candidateWidth =
+        context.measureText(candidate).width +
+        Math.max(0, middle - 1) * letterSpacing;
+      if (candidateWidth <= availableWidth) {
+        low = middle;
+      } else {
+        high = middle - 1;
+      }
+    }
+
+    const fitted = graphemes.slice(0, low).join("");
+    if (eventChipFitCache.size > 500) eventChipFitCache.clear();
+    eventChipFitCache.set(cacheKey, fitted);
+    label.textContent = fitted;
+  });
+}
+
 function newId() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 }
@@ -2056,10 +2120,32 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
     });
     return result;
   }, [daysOff]);
+  const calendarGridRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const grid = calendarGridRef.current;
+    if (!grid) return;
+
+    fitCalendarEventLabels(grid);
+    let resizeFrame: number | null = null;
+    const observer = new ResizeObserver(() => {
+      if (resizeFrame !== null) return;
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = null;
+        fitCalendarEventLabels(grid);
+      });
+    });
+    observer.observe(grid);
+
+    return () => {
+      observer.disconnect();
+      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
+    };
+  }, [panelEventsByDate]);
   const todayKey = toDateKey(new Date());
 
   return (
-    <div className="calendar-grid">
+    <div className="calendar-grid" ref={calendarGridRef}>
       {panelDays.map((date, dayIndex) => {
         const key = toDateKey(date);
         const weekIndex = Math.floor(dayIndex / 7);
@@ -2161,6 +2247,9 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                   const showTitle = !isRange || isSegmentStart;
                   const showStartTime =
                     showTitle && !event.is_all_day && range.start === key;
+                  const chipText = showTitle
+                    ? `${showStartTime ? `${timeInSeoul(event.start_at)} ` : ""}${event.title}`
+                    : "\u00a0";
 
                   return (
                     <span
@@ -2180,14 +2269,13 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                         color: EVENT_CHIP_TEXT_COLOR,
                       }}
                     >
-                      {showTitle ? (
-                        <>
-                          {showStartTime ? `${timeInSeoul(event.start_at)} ` : ""}
-                          {event.title}
-                        </>
-                      ) : (
-                        "\u00a0"
-                      )}
+                      <span
+                        className="event-chip-label"
+                        data-full-text={showTitle ? chipText : undefined}
+                        title={showTitle ? chipText : undefined}
+                      >
+                        {chipText}
+                      </span>
                     </span>
                   );
                 })}
