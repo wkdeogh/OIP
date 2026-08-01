@@ -402,6 +402,12 @@ p {
   font-weight: 700;
 }
 
+.field-hint {
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.45;
+}
+
 .local-hint {
   margin: 9px 0 15px;
   color: var(--muted);
@@ -2326,6 +2332,48 @@ p {
   font-weight: 800;
   box-shadow: 0 5px 16px rgba(28, 34, 43, 0.14);
   pointer-events: none;
+}
+
+.travel-map-legend {
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  max-width: calc(100% - 78px);
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid rgba(225, 228, 232, 0.9);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 5px 16px rgba(28, 34, 43, 0.14);
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.travel-map-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 3px;
+  color: #525a64;
+  font-size: 0.59rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.travel-map-legend i {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  color: white;
+  font-size: 0.72rem;
+  font-style: normal;
+  box-shadow: 0 2px 5px rgba(28, 34, 43, 0.18);
 }
 
 .travel-map-info {
@@ -4625,6 +4673,15 @@ p {
 [data-theme="dark"] .travel-map-notice {
   border-color: #39434f;
   background: rgba(26, 32, 39, 0.92);
+  color: #c2c9d1;
+}
+
+[data-theme="dark"] .travel-map-legend {
+  border-color: #39434f;
+  background: rgba(26, 32, 39, 0.92);
+}
+
+[data-theme="dark"] .travel-map-legend > span {
   color: #c2c9d1;
 }
 

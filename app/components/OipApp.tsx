@@ -3552,6 +3552,7 @@ function TripDetailForm({
         ...base,
         name,
         category: String(form.get("category") ?? "관광"),
+        location: optionalFormValue(form, "location"),
         is_visited: place?.is_visited ?? false,
         memo: optionalFormValue(form, "memo"),
       };
@@ -3688,11 +3689,15 @@ function TripDetailForm({
               />
             </label>
             <label className="field">
-              <span>주소</span>
+              <span>주소 (지도 표시)</span>
               <input
                 defaultValue={accommodation?.address ?? ""}
                 name="address"
+                placeholder="예: 호텔 뉴 오타니 오사카 또는 상세 주소"
               />
+              <small className="field-hint">
+                입력한 값이 있을 때만 숙소 핀이 지도에 표시돼요.
+              </small>
             </label>
             <label className="field">
               <span>지도 링크</span>
@@ -3773,8 +3778,15 @@ function TripDetailForm({
               </label>
             </div>
             <label className="field">
-              <span>위치</span>
-              <input defaultValue={food?.location ?? ""} name="location" />
+              <span>지도 위치/주소</span>
+              <input
+                defaultValue={food?.location ?? ""}
+                name="location"
+                placeholder="예: 이치란 도톤보리점 오사카 또는 상세 주소"
+              />
+              <small className="field-hint">
+                비워두면 지도에 표시하지 않아요.
+              </small>
             </label>
             <div className="field-row">
               <label className="field">
@@ -3821,6 +3833,17 @@ function TripDetailForm({
                 </select>
               </label>
             </div>
+            <label className="field">
+              <span>지도 위치/주소</span>
+              <input
+                defaultValue={place?.location ?? ""}
+                name="location"
+                placeholder="예: 오사카성 또는 상세 주소"
+              />
+              <small className="field-hint">
+                비워두면 지도에 표시하지 않아요.
+              </small>
+            </label>
           </>
         )}
 
@@ -4358,7 +4381,15 @@ function TravelView({
     selectedMapTripIds ?? trips.map((trip) => trip.id)
   ).filter((id) => availableTripIds.has(id));
   const activeMapTripIdSet = new Set(activeMapTripIds);
-  const mapTrips = trips.filter((trip) => activeMapTripIdSet.has(trip.id));
+  const mapAccommodations = accommodations.filter(
+    (item) => activeMapTripIdSet.has(item.trip_id) && item.address?.trim(),
+  );
+  const mapFoods = foods.filter(
+    (item) => activeMapTripIdSet.has(item.trip_id) && item.location?.trim(),
+  );
+  const mapPlaces = places.filter(
+    (item) => activeMapTripIdSet.has(item.trip_id) && item.location?.trim(),
+  );
   const selectedLinkSource = travelLinkSources.find(
     (source) => source.id === selectedLinkSourceId,
   );
@@ -4601,17 +4632,19 @@ function TravelView({
       ) : (
         <div className="travel-map-layout">
           <TravelMap
+            accommodations={mapAccommodations}
             apiKey={googleMapsApiKey}
-            emptyDetail="여행 연결 버튼에서 지도에 표시할 여행을 선택할 수 있습니다."
+            emptyDetail="선택한 여행의 숙소 주소와 먹을 것·갈 곳의 지도 위치를 입력해 주세요."
             emptyTitle={
               trips.length || travelLinkSources.length
-                ? "지도에 표시할 여행을 선택해 주세요"
+                ? "지도에 표시할 상세 위치가 없습니다"
                 : "등록된 여행이 없습니다"
             }
+            foods={mapFoods}
             linkPlaces={travelLinkPlaces}
             linkSources={travelLinkSources}
+            places={mapPlaces}
             theme={theme}
-            trips={mapTrips}
           />
 
           <div className="travel-map-actions">
@@ -5477,6 +5510,7 @@ function TravelView({
                       </div>
                       <TravelDetailFields
                         fields={[
+                          { label: "지도 위치", value: item.location },
                           { label: "메모", value: item.memo },
                         ]}
                       />

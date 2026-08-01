@@ -5,7 +5,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   TravelLinkPlace,
   TravelLinkSource,
-  Trip,
+  TripAccommodation,
+  TripFood,
+  TripPlace,
 } from "../oip-types";
 
 type ThemeMode = "light" | "dark";
@@ -16,19 +18,40 @@ type MapStatus =
   | "error"
   | "unlocated"
   | "unconfigured";
+type MapEntryKind = "accommodation" | "food" | "place" | "link";
 
-type DestinationGroup = {
-  countryCode?: string | null;
-  destination: string;
-  trips: Trip[];
+type MapEntry = {
+  detail: string;
+  href?: string | null;
+  id: string;
+  kind: MapEntryKind;
+  query: string;
+  title: string;
 };
 
-type LinkDestination = {
-  place: TravelLinkPlace;
-  source: TravelLinkSource;
+type MapLocationGroup = {
+  entries: MapEntry[];
+  query: string;
 };
 
 const DEFAULT_CENTER = { lat: 20, lng: 15 };
+
+const MARKER_META: Record<
+  MapEntryKind,
+  { color: string; icon: string; label: string }
+> = {
+  accommodation: { color: "#4285f4", icon: "🏨", label: "숙소" },
+  food: { color: "#f59e0b", icon: "🍴", label: "먹을 것" },
+  place: { color: "#8b5cf6", icon: "📍", label: "갈 곳" },
+  link: { color: "#4d7667", icon: "✨", label: "AI 링크" },
+};
+
+const MARKER_KIND_ORDER: MapEntryKind[] = [
+  "accommodation",
+  "food",
+  "place",
+  "link",
+];
 
 const DARK_MAP_STYLES: google.maps.MapTypeStyle[] = [
   { elementType: "geometry", stylers: [{ color: "#1d252d" }] },
@@ -99,145 +122,166 @@ function configureMapsApi(apiKey: string) {
   configuredApiKey = apiKey;
 }
 
-function formatTripPeriod(trip: Trip) {
-  const format = (value: string) =>
-    new Intl.DateTimeFormat("ko-KR", {
-      month: "short",
-      day: "numeric",
-      timeZone: "Asia/Seoul",
-    }).format(new Date(`${value}T00:00:00+09:00`));
-  return `${format(trip.start_date)} – ${format(trip.end_date)}`;
+function groupEntriesByQuery(entries: MapEntry[]) {
+  const groups = new Map<string, MapLocationGroup>();
+  entries.forEach((entry) => {
+    const query = entry.query.trim();
+    if (!query) return;
+    const key = query.toLocaleLowerCase("ko-KR");
+    const existing = groups.get(key);
+    if (existing) {
+      existing.entries.push(entry);
+      return;
+    }
+    groups.set(key, { entries: [entry], query });
+  });
+  return [...groups.values()];
 }
 
-function infoWindowContent(group: DestinationGroup) {
+function infoWindowContent(group: MapLocationGroup) {
   const content = document.createElement("div");
   content.className = "travel-map-info";
 
-  const destination = document.createElement("strong");
-  destination.textContent = group.destination;
-  content.append(destination);
+  const title = document.createElement("strong");
+  title.textContent =
+    group.entries.length === 1 ? group.entries[0].title : group.query;
+  content.append(title);
 
   const list = document.createElement("div");
   list.className = "travel-map-info-list";
-  group.trips.forEach((trip) => {
+  group.entries.forEach((entry) => {
     const item = document.createElement("span");
-    const title = document.createElement("b");
-    const period = document.createElement("small");
-    title.textContent = trip.title;
-    period.textContent = formatTripPeriod(trip);
-    item.append(title, period);
+    const entryTitle = document.createElement("b");
+    const detail = document.createElement("small");
+    entryTitle.textContent = `${MARKER_META[entry.kind].icon} ${entry.title}`;
+    detail.textContent = `${entry.detail} · ${entry.query}`;
+    item.append(entryTitle, detail);
+
+    if (entry.href) {
+      const link = document.createElement("a");
+      link.href = entry.href;
+      link.rel = "noreferrer";
+      link.target = "_blank";
+      link.textContent = "원본 링크 열기";
+      item.append(link);
+    }
+
     list.append(item);
   });
   content.append(list);
   return content;
 }
 
-function linkInfoWindowContent(group: LinkDestination) {
-  const content = document.createElement("div");
-  content.className = "travel-map-info";
-
-  const title = document.createElement("strong");
-  title.textContent = group.place.name;
-  content.append(title);
-
-  const list = document.createElement("div");
-  list.className = "travel-map-info-list";
-  const placeInfo = document.createElement("span");
-  const category = document.createElement("b");
-  const location = document.createElement("small");
-  category.textContent = group.place.category;
-  location.textContent =
-    group.place.address ||
-    [group.place.city, group.place.country].filter(Boolean).join(", ") ||
-    group.place.location_query;
-  placeInfo.append(category, location);
-  list.append(placeInfo);
-
-  const sourceLink = document.createElement("a");
-  sourceLink.href = group.source.url;
-  sourceLink.rel = "noreferrer";
-  sourceLink.target = "_blank";
-  sourceLink.textContent = `출처: ${group.source.title}`;
-  list.append(sourceLink);
-  content.append(list);
-  return content;
-}
-
-async function geocodeDestination(
-  geocoder: google.maps.Geocoder,
-  group: DestinationGroup,
-) {
-  const request: google.maps.GeocoderRequest = {
-    address: group.destination,
-    language: "ko",
-    ...(group.countryCode
-      ? { componentRestrictions: { country: group.countryCode } }
-      : {}),
-  };
-  const response = await geocoder.geocode(request);
-  const location = response.results[0]?.geometry.location.toJSON();
-  return location ?? null;
-}
-
-function groupTripsByDestination(trips: Trip[]) {
-  const groups = new Map<string, DestinationGroup>();
-  trips.forEach((trip) => {
-    const destination = trip.destination.trim();
-    if (!destination) return;
-    const key = `${trip.country_code ?? ""}:${destination}`.toLocaleLowerCase(
-      "ko-KR",
-    );
-    const existing = groups.get(key);
-    if (existing) {
-      existing.trips.push(trip);
-      return;
-    }
-    groups.set(key, {
-      countryCode: trip.country_code,
-      destination,
-      trips: [trip],
-    });
-  });
-  return [...groups.values()];
+function makeMarkerIcon(kind: MapEntryKind) {
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    fillColor: MARKER_META[kind].color,
+    fillOpacity: 1,
+    scale: 18,
+    strokeColor: "#ffffff",
+    strokeWeight: 2,
+  } satisfies google.maps.Symbol;
 }
 
 export function TravelMap({
+  accommodations = [],
   apiKey,
-  emptyDetail = "여행지를 추가하면 이곳에 마커가 생깁니다.",
-  emptyTitle = "표시할 여행지가 없습니다",
+  emptyDetail = "상세 위치를 입력하면 이곳에 마커가 생깁니다.",
+  emptyTitle = "표시할 상세 위치가 없습니다",
+  foods = [],
   linkPlaces = [],
   linkSources = [],
+  places = [],
   theme,
-  trips,
 }: {
+  accommodations?: TripAccommodation[];
   apiKey: string;
   emptyDetail?: string;
   emptyTitle?: string;
+  foods?: TripFood[];
   linkPlaces?: TravelLinkPlace[];
   linkSources?: TravelLinkSource[];
+  places?: TripPlace[];
   theme: ThemeMode;
-  trips: Trip[];
 }) {
   const mapElementRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<MapStatus>("loading");
   const [unlocatedCount, setUnlocatedCount] = useState(0);
-  const destinationGroups = useMemo(
-    () => groupTripsByDestination(trips),
-    [trips],
-  );
-  const linkDestinations = useMemo(() => {
+
+  const locationGroups = useMemo(() => {
     const visibleSources = new Map(
       linkSources
         .filter((source) => source.is_map_visible)
         .map((source) => [source.id, source]),
     );
-    return linkPlaces
-      .map((place) => {
+    const entries: MapEntry[] = [
+      ...accommodations.flatMap((item) =>
+        item.address?.trim()
+          ? [
+              {
+                detail: "숙소",
+                id: item.id,
+                kind: "accommodation" as const,
+                query: item.address.trim(),
+                title: item.name,
+              },
+            ]
+          : [],
+      ),
+      ...foods.flatMap((item) =>
+        item.location?.trim()
+          ? [
+              {
+                detail: `먹을 것 · ${item.item_type}`,
+                href: item.link,
+                id: item.id,
+                kind: "food" as const,
+                query: item.location.trim(),
+                title: item.name,
+              },
+            ]
+          : [],
+      ),
+      ...places.flatMap((item) =>
+        item.location?.trim()
+          ? [
+              {
+                detail: `갈 곳 · ${item.category}`,
+                href: item.link,
+                id: item.id,
+                kind: "place" as const,
+                query: item.location.trim(),
+                title: item.name,
+              },
+            ]
+          : [],
+      ),
+      ...linkPlaces.flatMap((place) => {
         const source = visibleSources.get(place.source_id);
-        return source ? { place, source } : null;
-      })
-      .filter((group): group is LinkDestination => Boolean(group));
-  }, [linkPlaces, linkSources]);
+        return source
+          ? [
+              {
+                detail: `AI 링크 · ${place.category}`,
+                href: source.url,
+                id: place.id,
+                kind: "link" as const,
+                query: place.location_query,
+                title: place.name,
+              },
+            ]
+          : [];
+      }),
+    ];
+    return groupEntriesByQuery(entries);
+  }, [accommodations, foods, linkPlaces, linkSources, places]);
+
+  const visibleKinds = useMemo(() => {
+    const kinds = new Set<MapEntryKind>();
+    locationGroups.forEach((group) =>
+      group.entries.forEach((entry) => kinds.add(entry.kind)),
+    );
+    return MARKER_KIND_ORDER.filter((kind) => kinds.has(kind));
+  }, [locationGroups]);
 
   useEffect(() => {
     if (!apiKey) return;
@@ -268,71 +312,55 @@ export function TravelMap({
         mapTypeControl: false,
         streetViewControl: false,
         styles: theme === "dark" ? DARK_MAP_STYLES : undefined,
-        zoom: destinationGroups.length || linkDestinations.length ? 3 : 2,
+        zoom: locationGroups.length ? 3 : 2,
         zoomControl: true,
       });
 
-      if (!destinationGroups.length && !linkDestinations.length) {
+      if (!locationGroups.length) {
         if (!isCancelled) setStatus("empty");
         return;
       }
 
       const geocoder = new Geocoder();
       const infoWindow = new InfoWindow();
-      const located: Array<
-        | {
-            kind: "trip";
-            group: DestinationGroup;
-            location: google.maps.LatLngLiteral;
-          }
-        | {
-            kind: "link";
-            group: LinkDestination;
-            location: google.maps.LatLngLiteral;
-          }
-      > = [];
+      const located: Array<{
+        group: MapLocationGroup;
+        location: google.maps.LatLngLiteral;
+      }> = [];
 
-      for (const group of destinationGroups) {
-        try {
-          const location = await geocodeDestination(geocoder, group);
-          if (location) located.push({ kind: "trip", group, location });
-        } catch {
-          // A single destination should not prevent the remaining trips from rendering.
-        }
-        if (isCancelled) return;
-      }
-
-      for (const group of linkDestinations) {
+      for (const group of locationGroups) {
         try {
           const response = await geocoder.geocode({
-            address: group.place.location_query,
+            address: group.query,
             language: "ko",
           });
           const location = response.results[0]?.geometry.location.toJSON();
-          if (location) located.push({ kind: "link", group, location });
+          if (location) located.push({ group, location });
         } catch {
-          // Keep rendering the other extracted places when one query is ambiguous.
+          // An ambiguous location should not prevent the remaining entries from rendering.
         }
         if (isCancelled) return;
       }
 
-      located.forEach((item) => {
+      located.forEach(({ group, location }) => {
+        const kind = group.entries[0].kind;
         const marker = new Marker({
+          icon: makeMarkerIcon(kind),
+          label: {
+            color: "#ffffff",
+            fontSize: "15px",
+            fontWeight: "700",
+            text: MARKER_META[kind].icon,
+          },
           map,
-          position: item.location,
+          position: location,
           title:
-            item.kind === "trip"
-              ? item.group.destination
-              : item.group.place.name,
+            group.entries.length === 1 ? group.entries[0].title : group.query,
         });
         markers.push(marker);
         listeners.push(
           marker.addListener("click", () => {
-            infoWindow.setContent(
-              item.kind === "trip"
-                ? infoWindowContent(item.group)
-                : linkInfoWindowContent(item.group),
-            );
+            infoWindow.setContent(infoWindowContent(group));
             infoWindow.open({ anchor: marker, map });
           }),
         );
@@ -340,7 +368,7 @@ export function TravelMap({
 
       if (located.length === 1) {
         map.setCenter(located[0].location);
-        map.setZoom(7);
+        map.setZoom(15);
       } else if (located.length > 1) {
         const latitudes = located.map(({ location }) => location.lat);
         const longitudes = located.map(({ location }) => location.lng);
@@ -354,16 +382,14 @@ export function TravelMap({
           54,
         );
         const fitListener = map.addListener("idle", () => {
-          if ((map.getZoom() ?? 0) > 8) map.setZoom(8);
+          if ((map.getZoom() ?? 0) > 16) map.setZoom(16);
           fitListener.remove();
         });
         listeners.push(fitListener);
       }
 
       if (!isCancelled) {
-        setUnlocatedCount(
-          destinationGroups.length + linkDestinations.length - located.length,
-        );
+        setUnlocatedCount(locationGroups.length - located.length);
         setStatus(located.length ? "ready" : "unlocated");
       }
     }
@@ -377,7 +403,7 @@ export function TravelMap({
       listeners.forEach((listener) => listener.remove());
       markers.forEach((marker) => marker.setMap(null));
     };
-  }, [apiKey, destinationGroups, linkDestinations, theme]);
+  }, [apiKey, locationGroups, theme]);
 
   const visibleStatus: MapStatus = apiKey ? status : "unconfigured";
   const statusCopy =
@@ -385,7 +411,7 @@ export function TravelMap({
       ? {
           icon: "🗺️",
           title: "Google Maps 연결이 필요합니다",
-          detail: "API 키를 설정하면 여행지가 지도에 표시됩니다.",
+          detail: "API 키를 설정하면 저장된 상세 위치가 지도에 표시됩니다.",
         }
       : visibleStatus === "error"
         ? {
@@ -396,29 +422,44 @@ export function TravelMap({
         : visibleStatus === "unlocated"
           ? {
               icon: "?",
-              title: "여행지 위치를 찾지 못했습니다",
-              detail: "여행지 이름과 Geocoding API 설정을 확인해 주세요.",
+              title: "입력한 위치를 지도에서 찾지 못했습니다",
+              detail: "상호명과 도시 또는 상세 주소를 확인해 주세요.",
             }
-        : visibleStatus === "empty"
-          ? {
-              icon: "📍",
-              title: emptyTitle,
-              detail: emptyDetail,
-            }
-          : {
-              icon: "",
-              title: "여행 지도를 불러오는 중",
-              detail: "등록된 여행지의 위치를 찾고 있습니다.",
-            };
+          : visibleStatus === "empty"
+            ? {
+                icon: "📍",
+                title: emptyTitle,
+                detail: emptyDetail,
+              }
+            : {
+                icon: "",
+                title: "여행 지도를 불러오는 중",
+                detail: "저장된 상세 위치를 지도에서 찾고 있습니다.",
+              };
 
   return (
     <section className="travel-map-panel" aria-label="여행 지도">
       <div
-        aria-label="등록된 여행지를 표시하는 Google 지도"
+        aria-label="저장된 숙소와 여행지를 표시하는 Google 지도"
         className="travel-map-canvas"
         ref={mapElementRef}
         role="region"
       />
+      {visibleStatus === "ready" && visibleKinds.length ? (
+        <div className="travel-map-legend" aria-label="지도 마커 범례">
+          {visibleKinds.map((kind) => (
+            <span key={kind}>
+              <i
+                aria-hidden="true"
+                style={{ backgroundColor: MARKER_META[kind].color }}
+              >
+                {MARKER_META[kind].icon}
+              </i>
+              {MARKER_META[kind].label}
+            </span>
+          ))}
+        </div>
+      ) : null}
       {visibleStatus !== "ready" ? (
         <div className={`travel-map-status travel-map-status--${visibleStatus}`}>
           {visibleStatus === "loading" ? (
@@ -434,7 +475,7 @@ export function TravelMap({
       ) : null}
       {visibleStatus === "ready" && unlocatedCount ? (
         <span className="travel-map-notice">
-          위치를 찾지 못한 여행지 {unlocatedCount}개
+          위치를 찾지 못한 항목 {unlocatedCount}개
         </span>
       ) : null}
     </section>
