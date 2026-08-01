@@ -362,6 +362,26 @@ const DAY_BACKGROUND_OPTIONS = [
   { name: "회색", value: "#AEB8C4" },
 ] as const;
 
+const PUBLIC_HOLIDAY_DAY_OFF_TYPE = "공휴일";
+const PUBLIC_HOLIDAY_DAY_OFF_MEMO = "[[oip-day-off:public-holiday]]";
+
+function normalizeDayOff(item: DayOff): DayOff {
+  return item.day_off_type === "기타 휴무" &&
+    item.memo === PUBLIC_HOLIDAY_DAY_OFF_MEMO
+    ? { ...item, day_off_type: PUBLIC_HOLIDAY_DAY_OFF_TYPE }
+    : item;
+}
+
+function dayOffForStorage(item: DayOff): DayOff {
+  return item.day_off_type === PUBLIC_HOLIDAY_DAY_OFF_TYPE
+    ? {
+        ...item,
+        day_off_type: "기타 휴무",
+        memo: PUBLIC_HOLIDAY_DAY_OFF_MEMO,
+      }
+    : item;
+}
+
 const LEGACY_EVENT_COLOR_DISPLAY: Record<string, string> = {
   "#F6D875": "#FFC928",
   "#EBC44F": "#FFC928",
@@ -528,6 +548,26 @@ function eventDateRange(event: CalendarEvent): DateRange {
 function eventCoversDate(event: CalendarEvent, date: string) {
   const range = eventDateRange(event);
   return date >= range.start && date <= range.end;
+}
+
+function mergeCalendarEventsWithSystemEvents(
+  events: CalendarEvent[],
+  systemEvents: CalendarEvent[],
+) {
+  const existing = new Set(
+    events.map(
+      (event) => `${eventDateRange(event).start}\u0000${event.title.trim()}`,
+    ),
+  );
+  return [
+    ...events,
+    ...systemEvents.filter(
+      (event) =>
+        !existing.has(
+          `${eventDateRange(event).start}\u0000${event.title.trim()}`,
+        ),
+    ),
+  ];
 }
 
 function calendarEventLaneKey(weekIndex: number, eventId: string) {
@@ -2063,7 +2103,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
     [year],
   );
   const panelEvents = useMemo(
-    () => [...events, ...panelSystemEvents],
+    () => mergeCalendarEventsWithSystemEvents(events, panelSystemEvents),
     [events, panelSystemEvents],
   );
   const panelEventLanes = useMemo(
@@ -2114,15 +2154,20 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   }, [panelDays, panelEventLanes, panelEvents]);
   const panelAnniversariesByDate = useMemo(() => {
     const result = new Map<string, CalendarEvent[]>();
-    panelSystemEvents.forEach((event) => {
-      if (event.event_type !== "anniversary") return;
+    panelEvents.forEach((event) => {
+      if (
+        event.author_id !== "system" ||
+        event.event_type !== "anniversary"
+      ) {
+        return;
+      }
       const dateKey = eventDateRange(event).start;
       const dateEvents = result.get(dateKey) ?? [];
       dateEvents.push(event);
       result.set(dateKey, dateEvents);
     });
     return result;
-  }, [panelSystemEvents]);
+  }, [panelEvents]);
   const panelHolidaysByDate = useMemo(() => {
     const result = new Map<string, PublicHoliday[]>();
     holidays.forEach((holiday) => {
@@ -2181,6 +2226,12 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         const dateDaysOff = panelDaysOffByDate.get(key) ?? [];
         const dateBackground = backgroundByDate.get(key);
         const owners = new Set(dateDaysOff.map((item) => item.owner_id));
+        const isDefaultPublicHoliday =
+          date.getDay() === 0 || date.getDay() === 6 || dateHolidays.length > 0;
+        if (isDefaultPublicHoliday) {
+          owners.add("daeho");
+          owners.add("sanghee");
+        }
         const dayOffBackground =
           owners.size === 2
             ? "color-mix(in srgb, rgb(233 166 173) 15%, var(--surface))"
@@ -2424,7 +2475,7 @@ function CalendarView({
   }, [visibleMonth]);
 
   const allEvents = useMemo(
-    () => [...events, ...systemEvents],
+    () => mergeCalendarEventsWithSystemEvents(events, systemEvents),
     [events, systemEvents],
   );
   const year = visibleMonth.getFullYear();
@@ -5348,7 +5399,10 @@ export function OipApp({
       );
     }
     setDaysOff((current) =>
-      retainEquivalentValue(current, data.daysOff ?? []),
+      retainEquivalentValue(
+        current,
+        (data.daysOff ?? []).map(normalizeDayOff),
+      ),
     );
     setDayBackgrounds((current) =>
       retainEquivalentValue(current, data.dayBackgrounds ?? []),
@@ -5697,7 +5751,9 @@ export function OipApp({
           setDaysOff((current) =>
             retainEquivalentValue(
               current,
-              (loaded.calendar_days_off as DayOff[]) ?? [],
+              ((loaded.calendar_days_off as DayOff[]) ?? []).map(
+                normalizeDayOff,
+              ),
             ),
           );
           setTodos((current) =>
@@ -6128,7 +6184,13 @@ export function OipApp({
     setModal(null);
     void Promise.all(
       nextItems.map((item) =>
-        writeRecord("POST", "calendar_days_off", item, undefined, true),
+        writeRecord(
+          "POST",
+          "calendar_days_off",
+          dayOffForStorage(item),
+          undefined,
+          true,
+        ),
       ),
     ).then((results) => {
       if (!results.every(Boolean)) {
@@ -6977,6 +7039,7 @@ export function OipApp({
                 <option>연차</option>
                 <option>패밀리데이</option>
                 <option>해피프라이데이</option>
+                <option>공휴일</option>
                 <option>기타 휴무</option>
               </select>
             </label>
