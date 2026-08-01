@@ -1181,9 +1181,9 @@ p {
   margin-inline: calc(1px - var(--calendar-day-inline-padding));
   padding: 3px 4px;
   border-radius: 3px;
-  color: #34413a;
+  color: #ffffff;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1226,7 +1226,7 @@ p {
 
 .event-chip--private {
   background: var(--event-private);
-  color: #584968;
+  color: #ffffff;
 }
 
 .event-chip--daeho,
@@ -3226,6 +3226,31 @@ p {
   font-size: 1.12rem;
 }
 
+.event-color-picker-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-color-default-settings-trigger,
+.event-color-picker-back {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.event-color-picker-back {
+  width: 30px;
+  padding: 0;
+  font-size: 1.15rem;
+}
+
 .event-color-picker-options {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -3256,10 +3281,64 @@ p {
   height: 54px;
   place-items: center;
   border-radius: 5px;
-  color: #34413a;
+  color: #ffffff;
   font-size: 0.64rem;
   font-weight: 800;
   box-shadow: inset 0 0 0 1px rgba(37, 48, 42, 0.08);
+}
+
+.event-color-default-settings {
+  padding-top: 14px;
+}
+
+.event-color-default-targets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.event-color-default-targets > button {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.event-color-default-targets > button.is-selected {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(77, 118, 103, 0.18);
+}
+
+.event-color-default-targets > button > span {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(37, 48, 42, 0.1);
+}
+
+.event-color-default-help {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.event-color-picker-options--defaults {
+  padding-top: 8px;
+}
+
+.event-color-default-save {
+  margin-top: 12px;
 }
 
 .event-submit {
@@ -3639,15 +3718,15 @@ p {
 }
 
 [data-theme="dark"] .event-chip {
-  color: #e0e6e2;
+  color: #ffffff;
 }
 
 [data-theme="dark"] .event-chip--private {
-  color: #d7cbe5;
+  color: #ffffff;
 }
 
 [data-theme="dark"] .event-color-picker-swatch {
-  color: #e0e6e2;
+  color: #ffffff;
 }
 
 [data-theme="dark"] .holiday-detail {

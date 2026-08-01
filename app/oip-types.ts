@@ -1,6 +1,21 @@
 export type UserCode = "daeho" | "sanghee";
 export type Visibility = "shared" | "private";
 
+export type CalendarColorDefaults = {
+  daeho: string;
+  sanghee: string;
+  shared: string;
+  private: string;
+};
+
+export type CalendarColorSettings = {
+  id: string;
+  daeho_color: string;
+  sanghee_color: string;
+  shared_color: string;
+  private_color: string;
+};
+
 export type CalendarEvent = {
   id: string;
   title: string;

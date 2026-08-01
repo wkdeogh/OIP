@@ -17,6 +17,29 @@ on conflict (code) do update set
   event_color = excluded.event_color,
   day_off_color = excluded.day_off_color;
 
+create table if not exists public.calendar_color_settings (
+  id text primary key default 'calendar' check (id = 'calendar'),
+  daeho_color text not null default '#7FA99B'
+    check (daeho_color ~ '^#[0-9A-Fa-f]{6}$'),
+  sanghee_color text not null default '#E9A6AD'
+    check (sanghee_color ~ '^#[0-9A-Fa-f]{6}$'),
+  shared_color text not null default '#FFD43B'
+    check (shared_color ~ '^#[0-9A-Fa-f]{6}$'),
+  private_color text not null default '#845EF7'
+    check (private_color ~ '^#[0-9A-Fa-f]{6}$'),
+  updated_at timestamptz not null default now()
+);
+
+insert into public.calendar_color_settings (
+  id,
+  daeho_color,
+  sanghee_color,
+  shared_color,
+  private_color
+)
+values ('calendar', '#7FA99B', '#E9A6AD', '#FFD43B', '#845EF7')
+on conflict (id) do nothing;
+
 create table if not exists public.calendar_events (
   id uuid primary key default gen_random_uuid(),
   title text not null check (char_length(title) between 1 and 120),
@@ -326,6 +349,7 @@ declare
   table_name text;
 begin
   foreach table_name in array array[
+    'calendar_color_settings',
     'calendar_events',
     'calendar_days_off',
     'calendar_day_backgrounds',
@@ -356,6 +380,7 @@ declare
 begin
   foreach table_name in array array[
     'profiles',
+    'calendar_color_settings',
     'calendar_events',
     'calendar_days_off',
     'calendar_day_backgrounds',

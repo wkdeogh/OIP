@@ -24,6 +24,8 @@ import {
   writeOipDataCache,
 } from "@/lib/client-data-cache";
 import type {
+  CalendarColorDefaults,
+  CalendarColorSettings,
   CalendarDayBackground,
   CalendarEvent,
   DayOff,
@@ -117,22 +119,76 @@ const USER_META: Record<
  * 회색 #AEB8C4
  */
 const EVENT_COLOR_OPTIONS = [
-  { name: "기본색", value: "" },
   { name: "노랑", value: "#FFD43B" },
   { name: "라임", value: "#A9E34B" },
   { name: "초록", value: "#40C057" },
+  { name: "연녹", value: "#7FA99B" },
   { name: "민트", value: "#38D9A9" },
   { name: "청록", value: "#22B8CF" },
   { name: "하늘", value: "#4DABF7" },
   { name: "파랑", value: "#3B82F6" },
   { name: "남색", value: "#4263EB" },
   { name: "보라", value: "#845EF7" },
+  { name: "연보라", value: "#B197FC" },
   { name: "분홍", value: "#F06595" },
-  { name: "빨강", value: "#F03E3E" },
+  { name: "연분홍", value: "#E9A6AD" },
   { name: "코랄", value: "#FF6B6B" },
+  { name: "빨강", value: "#F03E3E" },
+  { name: "와인", value: "#A61E4D" },
   { name: "주황", value: "#FF922B" },
+  { name: "브라운", value: "#A66A3F" },
   { name: "회색", value: "#98A2B3" },
+  { name: "차콜", value: "#34413A" },
 ] as const;
+
+type CalendarColorDefaultKey = keyof CalendarColorDefaults;
+
+const FALLBACK_CALENDAR_COLOR_DEFAULTS: CalendarColorDefaults = {
+  daeho: "#7FA99B",
+  sanghee: "#E9A6AD",
+  shared: "#FFD43B",
+  private: "#845EF7",
+};
+const EVENT_CHIP_TEXT_COLOR = "#ffffff";
+
+const CALENDAR_COLOR_DEFAULT_OPTIONS: Array<{
+  key: CalendarColorDefaultKey;
+  label: string;
+}> = [
+  { key: "daeho", label: "대호 개인일정" },
+  { key: "sanghee", label: "상희 개인일정" },
+  { key: "shared", label: "공동일정" },
+  { key: "private", label: "나만보기" },
+];
+
+function validCalendarColor(value: unknown, fallback: string) {
+  return typeof value === "string" && /^#[0-9A-Fa-f]{6}$/.test(value)
+    ? value.toUpperCase()
+    : fallback;
+}
+
+function calendarColorDefaultsFromSettings(
+  settings?: Partial<CalendarColorSettings> | null,
+): CalendarColorDefaults {
+  return {
+    daeho: validCalendarColor(
+      settings?.daeho_color,
+      FALLBACK_CALENDAR_COLOR_DEFAULTS.daeho,
+    ),
+    sanghee: validCalendarColor(
+      settings?.sanghee_color,
+      FALLBACK_CALENDAR_COLOR_DEFAULTS.sanghee,
+    ),
+    shared: validCalendarColor(
+      settings?.shared_color,
+      FALLBACK_CALENDAR_COLOR_DEFAULTS.shared,
+    ),
+    private: validCalendarColor(
+      settings?.private_color,
+      FALLBACK_CALENDAR_COLOR_DEFAULTS.private,
+    ),
+  };
+}
 
 const COUNTRY_CODES = `
 AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ
@@ -484,29 +540,28 @@ function calendarEventColor(event: CalendarEvent) {
   return scope === "personal" ? event.author_id : scope;
 }
 
-function defaultEventColor(scope: CalendarEventScope, user: UserCode) {
-  if (scope === "shared") return "var(--event-shared)";
-  if (scope === "private") return "var(--event-private)";
-  return user === "daeho" ? "var(--event-daeho)" : "var(--event-sanghee)";
+function defaultEventColor(
+  scope: CalendarEventScope,
+  user: UserCode,
+  defaults: CalendarColorDefaults,
+) {
+  if (scope === "shared") return defaults.shared;
+  if (scope === "private") return defaults.private;
+  return defaults[user];
+}
+
+function calendarColorDefaultKey(
+  scope: CalendarEventScope,
+  user: UserCode,
+): CalendarColorDefaultKey {
+  if (scope === "shared") return "shared";
+  if (scope === "private") return "private";
+  return user;
 }
 
 function displayedCustomEventColor(color?: string | null) {
   if (!color) return null;
   return LEGACY_EVENT_COLOR_DISPLAY[color.toUpperCase()] ?? color;
-}
-
-function eventChipTextColor(backgroundColor: string) {
-  const match = /^#([0-9a-f]{6})$/i.exec(backgroundColor.trim());
-  if (!match) return "#25302a";
-  const channels = [0, 2, 4].map((offset) => {
-    const value = Number.parseInt(match[1].slice(offset, offset + 2), 16) / 255;
-    return value <= 0.04045
-      ? value / 12.92
-      : ((value + 0.055) / 1.055) ** 2.4;
-  });
-  const luminance =
-    channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
-  return luminance < 0.4 ? "#ffffff" : "#25302a";
 }
 
 function newId() {
@@ -1042,16 +1097,26 @@ function EventDateRangePicker({
 }
 
 function EventColorPicker({
-  defaultColor,
+  activeDefaultKey,
+  defaultColors,
   value,
   onClose,
+  onSaveDefaultColors,
   onSelect,
 }: {
-  defaultColor: string;
+  activeDefaultKey: CalendarColorDefaultKey;
+  defaultColors: CalendarColorDefaults;
   value: string;
   onClose: () => void;
+  onSaveDefaultColors: (colors: CalendarColorDefaults) => Promise<boolean>;
   onSelect: (color: string) => void;
 }) {
+  const [view, setView] = useState<"colors" | "defaults">("colors");
+  const [selectedDefaultKey, setSelectedDefaultKey] =
+    useState<CalendarColorDefaultKey>(activeDefaultKey);
+  const [draftDefaults, setDraftDefaults] = useState(defaultColors);
+  const [isSavingDefaults, setIsSavingDefaults] = useState(false);
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -1080,7 +1145,28 @@ function EventColorPicker({
       >
         <div className="event-color-picker-handle" aria-hidden="true" />
         <header className="event-color-picker-head">
-          <h3>컬러</h3>
+          <div className="event-color-picker-title">
+            {view === "defaults" ? (
+              <button
+                aria-label="컬러 선택으로 돌아가기"
+                className="event-color-picker-back"
+                onClick={() => setView("colors")}
+                type="button"
+              >
+                ‹
+              </button>
+            ) : null}
+            <h3>{view === "colors" ? "컬러" : "기본색상 설정"}</h3>
+            {view === "colors" ? (
+              <button
+                className="event-color-default-settings-trigger"
+                onClick={() => setView("defaults")}
+                type="button"
+              >
+                기본색상 설정
+              </button>
+            ) : null}
+          </div>
           <button
             aria-label="컬러 선택 닫기"
             className="icon-button"
@@ -1090,37 +1176,108 @@ function EventColorPicker({
             ×
           </button>
         </header>
-        <div className="event-color-picker-options">
-          {EVENT_COLOR_OPTIONS.map((option) => {
-            const previewColor = option.value || defaultColor;
-            const previewTextColor = option.value
-              ? eventChipTextColor(previewColor)
-              : undefined;
-            const isSelected = option.value === value;
-            return (
-              <button
-                aria-pressed={isSelected}
-                className={isSelected ? "is-selected" : ""}
-                key={option.name}
-                onClick={() => {
-                  onSelect(option.value);
-                  onClose();
-                }}
-                type="button"
-              >
-                <span
-                  className="event-color-picker-swatch"
-                  style={{
-                    backgroundColor: previewColor,
-                    color: previewTextColor,
+        {view === "colors" ? (
+          <div className="event-color-picker-options">
+            {EVENT_COLOR_OPTIONS.map((option) => {
+              const isSelected = option.value === value;
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  className={isSelected ? "is-selected" : ""}
+                  key={option.name}
+                  onClick={() => {
+                    onSelect(option.value);
+                    onClose();
                   }}
+                  type="button"
                 >
-                  {option.name}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  <span
+                    className="event-color-picker-swatch"
+                    style={{
+                      backgroundColor: option.value,
+                      color: EVENT_CHIP_TEXT_COLOR,
+                    }}
+                  >
+                    {option.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="event-color-default-settings">
+            <div className="event-color-default-targets">
+              {CALENDAR_COLOR_DEFAULT_OPTIONS.map((option) => (
+                <button
+                  aria-pressed={selectedDefaultKey === option.key}
+                  className={
+                    selectedDefaultKey === option.key ? "is-selected" : ""
+                  }
+                  key={option.key}
+                  onClick={() => setSelectedDefaultKey(option.key)}
+                  type="button"
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{ backgroundColor: draftDefaults[option.key] }}
+                  />
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <p className="event-color-default-help">
+              {
+                CALENDAR_COLOR_DEFAULT_OPTIONS.find(
+                  (option) => option.key === selectedDefaultKey,
+                )?.label
+              } 색상
+            </p>
+            <div className="event-color-picker-options event-color-picker-options--defaults">
+              {EVENT_COLOR_OPTIONS.map((option) => {
+                const isSelected =
+                  draftDefaults[selectedDefaultKey] === option.value;
+                return (
+                  <button
+                    aria-label={`${option.name}, 기본색상으로 선택`}
+                    aria-pressed={isSelected}
+                    className={isSelected ? "is-selected" : ""}
+                    key={option.name}
+                    onClick={() =>
+                      setDraftDefaults((current) => ({
+                        ...current,
+                        [selectedDefaultKey]: option.value,
+                      }))
+                    }
+                    type="button"
+                  >
+                    <span
+                      className="event-color-picker-swatch"
+                      style={{
+                        backgroundColor: option.value,
+                        color: EVENT_CHIP_TEXT_COLOR,
+                      }}
+                    >
+                      {option.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              className="button button--primary button--full event-color-default-save"
+              disabled={isSavingDefaults}
+              onClick={async () => {
+                setIsSavingDefaults(true);
+                const saved = await onSaveDefaultColors(draftDefaults);
+                setIsSavingDefaults(false);
+                if (saved) onClose();
+              }}
+              type="button"
+            >
+              {isSavingDefaults ? "저장 중…" : "기본색상 저장"}
+            </button>
+          </div>
+        )}
       </section>
     </div>,
     document.body,
@@ -1128,16 +1285,20 @@ function EventColorPicker({
 }
 
 function EventForm({
+  colorDefaults,
   currentUser,
   initialEvent,
   initialRange,
   scope,
+  onSaveDefaultColors,
   onSubmit,
 }: {
+  colorDefaults: CalendarColorDefaults;
   currentUser: UserCode;
   initialEvent?: CalendarEvent | null;
   initialRange: DateRange;
   scope: CalendarEventScope;
+  onSaveDefaultColors: (colors: CalendarColorDefaults) => Promise<boolean>;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const [range, setRange] = useState(
@@ -1158,14 +1319,19 @@ function EventForm({
       ? timeInSeoul(initialEvent.end_at)
       : addOneHour(initialStartTime),
   );
-  const [color, setColor] = useState(
-    displayedCustomEventColor(initialEvent?.custom_color) ?? "",
+  const baseColor = defaultEventColor(scope, currentUser, colorDefaults);
+  const [usesDefaultColor, setUsesDefaultColor] = useState(
+    !initialEvent?.custom_color,
   );
-  const baseColor = defaultEventColor(scope, currentUser);
-  const displayedColor = displayedCustomEventColor(color);
+  const [color, setColor] = useState(
+    displayedCustomEventColor(initialEvent?.custom_color) ?? baseColor,
+  );
+  const displayedColor = usesDefaultColor
+    ? baseColor
+    : (displayedCustomEventColor(color) ?? color);
   const selectedColorName =
-    EVENT_COLOR_OPTIONS.find((option) => option.value === color)?.name ??
-    "기본색";
+    EVENT_COLOR_OPTIONS.find((option) => option.value === displayedColor)?.name ??
+    "선택 색상";
 
   function blurActiveInput() {
     if (document.activeElement instanceof HTMLElement) {
@@ -1210,7 +1376,12 @@ function EventForm({
           type="hidden"
           value={hasTime ? endTime : ""}
         />
-        <input name="custom_color" readOnly type="hidden" value={color} />
+        <input
+          name="custom_color"
+          readOnly
+          type="hidden"
+          value={usesDefaultColor ? "" : color}
+        />
 
         <button
           className="event-setting-row event-date-setting"
@@ -1299,9 +1470,7 @@ function EventForm({
             }}
             style={{
               backgroundColor: displayedColor || baseColor,
-              color: displayedColor
-                ? eventChipTextColor(displayedColor)
-                : "var(--ink)",
+              color: "#ffffff",
             }}
             type="button"
           >
@@ -1329,10 +1498,17 @@ function EventForm({
       ) : null}
       {isColorPickerOpen ? (
         <EventColorPicker
-          defaultColor={baseColor}
+          activeDefaultKey={calendarColorDefaultKey(scope, currentUser)}
+          defaultColors={colorDefaults}
           onClose={() => setIsColorPickerOpen(false)}
-          onSelect={setColor}
-          value={color}
+          onSaveDefaultColors={onSaveDefaultColors}
+          onSelect={(nextColor) => {
+            setColor(nextColor);
+            setUsesDefaultColor(
+              nextColor.toUpperCase() === baseColor.toUpperCase(),
+            );
+          }}
+          value={displayedColor}
         />
       ) : null}
     </>
@@ -1418,6 +1594,7 @@ function AuthorBadge({ user }: { user: UserCode }) {
 }
 
 function CalendarDaySheet({
+  colorDefaults,
   date,
   events,
   daysOff,
@@ -1430,6 +1607,7 @@ function CalendarDaySheet({
   onEditEvent,
   onSetBackground,
 }: {
+  colorDefaults: CalendarColorDefaults;
   date: string;
   events: CalendarEvent[];
   daysOff: DayOff[];
@@ -1563,15 +1741,15 @@ function CalendarDaySheet({
                   ) : (
                     <span
                       className={`detail-dot detail-dot--${calendarEventColor(event)}`}
-                      style={
-                        event.custom_color
-                          ? {
-                              backgroundColor: displayedCustomEventColor(
-                                event.custom_color,
-                              )!,
-                            }
-                          : undefined
-                      }
+                      style={{
+                        backgroundColor:
+                          displayedCustomEventColor(event.custom_color) ??
+                          defaultEventColor(
+                            calendarEventScope(event),
+                            event.author_id === "sanghee" ? "sanghee" : "daeho",
+                            colorDefaults,
+                          ),
+                      }}
                     />
                   )}
                   <div className="detail-row-copy">
@@ -1721,6 +1899,7 @@ function CalendarRangeSheet({
 
 const CalendarMonthGrid = memo(function CalendarMonthGrid({
   backgroundByDate,
+  colorDefaults,
   daysOff,
   events,
   holidays,
@@ -1729,6 +1908,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   year,
 }: {
   backgroundByDate: Map<string, CalendarDayBackground>;
+  colorDefaults: CalendarColorDefaults;
   daysOff: DayOff[];
   events: CalendarEvent[];
   holidays: PublicHoliday[];
@@ -1926,6 +2106,13 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                   const customColor = displayedCustomEventColor(
                     event.custom_color,
                   );
+                  const resolvedColor =
+                    customColor ??
+                    defaultEventColor(
+                      calendarEventScope(event),
+                      event.author_id === "sanghee" ? "sanghee" : "daeho",
+                      colorDefaults,
+                    );
                   const isRange = range.start !== range.end;
                   const isSegmentStart =
                     isRange && (range.start === key || date.getDay() === 0);
@@ -1949,12 +2136,8 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                       key={event.id}
                       style={{
                         gridRow: lane + 1,
-                        ...(customColor
-                          ? {
-                              backgroundColor: customColor,
-                              color: eventChipTextColor(customColor),
-                            }
-                          : {}),
+                        backgroundColor: resolvedColor,
+                        color: EVENT_CHIP_TEXT_COLOR,
                       }}
                     >
                       {showTitle ? (
@@ -2000,6 +2183,7 @@ function groupPublicHolidaysByYear(items: PublicHoliday[]) {
 
 function CalendarView({
   backgrounds,
+  colorDefaults,
   events,
   daysOff,
   holidays,
@@ -2014,6 +2198,7 @@ function CalendarView({
   onSetBackground,
 }: {
   backgrounds: CalendarDayBackground[];
+  colorDefaults: CalendarColorDefaults;
   events: CalendarEvent[];
   daysOff: DayOff[];
   holidays: PublicHoliday[];
@@ -2641,6 +2826,7 @@ function CalendarView({
                 >
                   <CalendarMonthGrid
                     backgroundByDate={backgroundByDate}
+                    colorDefaults={colorDefaults}
                     daysOff={daysOff}
                     events={events}
                     holidays={
@@ -2659,6 +2845,7 @@ function CalendarView({
 
       {isDaySheetOpen ? (
         <CalendarDaySheet
+          colorDefaults={colorDefaults}
           date={selectedDate}
           daysOff={selectedDaysOff}
           events={selectedEvents}
@@ -4863,6 +5050,8 @@ export function OipApp({
   const [cacheReadyUser, setCacheReadyUser] = useState<UserCode | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [calendarColorDefaults, setCalendarColorDefaults] =
+    useState<CalendarColorDefaults>(FALLBACK_CALENDAR_COLOR_DEFAULTS);
   const [daysOff, setDaysOff] = useState<DayOff[]>([]);
   const [dayBackgrounds, setDayBackgrounds] = useState<
     CalendarDayBackground[]
@@ -4893,6 +5082,7 @@ export function OipApp({
   const currentDataSnapshot = useMemo<OipDataSnapshot>(
     () => ({
       events,
+      calendarColorDefaults,
       daysOff,
       dayBackgrounds,
       holidays,
@@ -4909,6 +5099,7 @@ export function OipApp({
     }),
     [
       events,
+      calendarColorDefaults,
       daysOff,
       dayBackgrounds,
       holidays,
@@ -5003,6 +5194,11 @@ export function OipApp({
 
   const applyDataSnapshot = useCallback((data: OipDataSnapshot) => {
     setEvents((current) => retainEquivalentValue(current, data.events ?? []));
+    if (data.calendarColorDefaults) {
+      setCalendarColorDefaults((current) =>
+        retainEquivalentValue(current, data.calendarColorDefaults!),
+      );
+    }
     setDaysOff((current) =>
       retainEquivalentValue(current, data.daysOff ?? []),
     );
@@ -5480,6 +5676,31 @@ export function OipApp({
   }, [authState, cacheReadyUser, currentUser]);
 
   useEffect(() => {
+    if (authState !== "ready" || cacheReadyUser !== currentUser) return;
+    let active = true;
+    fetch(
+      `/api/records?resource=calendar_color_settings&user=${currentUser}`,
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new Error("COLOR_SETTINGS_LOAD_FAILED");
+        return (await response.json()) as CalendarColorSettings[];
+      })
+      .then((rows) => {
+        if (!active || !rows[0]) return;
+        const next = calendarColorDefaultsFromSettings(rows[0]);
+        startTransition(() => {
+          setCalendarColorDefaults((current) =>
+            retainEquivalentValue(current, next),
+          );
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [authState, cacheReadyUser, currentUser]);
+
+  useEffect(() => {
     if (
       authState !== "ready" ||
       cacheReadyUser !== currentUser ||
@@ -5574,6 +5795,48 @@ export function OipApp({
       }
       return false;
     }
+  }
+
+  async function saveCalendarColorDefaults(next: CalendarColorDefaults) {
+    const normalized: CalendarColorDefaults = {
+      daeho: validCalendarColor(
+        next.daeho,
+        FALLBACK_CALENDAR_COLOR_DEFAULTS.daeho,
+      ),
+      sanghee: validCalendarColor(
+        next.sanghee,
+        FALLBACK_CALENDAR_COLOR_DEFAULTS.sanghee,
+      ),
+      shared: validCalendarColor(
+        next.shared,
+        FALLBACK_CALENDAR_COLOR_DEFAULTS.shared,
+      ),
+      private: validCalendarColor(
+        next.private,
+        FALLBACK_CALENDAR_COLOR_DEFAULTS.private,
+      ),
+    };
+    const previous = calendarColorDefaults;
+    setCalendarColorDefaults(normalized);
+    const saved = await writeRecord(
+      "PATCH",
+      "calendar_color_settings",
+      {
+        daeho_color: normalized.daeho,
+        sanghee_color: normalized.sanghee,
+        shared_color: normalized.shared,
+        private_color: normalized.private,
+      },
+      "calendar",
+      true,
+    );
+    if (!saved) {
+      setCalendarColorDefaults(previous);
+      showToast("기본색상을 저장하지 못했어요.");
+      return false;
+    }
+    showToast("기본색상을 저장했어요.");
+    return true;
   }
 
   function chooseUser(user: UserCode) {
@@ -6368,6 +6631,7 @@ export function OipApp({
           {mainTab === "schedule" ? (
             <CalendarView
               backgrounds={dayBackgrounds}
+              colorDefaults={calendarColorDefaults}
               daysOff={daysOff}
               events={events}
               holidays={holidays}
@@ -6513,6 +6777,7 @@ export function OipApp({
           title={editingEvent ? "일정 수정" : "일정 추가"}
         >
           <EventForm
+            colorDefaults={calendarColorDefaults}
             currentUser={
               editingEvent?.author_id === "daeho" ||
               editingEvent?.author_id === "sanghee"
@@ -6522,6 +6787,7 @@ export function OipApp({
             initialEvent={editingEvent}
             initialRange={eventRange}
             key={editingEvent?.id ?? "new-event"}
+            onSaveDefaultColors={saveCalendarColorDefaults}
             onSubmit={saveEvent}
             scope={eventScope}
           />

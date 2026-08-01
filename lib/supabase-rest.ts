@@ -5,6 +5,16 @@ type ResourceConfig = {
 };
 
 export const resourceConfigs = {
+  calendar_color_settings: {
+    table: "calendar_color_settings",
+    fields: [
+      "daeho_color",
+      "sanghee_color",
+      "shared_color",
+      "private_color",
+    ],
+    order: "id.asc",
+  },
   calendar_events: {
     table: "calendar_events",
     fields: [

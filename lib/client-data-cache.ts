@@ -1,5 +1,6 @@
 import type {
   CalendarDayBackground,
+  CalendarColorDefaults,
   CalendarEvent,
   DayOff,
   FridgeItem,
@@ -24,6 +25,7 @@ const LOCAL_SNAPSHOT_PREFIX = "oip-client-snapshot-v1:";
 
 export type OipDataSnapshot = {
   events: CalendarEvent[];
+  calendarColorDefaults?: CalendarColorDefaults;
   daysOff: DayOff[];
   dayBackgrounds: CalendarDayBackground[];
   holidays: PublicHoliday[];
