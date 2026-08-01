@@ -603,7 +603,7 @@ export function TravelMap({
           icon: makeMarkerIcon(group.source),
           label: {
             color: "#ffffff",
-            fontSize: "18px",
+            fontSize: "15px",
             fontWeight: "700",
             text: MARKER_KIND_META[kind].icon,
           },
@@ -712,7 +712,8 @@ export function TravelMap({
                     aria-hidden="true"
                     style={{
                       backgroundColor: MARKER_SOURCE_META[source].color,
-                      borderColor: source === "trip" ? "#73829a" : "#ffffff",
+                      // borderColor: source === "trip" ? "#73829a" : "#ffffff",
+                      borderColor: "#3c3b3b8b",
                     }}
                   />
                   {MARKER_SOURCE_META[source].label}
