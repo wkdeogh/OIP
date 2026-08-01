@@ -204,6 +204,7 @@ export type TravelLinkAnalysis = {
   };
   places: Array<{
     name: string;
+    translated_name: string;
     city: string;
     country: string;
     category: string;

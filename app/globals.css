@@ -2452,6 +2452,12 @@ p {
   font-size: 0.76rem;
 }
 
+.travel-map-unlocated-translation {
+  color: var(--green-dark);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
 .travel-map-unlocated-list small {
   color: var(--muted);
   font-size: 0.61rem;
@@ -2477,16 +2483,27 @@ p {
 }
 
 .travel-map-info-title {
-  display: block;
+  display: grid;
   min-width: 155px;
+  gap: 1px;
   padding: 2px 4px 0 0;
   color: #252a31;
   font-family:
     Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
     "Noto Sans KR", "Segoe UI", sans-serif;
-  font-size: 0.9rem;
   line-height: 1.35;
   letter-spacing: -0.025em;
+}
+
+.travel-map-info-title > strong {
+  font-size: 0.9rem;
+}
+
+.travel-map-info-title > small,
+.travel-map-info-translation {
+  color: #3d6f5d;
+  font-size: 0.67rem;
+  font-weight: 750;
 }
 
 .travel-map-info-list {
@@ -2842,6 +2859,12 @@ p {
 
 .travel-link-place-list strong {
   font-size: 0.75rem;
+}
+
+.travel-link-place-translation {
+  color: var(--green-dark);
+  font-size: 0.68rem;
+  font-weight: 800;
 }
 
 .travel-link-place-list small {

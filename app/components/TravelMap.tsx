@@ -2,6 +2,7 @@
 
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { splitTravelPlaceName } from "@/lib/travel-place-name";
 import type {
   TravelLinkPlace,
   TravelLinkSource,
@@ -32,6 +33,7 @@ type MapEntry = {
   query: string;
   source: MapEntrySource;
   title: string;
+  translatedTitle?: string | null;
 };
 
 type MapLocationGroup = {
@@ -57,8 +59,8 @@ const MARKER_SOURCE_META: Record<
   MapEntrySource,
   { color: string; label: string }
 > = {
-  trip: { color: "#4d73d8", label: "여행 연결" },
-  link: { color: "#4d8b70", label: "링크 분석" },
+  trip: { color: "#ffffff", label: "여행 연결" },
+  link: { color: "#f2c94c", label: "링크 분석" },
 };
 
 const MARKER_KIND_ORDER: MapEntryKind[] = [
@@ -245,10 +247,17 @@ async function fallbackResultMatchesDestination(
 }
 
 function infoWindowHeader(group: MapLocationGroup) {
-  const header = document.createElement("strong");
+  const header = document.createElement("div");
   header.className = "travel-map-info-title";
-  header.textContent =
-    group.entries.length === 1 ? group.entries[0].title : group.query;
+  const title = document.createElement("strong");
+  const translatedTitle = document.createElement("small");
+  const singleEntry = group.entries.length === 1 ? group.entries[0] : null;
+  title.textContent = singleEntry?.title ?? group.query;
+  header.append(title);
+  if (singleEntry?.translatedTitle) {
+    translatedTitle.textContent = singleEntry.translatedTitle;
+    header.append(translatedTitle);
+  }
   return header;
 }
 
@@ -266,10 +275,18 @@ function infoWindowContent(group: MapLocationGroup) {
       group.entries.length === 1
         ? `${MARKER_KIND_META[entry.kind].icon} ${entry.detail}`
         : `${MARKER_KIND_META[entry.kind].icon} ${entry.title}`;
+    if (group.entries.length > 1 && entry.translatedTitle) {
+      const translation = document.createElement("small");
+      translation.className = "travel-map-info-translation";
+      translation.textContent = entry.translatedTitle;
+      item.append(entryTitle, translation);
+    } else {
+      item.append(entryTitle);
+    }
     detail.textContent = entry.fallbackDestination
       ? `이름으로 자동 검색 · ${entry.fallbackDestination}`
       : entry.query;
-    item.append(entryTitle, detail);
+    item.append(detail);
 
     if (entry.href) {
       const link = document.createElement("a");
@@ -290,13 +307,13 @@ function makeMarkerIcon(source: MapEntrySource) {
   return {
     anchor: new google.maps.Point(0, 29),
     fillColor: MARKER_SOURCE_META[source].color,
-    fillOpacity: 0.78,
+    fillOpacity: 0.8,
     labelOrigin: new google.maps.Point(0, -2),
     path: WATERDROP_PATH,
-    scale: 0.9,
-    strokeColor: "#ffffff",
-    strokeOpacity: 0.96,
-    strokeWeight: 2.3,
+    scale: 0.74,
+    strokeColor: source === "trip" ? "#73829a" : "#ffffff",
+    strokeOpacity: source === "trip" ? 0.78 : 0.96,
+    strokeWeight: 2.1,
   } satisfies google.maps.Symbol;
 }
 
@@ -338,6 +355,11 @@ function UnlocatedDialog({
               </span>
               <div>
                 <strong>{entry.title}</strong>
+                {entry.translatedTitle ? (
+                  <span className="travel-map-unlocated-translation">
+                    {entry.translatedTitle}
+                  </span>
+                ) : null}
                 <small>
                   {MARKER_SOURCE_META[entry.source].label} · {entry.detail}
                 </small>
@@ -445,6 +467,9 @@ export function TravelMap({
       }),
       ...linkPlaces.flatMap((place) => {
         const source = visibleSources.get(place.source_id);
+        const { originalName, translatedName } = splitTravelPlaceName(
+          place.name,
+        );
         return source
           ? [
               {
@@ -454,7 +479,8 @@ export function TravelMap({
                 kind: linkPlaceKind(place.category),
                 query: place.location_query,
                 source: "link" as const,
-                title: place.name,
+                title: originalName,
+                translatedTitle: translatedName,
               },
             ]
           : [];
@@ -577,7 +603,7 @@ export function TravelMap({
           icon: makeMarkerIcon(group.source),
           label: {
             color: "#ffffff",
-            fontSize: "15px",
+            fontSize: "13px",
             fontWeight: "700",
             text: MARKER_KIND_META[kind].icon,
           },
@@ -684,7 +710,10 @@ export function TravelMap({
                 <span key={source}>
                   <i
                     aria-hidden="true"
-                    style={{ backgroundColor: MARKER_SOURCE_META[source].color }}
+                    style={{
+                      backgroundColor: MARKER_SOURCE_META[source].color,
+                      borderColor: source === "trip" ? "#73829a" : "#ffffff",
+                    }}
                   />
                   {MARKER_SOURCE_META[source].label}
                 </span>

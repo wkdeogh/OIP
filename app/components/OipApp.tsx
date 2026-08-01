@@ -47,6 +47,11 @@ import type {
   UserCode,
   Visibility,
 } from "../oip-types";
+import {
+  combinedTravelPlaceName,
+  needsKoreanTravelPlaceName,
+  splitTravelPlaceName,
+} from "../../lib/travel-place-name";
 
 type MainTab =
   | "schedule"
@@ -4939,21 +4944,30 @@ function TravelView({
             </a>
             {selectedLinkPlaces.length ? (
               <div className="travel-link-place-list">
-                {selectedLinkPlaces.map((place) => (
-                  <article key={place.id}>
-                    <span aria-hidden="true">⌖</span>
-                    <div>
-                      <strong>{place.name}</strong>
-                      <small>
-                        {[place.category, place.city, place.country]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </small>
-                      {place.evidence ? <p>{place.evidence}</p> : null}
-                    </div>
-                    <em>{Math.round(place.confidence * 100)}%</em>
-                  </article>
-                ))}
+                {selectedLinkPlaces.map((place) => {
+                  const { originalName, translatedName } =
+                    splitTravelPlaceName(place.name);
+                  return (
+                    <article key={place.id}>
+                      <span aria-hidden="true">⌖</span>
+                      <div>
+                        <strong>{originalName}</strong>
+                        {translatedName ? (
+                          <span className="travel-link-place-translation">
+                            {translatedName}
+                          </span>
+                        ) : null}
+                        <small>
+                          {[place.category, place.city, place.country]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </small>
+                        {place.evidence ? <p>{place.evidence}</p> : null}
+                      </div>
+                      <em>{Math.round(place.confidence * 100)}%</em>
+                    </article>
+                  );
+                })}
               </div>
             ) : (
               <p className="trip-empty-copy">
@@ -5935,6 +5949,7 @@ export function OipApp({
   const authenticationRejectedRef = useRef(false);
   const cacheRestoredAtRef = useRef(0);
   const lastUiInteractionRef = useRef(0);
+  const travelPlaceTranslationAttemptsRef = useRef(new Set<string>());
 
   const currentDataSnapshot = useMemo<OipDataSnapshot>(
     () => ({
@@ -5976,6 +5991,83 @@ export function OipApp({
       parking,
     ],
   );
+
+  useEffect(() => {
+    if (authState !== "ready" || isDataLoading) return;
+    const candidates = travelLinkPlaces
+      .filter(
+        (place) =>
+          !travelPlaceTranslationAttemptsRef.current.has(place.id) &&
+          needsKoreanTravelPlaceName(place.name),
+      )
+      .slice(0, 20);
+    if (!candidates.length) return;
+    candidates.forEach((place) =>
+      travelPlaceTranslationAttemptsRef.current.add(place.id),
+    );
+
+    let isCancelled = false;
+    void fetch("/api/travel-links/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        places: candidates.map((place) => ({
+          id: place.id,
+          name: splitTravelPlaceName(place.name).originalName,
+        })),
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as {
+          translations?: Array<{ id: string; translated_name: string }>;
+        };
+      })
+      .then((result) => {
+        if (isCancelled || !result?.translations?.length) return;
+        const translations = new Map(
+          result.translations.map((item) => [item.id, item.translated_name]),
+        );
+        const updates = candidates.flatMap((place) => {
+          const translatedName = translations.get(place.id)?.trim();
+          if (!translatedName) return [];
+          return [
+            {
+              id: place.id,
+              name: combinedTravelPlaceName(
+                splitTravelPlaceName(place.name).originalName,
+                translatedName,
+              ),
+            },
+          ];
+        });
+        if (!updates.length) return;
+        const namesById = new Map(
+          updates.map((update) => [update.id, update.name]),
+        );
+        setTravelLinkPlaces((items) =>
+          items.map((item) => {
+            const name = namesById.get(item.id);
+            return name ? { ...item, name } : item;
+          }),
+        );
+        updates.forEach((update) => {
+          void fetch(
+            `/api/records?resource=travel_link_places&id=${encodeURIComponent(update.id)}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: update.name }),
+            },
+          );
+        });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [authState, isDataLoading, travelLinkPlaces]);
 
   const isCalendarPage =
     authState === "ready" && mainTab === "schedule";
@@ -7155,16 +7247,19 @@ export function OipApp({
       created_by: currentUser,
       created_at: new Date().toISOString(),
     };
-    const nextPlaces: TravelLinkPlace[] = analysis.places.map((place) => ({
-      id: newId(),
-      source_id: sourceId,
-      ...place,
-      city: place.city || null,
-      country: place.country || null,
-      address: place.address || null,
-      evidence: place.evidence || null,
-      created_at: new Date().toISOString(),
-    }));
+    const nextPlaces: TravelLinkPlace[] = analysis.places.map(
+      ({ translated_name: translatedName, ...place }) => ({
+        id: newId(),
+        source_id: sourceId,
+        ...place,
+        name: combinedTravelPlaceName(place.name, translatedName),
+        city: place.city || null,
+        country: place.country || null,
+        address: place.address || null,
+        evidence: place.evidence || null,
+        created_at: new Date().toISOString(),
+      }),
+    );
     setTravelLinkSources((items) => [source, ...items]);
     setTravelLinkPlaces((items) => [...items, ...nextPlaces]);
 

@@ -10,3 +10,8 @@
 - Commit directly to `main` and push to `origin/main` as the final step of the task.
 - Only create a branch or pull request if the user explicitly overrides this rule for a specific task.
 - Before pushing, verify that only the intended project changes are included and run relevant checks when appropriate.
+
+## Verification workflow
+
+- For routine changes, rely on relevant automated checks and do not run live/manual browser verification unless the user explicitly asks for it.
+- The user will perform final real-world usage verification; after implementation and automated checks succeed, commit and push the change.
