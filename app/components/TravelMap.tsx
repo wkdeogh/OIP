@@ -60,7 +60,7 @@ const MARKER_SOURCE_META: Record<
   { color: string; label: string }
 > = {
   trip: { color: "#ffffff", label: "여행 연결" },
-  link: { color: "#f2c94c", label: "링크 분석" },
+  link: { color: "#fde398", label: "링크 분석" },
 };
 
 const MARKER_KIND_ORDER: MapEntryKind[] = [
@@ -310,7 +310,7 @@ function makeMarkerIcon(source: MapEntrySource) {
     fillOpacity: 0.8,
     labelOrigin: new google.maps.Point(0, -2),
     path: WATERDROP_PATH,
-    scale: 0.74,
+    scale: 0.55,
     strokeColor: source === "trip" ? "#73829a" : "#ffffff",
     strokeOpacity: source === "trip" ? 0.78 : 0.96,
     strokeWeight: 2.1,
