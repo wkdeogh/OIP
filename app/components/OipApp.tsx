@@ -2075,7 +2075,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         const owners = new Set(dateDaysOff.map((item) => item.owner_id));
         const dayOffBackground =
           owners.size === 2
-            ? "linear-gradient(135deg, rgba(127,169,155,.16) 0 50%, rgba(233,166,173,.16) 50%)"
+            ? "linear-gradient(135deg, rgba(127,169,155,.2) 0%, rgba(180,168,164,.18) 50%, rgba(233,166,173,.2) 100%)"
             : owners.has("daeho")
               ? "rgba(127,169,155,.15)"
               : owners.has("sanghee")
