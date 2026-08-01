@@ -6732,7 +6732,7 @@ export function OipApp({
             <CloverLogo />
             <strong>OIP</strong>
           </button>
-          <div>
+          <div className="app-header-title">
             <h1>{activeTab.title}</h1>
           </div>
           <div className="header-actions">
