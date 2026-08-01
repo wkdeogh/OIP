@@ -1084,6 +1084,7 @@ p {
 .calendar-day--outside {
   color: #bbc2bc;
   background-color: #fafbfc;
+  opacity: 0.45;
 }
 
 .calendar-day:focus:not(:focus-visible) {
