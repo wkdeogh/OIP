@@ -9,12 +9,15 @@ export const SYSTEM_ANNIVERSARIES = [
 
 export const SYSTEM_LUNAR_EVENTS = [
   { month: 7, day: 12, title: "김해엄마생신" },
-  { month: 7, day: 3, title: "서울엄마생신" },
   { month: 4, day: 19, title: "김해아빠생신" },
   { month: 4, day: 28, title: "서울아빠생신" },
 ] as const;
 
-const SYSTEM_LUNAR_EVENT_COLOR = "#9C6ADE";
+export const SYSTEM_SOLAR_EVENTS = [
+  { day: "08-15", title: "서울엄마생신" },
+] as const;
+
+const SYSTEM_BIRTHDAY_EVENT_COLOR = "#9C6ADE";
 const systemCalendarEventsByYear = new Map<number, CalendarEvent[]>();
 const koreanLunarPartsFormatter = new Intl.DateTimeFormat(
   "ko-KR-u-ca-dangi",
@@ -76,16 +79,29 @@ export function systemCalendarEventsForYear(year: number) {
   const cached = systemCalendarEventsByYear.get(year);
   if (cached) return cached;
 
-  const events: CalendarEvent[] = SYSTEM_ANNIVERSARIES.map(({ day, title }) => ({
-    id: `system-${year}-${day}`,
-    title,
-    start_at: `${year}-${day}T00:00:00+09:00`,
-    end_at: null,
-    is_all_day: true,
-    visibility: "shared",
-    author_id: "system",
-    event_type: "anniversary",
-  }));
+  const events: CalendarEvent[] = [
+    ...SYSTEM_ANNIVERSARIES.map(({ day, title }) => ({
+      id: `system-${year}-${day}`,
+      title,
+      start_at: `${year}-${day}T00:00:00+09:00`,
+      end_at: null,
+      is_all_day: true,
+      visibility: "shared" as const,
+      author_id: "system" as const,
+      event_type: "anniversary" as const,
+    })),
+    ...SYSTEM_SOLAR_EVENTS.map(({ day, title }) => ({
+      id: `system-solar-${year}-${day}`,
+      title,
+      start_at: `${year}-${day}T00:00:00+09:00`,
+      end_at: null,
+      is_all_day: true,
+      visibility: "shared" as const,
+      author_id: "system" as const,
+      event_type: "normal" as const,
+      custom_color: SYSTEM_BIRTHDAY_EVENT_COLOR,
+    })),
+  ];
 
   let dateKey = `${year}-01-01`;
   while (dateKey.startsWith(`${year}-`)) {
@@ -104,7 +120,7 @@ export function systemCalendarEventsForYear(year: number) {
           visibility: "shared",
           author_id: "system",
           event_type: "normal",
-          custom_color: SYSTEM_LUNAR_EVENT_COLOR,
+          custom_color: SYSTEM_BIRTHDAY_EVENT_COLOR,
         });
       });
     }
