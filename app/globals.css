@@ -1336,6 +1336,21 @@ p {
   letter-spacing: -0.04em;
 }
 
+.day-sheet-title {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.day-sheet-title > span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .day-sheet-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

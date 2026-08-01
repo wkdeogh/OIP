@@ -689,6 +689,21 @@ function formatKoreanDate(value: string, includeYear = false) {
   }).format(date);
 }
 
+const koreanLunarDateFormatter = new Intl.DateTimeFormat(
+  "ko-KR-u-ca-dangi",
+  {
+    month: "long",
+    day: "numeric",
+    timeZone: "Asia/Seoul",
+  },
+);
+
+function formatKoreanLunarDate(value: string) {
+  return `음력 ${koreanLunarDateFormatter.format(
+    parseDateKey(dateKeyInSeoul(value)),
+  )}`;
+}
+
 function formatEventDateSummary(range: DateRange) {
   const formatter = new Intl.DateTimeFormat("ko-KR", {
     month: "long",
@@ -1767,8 +1782,9 @@ function CalendarDaySheet({
       >
         <div className="day-sheet-handle" aria-hidden="true" />
         <header className="day-sheet-head">
-          <div>
+          <div className="day-sheet-title">
             <h2 id="day-sheet-title">{formatKoreanDate(date, true)}</h2>
+            <span>{formatKoreanLunarDate(date)}</span>
           </div>
           <button
             aria-label="날짜 상세 닫기"
