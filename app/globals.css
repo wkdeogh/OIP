@@ -1098,7 +1098,7 @@ p {
   position: absolute;
   z-index: 0;
   inset: 0;
-  background: color-mix(in srgb, rgb(127 169 155) 20%, var(--surface));
+  background: color-mix(in srgb, rgb(127 169 155) 15%, var(--surface));
   clip-path: polygon(0 0, 100% 0, 0 100%);
   content: "";
   pointer-events: none;

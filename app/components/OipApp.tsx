@@ -2174,7 +2174,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
         const owners = new Set(dateDaysOff.map((item) => item.owner_id));
         const dayOffBackground =
           owners.size === 2
-            ? "color-mix(in srgb, rgb(233 166 173) 20%, var(--surface))"
+            ? "color-mix(in srgb, rgb(233 166 173) 15%, var(--surface))"
             : owners.has("daeho")
               ? "rgba(127,169,155,.15)"
               : owners.has("sanghee")
