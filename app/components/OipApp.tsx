@@ -4995,9 +4995,7 @@ function ParkingView({
             </>
           )}
         </div>
-        <div className="parking-mark" aria-hidden="true">
-          🚙
-        </div>
+        <div className="parking-mark" aria-hidden="true" />
       </article>
 
       <div className="card parking-picker">

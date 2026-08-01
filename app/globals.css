@@ -2830,24 +2830,13 @@ p {
 .parking-mark {
   position: relative;
   z-index: 1;
-  display: grid;
   width: 88px;
   height: 88px;
   flex: 0 0 88px;
-  place-items: center;
   border: 5px solid rgba(77, 118, 103, 0.46);
   border-radius: 28px;
-  background: var(--green-soft);
-  color: var(--green);
-  font-size: 3.2rem;
-  font-weight: 950;
-}
-
-.parking-mark span {
-  position: absolute;
-  right: 8px;
-  bottom: 5px;
-  font-size: 0.6rem;
+  background: url("/parking-car.jpeg") center / cover no-repeat;
+  box-shadow: 0 8px 20px rgba(31, 52, 44, 0.16);
 }
 
 .parking-picker {
