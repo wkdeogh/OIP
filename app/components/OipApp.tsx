@@ -6074,6 +6074,7 @@ export function OipApp({
       "calendar_events",
       next,
       previous?.id,
+      true,
     ).then((saved) => {
       if (!saved) {
         setEvents((items) =>
@@ -6081,6 +6082,7 @@ export function OipApp({
             ? items.map((item) => (item.id === previous.id ? previous : item))
             : items.filter((item) => item.id !== next.id),
         );
+        showToast("일정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
       }
     });
   }
@@ -6220,8 +6222,12 @@ export function OipApp({
       "calendar_events",
       undefined,
       item.id,
+      true,
     ).then((saved) => {
-      if (!saved) setEvents((items) => [...items, item]);
+      if (!saved) {
+        setEvents((items) => [...items, item]);
+        showToast("일정을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      }
     });
   }
 
