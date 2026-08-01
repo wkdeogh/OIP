@@ -1239,12 +1239,6 @@ p {
   color: #ffffff;
 }
 
-.event-chip--daeho,
-.event-chip--sanghee,
-.event-chip--private {
-  font-size: 0.7rem;
-}
-
 .event-chip--system {
   background: var(--event-system);
 }
@@ -3905,12 +3899,6 @@ p {
 
   .event-chip {
     padding: 4px 5px;
-    font-size: 0.72rem;
-  }
-
-  .event-chip--daeho,
-  .event-chip--sanghee,
-  .event-chip--private {
     font-size: 0.76rem;
   }
 
@@ -4150,12 +4138,6 @@ p {
 
   .event-chip {
     padding-inline: 2px;
-    font-size: 0.56rem;
-  }
-
-  .event-chip--daeho,
-  .event-chip--sanghee,
-  .event-chip--private {
     font-size: 0.6rem;
   }
 
