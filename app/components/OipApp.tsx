@@ -15,7 +15,7 @@ import {
   useState,
 } from "react";
 import { createPortal, flushSync } from "react-dom";
-import { SYSTEM_ANNIVERSARIES } from "@/lib/calendar-reminders";
+import { systemCalendarEventsForYear } from "@/lib/calendar-reminders";
 import {
   clearOipDataCache,
   readOipDataCache,
@@ -1907,7 +1907,7 @@ function CalendarDaySheet({
                             : "나만보기"}
                     </p>
                   </div>
-                  {event.event_type !== "anniversary" ? (
+                  {event.author_id !== "system" ? (
                     <div className="detail-row-actions">
                       <button
                         aria-label={`${event.title} 일정 수정`}
@@ -2059,15 +2059,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   );
   const panelSystemEvents = useMemo<CalendarEvent[]>(
     () =>
-      SYSTEM_ANNIVERSARIES.map(({ day, title }) => ({
-        id: `system-${year}-${day}`,
-        title,
-        start_at: `${year}-${day}T00:00:00+09:00`,
-        is_all_day: true,
-        visibility: "shared" as const,
-        author_id: "system" as const,
-        event_type: "anniversary" as const,
-      })),
+      [year - 1, year, year + 1].flatMap(systemCalendarEventsForYear),
     [year],
   );
   const panelEvents = useMemo(
@@ -2096,7 +2088,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
       Array<{ event: CalendarEvent; lane: number }>
     >();
     const panelDayKeys = panelDays.map(toDateKey);
-    events.forEach((event) => {
+    panelEvents.forEach((event) => {
       if (event.event_type === "anniversary") return;
       const range = eventDateRange(event);
       panelDayKeys.forEach((dateKey, dayIndex) => {
@@ -2119,10 +2111,11 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
       );
     });
     return result;
-  }, [events, panelDays, panelEventLanes]);
+  }, [panelDays, panelEventLanes, panelEvents]);
   const panelAnniversariesByDate = useMemo(() => {
     const result = new Map<string, CalendarEvent[]>();
     panelSystemEvents.forEach((event) => {
+      if (event.event_type !== "anniversary") return;
       const dateKey = eventDateRange(event).start;
       const dateEvents = result.get(dateKey) ?? [];
       dateEvents.push(event);
@@ -2427,15 +2420,7 @@ function CalendarView({
 
   const systemEvents = useMemo<CalendarEvent[]>(() => {
     const year = visibleMonth.getFullYear();
-    return SYSTEM_ANNIVERSARIES.map(({ day, title }) => ({
-      id: `system-${year}-${day}`,
-      title,
-      start_at: `${year}-${day}T00:00:00+09:00`,
-      is_all_day: true,
-      visibility: "shared" as const,
-      author_id: "system" as const,
-      event_type: "anniversary" as const,
-    }));
+    return [year - 1, year, year + 1].flatMap(systemCalendarEventsForYear);
   }, [visibleMonth]);
 
   const allEvents = useMemo(

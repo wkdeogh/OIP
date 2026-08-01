@@ -7,6 +7,24 @@ export const SYSTEM_ANNIVERSARIES = [
   { day: "11-17", title: "만난 날 기념일" },
 ] as const;
 
+export const SYSTEM_LUNAR_EVENTS = [
+  { month: 7, day: 12, title: "김해엄마생신" },
+  { month: 7, day: 3, title: "서울엄마생신" },
+  { month: 4, day: 19, title: "김해아빠생신" },
+  { month: 4, day: 28, title: "서울아빠생신" },
+] as const;
+
+const SYSTEM_LUNAR_EVENT_COLOR = "#9C6ADE";
+const systemCalendarEventsByYear = new Map<number, CalendarEvent[]>();
+const koreanLunarPartsFormatter = new Intl.DateTimeFormat(
+  "ko-KR-u-ca-dangi",
+  {
+    month: "long",
+    day: "numeric",
+    timeZone: "Asia/Seoul",
+  },
+);
+
 export type CalendarReminderEvent = Pick<
   CalendarEvent,
   | "id"
@@ -40,6 +58,63 @@ export function nextDateKey(dateKey: string) {
   return date.toISOString().slice(0, 10);
 }
 
+function koreanLunarMonthDay(dateKey: string) {
+  const parts = koreanLunarPartsFormatter.formatToParts(
+    new Date(`${dateKey}T12:00:00+09:00`),
+  );
+  const monthText = parts.find((part) => part.type === "month")?.value ?? "";
+  const dayText = parts.find((part) => part.type === "day")?.value ?? "";
+  const monthMatch = monthText.match(/^(윤)?(\d+)월$/);
+  return {
+    month: Number(monthMatch?.[2] ?? 0),
+    day: Number(dayText),
+    isLeapMonth: Boolean(monthMatch?.[1]),
+  };
+}
+
+export function systemCalendarEventsForYear(year: number) {
+  const cached = systemCalendarEventsByYear.get(year);
+  if (cached) return cached;
+
+  const events: CalendarEvent[] = SYSTEM_ANNIVERSARIES.map(({ day, title }) => ({
+    id: `system-${year}-${day}`,
+    title,
+    start_at: `${year}-${day}T00:00:00+09:00`,
+    end_at: null,
+    is_all_day: true,
+    visibility: "shared",
+    author_id: "system",
+    event_type: "anniversary",
+  }));
+
+  let dateKey = `${year}-01-01`;
+  while (dateKey.startsWith(`${year}-`)) {
+    const lunarDate = koreanLunarMonthDay(dateKey);
+    if (!lunarDate.isLeapMonth) {
+      SYSTEM_LUNAR_EVENTS.forEach((event) => {
+        if (event.month !== lunarDate.month || event.day !== lunarDate.day) {
+          return;
+        }
+        events.push({
+          id: `system-lunar-${year}-${event.month}-${event.day}`,
+          title: event.title,
+          start_at: `${dateKey}T00:00:00+09:00`,
+          end_at: null,
+          is_all_day: true,
+          visibility: "shared",
+          author_id: "system",
+          event_type: "normal",
+          custom_color: SYSTEM_LUNAR_EVENT_COLOR,
+        });
+      });
+    }
+    dateKey = nextDateKey(dateKey);
+  }
+
+  systemCalendarEventsByYear.set(year, events);
+  return events;
+}
+
 export function seoulDayBounds(dateKey: string) {
   return {
     start: new Date(`${dateKey}T00:00:00+09:00`).toISOString(),
@@ -50,19 +125,8 @@ export function seoulDayBounds(dateKey: string) {
 export function systemAnniversariesForDate(
   dateKey: string,
 ): CalendarReminderEvent[] {
-  const year = dateKey.slice(0, 4);
-  const monthDay = dateKey.slice(5);
-  return SYSTEM_ANNIVERSARIES.filter((item) => item.day === monthDay).map(
-    (item) => ({
-      id: `system-${year}-${item.day}`,
-      title: item.title,
-      start_at: `${dateKey}T00:00:00+09:00`,
-      end_at: null,
-      is_all_day: true,
-      visibility: "shared",
-      author_id: "system",
-      event_type: "anniversary",
-    }),
+  return systemCalendarEventsForYear(Number(dateKey.slice(0, 4))).filter(
+    (event) => event.start_at.slice(0, 10) === dateKey,
   );
 }
 
