@@ -960,18 +960,18 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 12px;
+  padding: 1px 12px;
 }
 
 .calendar-toolbar .icon-button {
-  width: 36px;
-  height: 36px;
-  flex-basis: 36px;
+  width: 32px;
+  height: 28px;
+  flex-basis: 32px;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: #9aa1aa;
-  font-size: 1.75rem;
+  font-size: 1.3rem;
   font-weight: 400;
 }
 
@@ -982,13 +982,13 @@ p {
 
 .month-title {
   display: grid;
-  min-height: 36px;
+  min-height: 28px;
   place-items: center;
   background: transparent;
 }
 
 .month-title strong {
-  font-size: 1.12rem;
+  font-size: 0.88rem;
   letter-spacing: -0.03em;
 }
 
@@ -1005,10 +1005,11 @@ p {
 }
 
 .calendar-weekdays span {
-  padding: 9px 2px;
+  padding: 2px;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 800;
+  line-height: 1.1;
   text-align: center;
 }
 
