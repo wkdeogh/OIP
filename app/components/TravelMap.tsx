@@ -310,7 +310,7 @@ function makeMarkerIcon(source: MapEntrySource) {
     fillOpacity: 0.8,
     labelOrigin: new google.maps.Point(0, -2),
     path: WATERDROP_PATH,
-    scale: 0.55,
+    scale: 0.60,
     strokeColor: source === "trip" ? "#73829a" : "#ffffff",
     strokeOpacity: source === "trip" ? 0.78 : 0.96,
     strokeWeight: 2.1,
