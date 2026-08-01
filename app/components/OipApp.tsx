@@ -852,9 +852,9 @@ function PasswordGate({
           </div>
         </div>
         <p className="gate-copy">
-          대호와 상희가 함께 쓰는 공간이에요.
+          당신은 누구십니까?!?!?
           <br />
-          공통 비밀번호를 입력해 주세요.
+          비밀번호를 입력해 주세요.
         </p>
         <form onSubmit={submit} noValidate>
           <label className="field">
@@ -5529,7 +5529,6 @@ export function OipApp({
       try {
         await removeDevicePushSubscription();
         setPushStatus("disabled");
-        showToast("이 기기의 일정 알림을 껐어요.");
       } catch {
         setPushStatus("enabled");
         showToast("알림을 끄지 못했어요. 다시 시도해 주세요.");
@@ -5575,11 +5574,9 @@ export function OipApp({
       }
 
       setPushStatus("enabled");
-      showToast(
-        saved.data.testSent
-          ? "매일 오전 8시 일정 알림을 켰어요."
-          : "알림은 켰지만 테스트 전송을 확인하지 못했어요.",
-      );
+      if (!saved.data.testSent) {
+        showToast("알림은 켰지만 테스트 전송을 확인하지 못했어요.");
+      }
     } catch {
       setPushStatus("disabled");
       showToast("일정 알림을 켜지 못했어요. 다시 시도해 주세요.");
@@ -5936,7 +5933,6 @@ export function OipApp({
         }
         throw new Error("WRITE_FAILED");
       }
-      if (!quiet) showToast("저장했어요.");
       return true;
     } catch {
       if (!quiet) {
@@ -5984,7 +5980,6 @@ export function OipApp({
       showToast("기본색상을 저장하지 못했어요.");
       return false;
     }
-    showToast("기본색상을 저장했어요.");
     return true;
   }
 
@@ -6137,13 +6132,7 @@ export function OipApp({
         writeRecord("POST", "calendar_days_off", item, undefined, true),
       ),
     ).then((results) => {
-      if (results.every(Boolean)) {
-        showToast(
-          nextItems.length === 1
-            ? "휴무를 저장했어요."
-            : `${nextItems.length}일의 휴무를 저장했어요.`,
-        );
-      } else {
+      if (!results.every(Boolean)) {
         const ids = new Set(nextItems.map((item) => item.id));
         setDaysOff((items) => items.filter((item) => !ids.has(item.id)));
         showToast("휴무를 모두 저장하지 못했어요.");
@@ -6205,9 +6194,7 @@ export function OipApp({
           );
 
     void Promise.all(requests).then((results) => {
-      if (results.every(Boolean)) {
-        showToast(color ? "배경색을 저장했어요." : "기본 배경으로 되돌렸어요.");
-      } else {
+      if (!results.every(Boolean)) {
         setDayBackgrounds(previous);
         showToast("배경색을 저장하지 못했어요. Supabase 설정을 확인해 주세요.");
       }
@@ -6409,7 +6396,6 @@ export function OipApp({
               : entry,
           ),
         );
-        showToast("저장했어요.");
         return;
       }
 
