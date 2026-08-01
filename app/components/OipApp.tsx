@@ -110,16 +110,28 @@ const USER_META: Record<
   sanghee: { name: "상희", short: "상", color: "#e9a6ad" },
 };
 
+/*
+ * 이전 9색 팔레트 복원용 (기본색 포함)
+ * 기본색 "", 노랑 #EBC44F, 파랑 #7FC1EB, 초록 #82CE99,
+ * 보라 #B596DE, 분홍 #EC91A5, 주황 #EFA966, 코랄 #EB7F78,
+ * 회색 #AEB8C4
+ */
 const EVENT_COLOR_OPTIONS = [
   { name: "기본색", value: "" },
-  { name: "노랑", value: "#EBC44F" },
-  { name: "파랑", value: "#7FC1EB" },
-  { name: "초록", value: "#82CE99" },
-  { name: "보라", value: "#B596DE" },
-  { name: "분홍", value: "#EC91A5" },
-  { name: "주황", value: "#EFA966" },
-  { name: "코랄", value: "#EB7F78" },
-  { name: "회색", value: "#AEB8C4" },
+  { name: "노랑", value: "#FFD43B" },
+  { name: "라임", value: "#A9E34B" },
+  { name: "초록", value: "#40C057" },
+  { name: "민트", value: "#38D9A9" },
+  { name: "청록", value: "#22B8CF" },
+  { name: "하늘", value: "#4DABF7" },
+  { name: "파랑", value: "#3B82F6" },
+  { name: "남색", value: "#4263EB" },
+  { name: "보라", value: "#845EF7" },
+  { name: "분홍", value: "#F06595" },
+  { name: "빨강", value: "#F03E3E" },
+  { name: "코랄", value: "#FF6B6B" },
+  { name: "주황", value: "#FF922B" },
+  { name: "회색", value: "#98A2B3" },
 ] as const;
 
 const COUNTRY_CODES = `
@@ -287,14 +299,22 @@ const DAY_BACKGROUND_OPTIONS = [
 ] as const;
 
 const LEGACY_EVENT_COLOR_DISPLAY: Record<string, string> = {
-  "#F6D875": "#EBC44F",
-  "#A8D5F2": "#7FC1EB",
-  "#A8DDB8": "#82CE99",
-  "#CEB7EC": "#B596DE",
-  "#F5B7C3": "#EC91A5",
-  "#F7C49A": "#EFA966",
-  "#F4A6A0": "#EB7F78",
-  "#CCD3DB": "#AEB8C4",
+  "#F6D875": "#FFD43B",
+  "#EBC44F": "#FFD43B",
+  "#A8D5F2": "#3B82F6",
+  "#7FC1EB": "#3B82F6",
+  "#A8DDB8": "#40C057",
+  "#82CE99": "#40C057",
+  "#CEB7EC": "#845EF7",
+  "#B596DE": "#845EF7",
+  "#F5B7C3": "#F06595",
+  "#EC91A5": "#F06595",
+  "#F7C49A": "#FF922B",
+  "#EFA966": "#FF922B",
+  "#F4A6A0": "#FF6B6B",
+  "#EB7F78": "#FF6B6B",
+  "#CCD3DB": "#98A2B3",
+  "#AEB8C4": "#98A2B3",
 };
 
 const MAIN_TABS: Array<{
@@ -1138,7 +1158,9 @@ function EventForm({
       ? timeInSeoul(initialEvent.end_at)
       : addOneHour(initialStartTime),
   );
-  const [color, setColor] = useState(initialEvent?.custom_color ?? "");
+  const [color, setColor] = useState(
+    displayedCustomEventColor(initialEvent?.custom_color) ?? "",
+  );
   const baseColor = defaultEventColor(scope, currentUser);
   const displayedColor = displayedCustomEventColor(color);
   const selectedColorName =
