@@ -203,7 +203,7 @@ export function TravelMap({
         center: DEFAULT_CENTER,
         clickableIcons: false,
         fullscreenControl: false,
-        gestureHandling: "cooperative",
+        gestureHandling: "greedy",
         mapTypeControl: false,
         streetViewControl: false,
         styles: theme === "dark" ? DARK_MAP_STYLES : undefined,
