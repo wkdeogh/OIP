@@ -149,7 +149,13 @@ const FALLBACK_CALENDAR_COLOR_DEFAULTS: CalendarColorDefaults = {
   shared: "#FFC928",
   private: "#9C6ADE",
 };
-const EVENT_CHIP_TEXT_COLOR = "#ffffff";
+const DARK_EVENT_TEXT_COLORS = new Set(["#FFC928", "#D7DC45"]);
+
+function eventTextColor(backgroundColor: string) {
+  return DARK_EVENT_TEXT_COLORS.has(backgroundColor.toUpperCase())
+    ? "#1a1a1a"
+    : "#ffffff";
+}
 
 const CALENDAR_COLOR_DEFAULT_OPTIONS: Array<{
   key: CalendarColorDefaultKey;
@@ -1299,7 +1305,10 @@ function EventColorPicker({
                     className="event-color-picker-swatch"
                     style={{
                       backgroundColor: option.value,
-                      color: EVENT_CHIP_TEXT_COLOR,
+                      color: eventTextColor(option.value),
+                      textShadow: DARK_EVENT_TEXT_COLORS.has(option.value)
+                        ? "none"
+                        : undefined,
                     }}
                   >
                     {option.name}
@@ -1358,7 +1367,10 @@ function EventColorPicker({
                       className="event-color-picker-swatch"
                       style={{
                         backgroundColor: option.value,
-                        color: EVENT_CHIP_TEXT_COLOR,
+                        color: eventTextColor(option.value),
+                        textShadow: DARK_EVENT_TEXT_COLORS.has(option.value)
+                          ? "none"
+                          : undefined,
                       }}
                     >
                       {option.name}
@@ -1574,7 +1586,7 @@ function EventForm({
             }}
             style={{
               backgroundColor: displayedColor || baseColor,
-              color: "#ffffff",
+              color: eventTextColor(displayedColor || baseColor),
             }}
             type="button"
           >
@@ -2262,7 +2274,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                       style={{
                         gridRow: lane + 1,
                         backgroundColor: resolvedColor,
-                        color: EVENT_CHIP_TEXT_COLOR,
+                        color: eventTextColor(resolvedColor),
                       }}
                     >
                       <span

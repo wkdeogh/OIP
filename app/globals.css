@@ -1183,11 +1183,8 @@ p {
   border-radius: 3px;
   color: #ffffff;
   font-size: 0.75rem;
-  font-weight: 630;
+  font-weight: 600;
   line-height: 1.2;
-  text-shadow:
-    0 0.5px 0.5px rgba(20, 27, 23, 0.62),
-    0 0.5px 0.5px rgba(20, 27, 23, 0.38);
   text-overflow: clip;
   white-space: nowrap;
 }
