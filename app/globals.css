@@ -1974,14 +1974,25 @@ p {
   display: grid;
   width: min(100%, 920px);
   grid-template-areas:
-    "lead"
     "map"
+    "actions"
     "list";
+  margin-top: -18px;
   margin-inline: auto;
 }
 
-.travel-lead {
-  grid-area: lead;
+.travel-actions {
+  display: flex;
+  justify-content: flex-end;
+  grid-area: actions;
+  margin-bottom: 10px;
+}
+
+.travel-add-button {
+  min-height: 36px;
+  padding-inline: 12px;
+  border-radius: 10px;
+  font-size: 0.72rem;
 }
 
 .travel-list-panel {
@@ -1995,7 +2006,7 @@ p {
   width: 100vw;
   aspect-ratio: 1;
   grid-area: map;
-  margin: 0 0 18px -50vw;
+  margin: 0 0 12px -50vw;
   overflow: hidden;
   border-block: 1px solid var(--line);
   background: var(--surface-soft);
@@ -4133,6 +4144,10 @@ p {
     padding: 24px 24px 110px;
   }
 
+  .travel-layout {
+    margin-top: -24px;
+  }
+
   .calendar-day,
   .data-loading-day {
     --calendar-day-inline-padding: 5px;
@@ -4267,10 +4282,14 @@ p {
     left: auto;
     width: 100%;
     aspect-ratio: 16 / 7;
-    margin: 0 0 24px;
+    margin: 0 0 14px;
     border: 1px solid var(--line);
     border-radius: 24px;
     box-shadow: var(--shadow-soft);
+  }
+
+  .travel-layout {
+    margin-top: 0;
   }
 
   .sub-tabs {
@@ -4319,7 +4338,7 @@ p {
   .travel-layout {
     width: min(100%, 1120px);
     grid-template-areas:
-      "map lead"
+      "map actions"
       "map list";
     grid-template-columns: minmax(360px, 0.88fr) minmax(470px, 1.12fr);
     grid-template-rows: auto 1fr;

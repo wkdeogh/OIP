@@ -4314,16 +4314,17 @@ function TravelView({
 
   return (
     <section className="travel-layout">
-      <div className="page-lead travel-lead">
-        <div>
-          <h2>✈️</h2>
-        </div>
-        <button className="button button--primary" onClick={onAdd} type="button">
+      <TravelMap apiKey={googleMapsApiKey} theme={theme} trips={trips} />
+
+      <div className="travel-actions">
+        <button
+          className="button button--primary travel-add-button"
+          onClick={onAdd}
+          type="button"
+        >
           + 여행 추가
         </button>
       </div>
-
-      <TravelMap apiKey={googleMapsApiKey} theme={theme} trips={trips} />
 
       <div className="travel-list-panel">
         {upcoming.length ? (
