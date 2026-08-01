@@ -23,6 +23,7 @@ import {
   type OipDataSnapshot,
   writeOipDataCache,
 } from "@/lib/client-data-cache";
+import { TravelMap } from "./TravelMap";
 import type {
   CalendarColorDefaults,
   CalendarColorSettings,
@@ -4222,6 +4223,8 @@ function TripNotepad({
 }
 
 function TravelView({
+  googleMapsApiKey,
+  theme,
   trips,
   flights,
   accommodations,
@@ -4237,6 +4240,8 @@ function TravelView({
   onUpdateChecklist,
   onUpdateMemo,
 }: {
+  googleMapsApiKey: string;
+  theme: ThemeMode;
   trips: Trip[];
   flights: TripFlight[];
   accommodations: TripAccommodation[];
@@ -4309,16 +4314,18 @@ function TravelView({
 
   return (
     <section className="travel-layout">
-      <div>
-        <div className="page-lead">
-          <div>
-            <h2>✈️</h2>
-          </div>
-          <button className="button button--primary" onClick={onAdd} type="button">
-            + 여행 추가
-          </button>
+      <div className="page-lead travel-lead">
+        <div>
+          <h2>✈️</h2>
         </div>
+        <button className="button button--primary" onClick={onAdd} type="button">
+          + 여행 추가
+        </button>
+      </div>
 
+      <TravelMap apiKey={googleMapsApiKey} theme={theme} trips={trips} />
+
+      <div className="travel-list-panel">
         {upcoming.length ? (
           <div className="trip-list">
             {upcoming.map((trip, index) => (
@@ -5251,8 +5258,10 @@ function urlBase64ToUint8Array(value: string) {
 }
 
 export function OipApp({
+  googleMapsApiKey = "",
   initialMainTab = "schedule",
 }: {
+  googleMapsApiKey?: string;
   initialMainTab?: MainTab;
 }) {
   const [theme, setTheme] = useState<ThemeMode>(() => {
@@ -6974,6 +6983,7 @@ export function OipApp({
               accommodations={tripAccommodations}
               flights={tripFlights}
               foods={tripFoods}
+              googleMapsApiKey={googleMapsApiKey}
               onAdd={() => setModal("trip")}
               onDeleteDetail={deleteTripDetail}
               onDeleteTrip={deleteTrip}
@@ -6985,6 +6995,7 @@ export function OipApp({
               places={tripPlaces}
               transportations={tripTransportations}
               trips={trips}
+              theme={theme}
             />
           ) : null}
 

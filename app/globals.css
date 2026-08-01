@@ -1971,8 +1971,164 @@ p {
 }
 
 .travel-layout {
+  display: grid;
   width: min(100%, 920px);
+  grid-template-areas:
+    "lead"
+    "map"
+    "list";
   margin-inline: auto;
+}
+
+.travel-lead {
+  grid-area: lead;
+}
+
+.travel-list-panel {
+  min-width: 0;
+  grid-area: list;
+}
+
+.travel-map-panel {
+  position: relative;
+  left: 50%;
+  width: 100vw;
+  aspect-ratio: 1;
+  grid-area: map;
+  margin: 0 0 18px -50vw;
+  overflow: hidden;
+  border-block: 1px solid var(--line);
+  background: var(--surface-soft);
+  isolation: isolate;
+}
+
+.travel-map-panel::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    linear-gradient(32deg, transparent 46%, rgba(77, 118, 103, 0.16) 47% 49%, transparent 50%),
+    linear-gradient(147deg, transparent 54%, rgba(77, 118, 103, 0.12) 55% 57%, transparent 58%),
+    radial-gradient(circle at 72% 28%, rgba(77, 118, 103, 0.14) 0 11%, transparent 12%),
+    var(--surface-soft);
+  content: "";
+}
+
+.travel-map-canvas {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+}
+
+.travel-map-status {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 7px;
+  padding: 30px;
+  background: rgba(245, 246, 248, 0.78);
+  color: var(--ink);
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(3px);
+}
+
+.travel-map-status--loading {
+  background: rgba(245, 246, 248, 0.52);
+}
+
+.travel-map-status strong {
+  margin-top: 4px;
+  font-size: 0.94rem;
+  letter-spacing: -0.025em;
+}
+
+.travel-map-status small {
+  max-width: 270px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.travel-map-status-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--danger);
+  font-size: 1.5rem;
+  font-weight: 900;
+  box-shadow: var(--shadow-soft);
+}
+
+.travel-map-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(77, 118, 103, 0.2);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: travel-map-spin 800ms linear infinite;
+}
+
+.travel-map-notice {
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  bottom: 24px;
+  padding: 7px 10px;
+  border: 1px solid rgba(225, 228, 232, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #525a64;
+  font-size: 0.65rem;
+  font-weight: 800;
+  box-shadow: 0 5px 16px rgba(28, 34, 43, 0.14);
+  pointer-events: none;
+}
+
+.travel-map-info {
+  display: grid;
+  min-width: 160px;
+  max-width: 230px;
+  gap: 8px;
+  padding: 3px 2px 2px;
+  color: #252a31;
+  font-family:
+    Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Noto Sans KR", "Segoe UI", sans-serif;
+}
+
+.travel-map-info > strong {
+  font-size: 0.9rem;
+  letter-spacing: -0.025em;
+}
+
+.travel-map-info-list {
+  display: grid;
+  gap: 6px;
+}
+
+.travel-map-info-list span {
+  display: grid;
+  gap: 2px;
+  padding-top: 6px;
+  border-top: 1px solid #e7e9ec;
+}
+
+.travel-map-info-list b {
+  font-size: 0.72rem;
+}
+
+.travel-map-info-list small {
+  color: #747b86;
+  font-size: 0.64rem;
 }
 
 .trip-list {
@@ -3847,6 +4003,20 @@ p {
   border-color: #547c6d;
 }
 
+[data-theme="dark"] .travel-map-status {
+  background: rgba(18, 22, 27, 0.8);
+}
+
+[data-theme="dark"] .travel-map-status--loading {
+  background: rgba(18, 22, 27, 0.58);
+}
+
+[data-theme="dark"] .travel-map-notice {
+  border-color: #39434f;
+  background: rgba(26, 32, 39, 0.92);
+  color: #c2c9d1;
+}
+
 [data-theme="dark"] .fridge-card--urgent {
   border-color: #6f582d;
   background: #2d271b;
@@ -3949,6 +4119,12 @@ p {
   from {
     opacity: 0;
     transform: translateY(10px);
+  }
+}
+
+@keyframes travel-map-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -4087,6 +4263,16 @@ p {
     margin-inline: 30px;
   }
 
+  .travel-map-panel {
+    left: auto;
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    margin: 0 0 24px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: var(--shadow-soft);
+  }
+
   .sub-tabs {
     width: max-content;
     min-width: 350px;
@@ -4126,6 +4312,26 @@ p {
 
   .parking-mark {
     align-self: flex-end;
+  }
+}
+
+@media (min-width: 1200px) {
+  .travel-layout {
+    width: min(100%, 1120px);
+    grid-template-areas:
+      "map lead"
+      "map list";
+    grid-template-columns: minmax(360px, 0.88fr) minmax(470px, 1.12fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 28px;
+    align-items: start;
+  }
+
+  .travel-map-panel {
+    position: sticky;
+    top: 118px;
+    aspect-ratio: 1;
+    margin-top: 5px;
   }
 }
 
