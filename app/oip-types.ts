@@ -163,6 +163,57 @@ export type TripPlace = {
   memo?: string | null;
 };
 
+export type TravelLinkSource = {
+  id: string;
+  url: string;
+  canonical_url: string;
+  platform: string;
+  title: string;
+  author_name?: string | null;
+  thumbnail_url?: string | null;
+  summary: string;
+  status: "ready" | "needs_review" | "failed";
+  is_map_visible: boolean;
+  created_by: UserCode;
+  created_at?: string;
+};
+
+export type TravelLinkPlace = {
+  id: string;
+  source_id: string;
+  name: string;
+  city?: string | null;
+  country?: string | null;
+  category: string;
+  address?: string | null;
+  location_query: string;
+  evidence?: string | null;
+  confidence: number;
+  created_at?: string;
+};
+
+export type TravelLinkAnalysis = {
+  source: {
+    url: string;
+    canonical_url: string;
+    platform: string;
+    title: string;
+    author_name?: string | null;
+    thumbnail_url?: string | null;
+    summary: string;
+  };
+  places: Array<{
+    name: string;
+    city: string;
+    country: string;
+    category: string;
+    address: string;
+    location_query: string;
+    evidence: string;
+    confidence: number;
+  }>;
+};
+
 export type FridgeItem = {
   id: string;
   name: string;

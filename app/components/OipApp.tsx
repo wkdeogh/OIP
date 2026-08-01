@@ -39,6 +39,9 @@ import type {
   TripAccommodation,
   TripFlight,
   TripFood,
+  TravelLinkAnalysis,
+  TravelLinkPlace,
+  TravelLinkSource,
   TripPlace,
   TripTransportation,
   UserCode,
@@ -4238,6 +4241,14 @@ function TripNotepad({
   );
 }
 
+function travelLinkPlatformMeta(platform: string) {
+  if (platform === "youtube") return { icon: "▶", label: "YouTube" };
+  if (platform === "tiktok") return { icon: "♪", label: "TikTok" };
+  if (platform === "instagram") return { icon: "◎", label: "Instagram" };
+  if (platform === "google-maps") return { icon: "⌖", label: "Google Maps" };
+  return { icon: "↗", label: "웹 링크" };
+}
+
 function TravelView({
   googleMapsApiKey,
   theme,
@@ -4247,11 +4258,16 @@ function TravelView({
   transportations,
   foods,
   places,
+  travelLinkPlaces,
+  travelLinkSources,
   onAdd,
+  onDeleteLinkSource,
   onSaveDetail,
   onDeleteDetail,
   onDeleteTrip,
   onToggleVisited,
+  onSaveLink,
+  onToggleLinkSource,
   onUpdateCountry,
   onUpdateChecklist,
   onUpdateMemo,
@@ -4264,7 +4280,15 @@ function TravelView({
   transportations: TripTransportation[];
   foods: TripFood[];
   places: TripPlace[];
+  travelLinkPlaces: TravelLinkPlace[];
+  travelLinkSources: TravelLinkSource[];
   onAdd: () => void;
+  onDeleteLinkSource: (source: TravelLinkSource) => boolean;
+  onSaveLink: (analysis: TravelLinkAnalysis) => Promise<boolean>;
+  onToggleLinkSource: (
+    source: TravelLinkSource,
+    isMapVisible: boolean,
+  ) => void;
   onSaveDetail: (
     resource: TripDetailResource,
     payload: Record<string, unknown>,
@@ -4286,6 +4310,16 @@ function TravelView({
   const [mapTripPickerOpen, setMapTripPickerOpen] = useState(false);
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
+  const [linkScreenshots, setLinkScreenshots] = useState<
+    Array<{ id: string; file: File; preview: string }>
+  >([]);
+  const [linkAnalysisState, setLinkAnalysisState] = useState<
+    "idle" | "analyzing"
+  >("idle");
+  const [linkAnalysisError, setLinkAnalysisError] = useState("");
+  const [selectedLinkSourceId, setSelectedLinkSourceId] = useState<
+    string | null
+  >(null);
   const [selectedMapTripIds, setSelectedMapTripIds] = useState<string[] | null>(
     initialMapTripSelection,
   );
@@ -4325,6 +4359,12 @@ function TravelView({
   ).filter((id) => availableTripIds.has(id));
   const activeMapTripIdSet = new Set(activeMapTripIds);
   const mapTrips = trips.filter((trip) => activeMapTripIdSet.has(trip.id));
+  const selectedLinkSource = travelLinkSources.find(
+    (source) => source.id === selectedLinkSourceId,
+  );
+  const selectedLinkPlaces = travelLinkPlaces.filter(
+    (place) => place.source_id === selectedLinkSourceId,
+  );
 
   useEffect(() => {
     if (selectedMapTripIds === null) return;
@@ -4355,6 +4395,106 @@ function TravelView({
   function openMapTripPicker() {
     setDraftMapTripIds(activeMapTripIds);
     setMapTripPickerOpen(true);
+  }
+
+  function resetLinkForm() {
+    setLinkUrl("");
+    setLinkScreenshots([]);
+    setLinkAnalysisError("");
+    setLinkAnalysisState("idle");
+  }
+
+  function closeLinkPicker() {
+    if (linkAnalysisState === "analyzing") return;
+    setLinkPickerOpen(false);
+    resetLinkForm();
+  }
+
+  async function addLinkScreenshots(files: FileList | null) {
+    if (!files?.length) return;
+    const remaining = Math.max(0, 4 - linkScreenshots.length);
+    const selected = Array.from(files).slice(0, remaining);
+    if (!selected.length) {
+      setLinkAnalysisError("스크린샷은 최대 4장까지 첨부할 수 있습니다.");
+      return;
+    }
+    if (
+      selected.some(
+        (file) =>
+          !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(
+            file.type,
+          ) || file.size > 7 * 1024 * 1024,
+      )
+    ) {
+      setLinkAnalysisError(
+        "JPG, PNG, WEBP, GIF 이미지를 장당 7MB 이하로 첨부해 주세요.",
+      );
+      return;
+    }
+    const attachments = await Promise.all(
+      selected.map(
+        (file) =>
+          new Promise<{ id: string; file: File; preview: string }>(
+            (resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () =>
+                resolve({
+                  id: newId(),
+                  file,
+                  preview: String(reader.result ?? ""),
+                });
+              reader.onerror = () => reject(reader.error);
+              reader.readAsDataURL(file);
+            },
+          ),
+      ),
+    ).catch(() => null);
+    if (!attachments) {
+      setLinkAnalysisError("스크린샷을 읽지 못했습니다.");
+      return;
+    }
+    setLinkScreenshots((current) => [...current, ...attachments].slice(0, 4));
+    setLinkAnalysisError("");
+  }
+
+  async function analyzeTravelLink(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      new URL(linkUrl);
+    } catch {
+      setLinkAnalysisError("분석할 URL 주소를 확인해 주세요.");
+      return;
+    }
+    setLinkAnalysisState("analyzing");
+    setLinkAnalysisError("");
+    const formData = new FormData();
+    formData.set("url", linkUrl.trim());
+    linkScreenshots.forEach(({ file }) =>
+      formData.append("screenshots", file, file.name),
+    );
+    try {
+      const response = await fetch("/api/travel-links/analyze", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await response.json().catch(() => ({}))) as
+        | TravelLinkAnalysis
+        | { error?: string };
+      if (!response.ok || !("source" in data)) {
+        throw new Error("error" in data ? data.error : undefined);
+      }
+      const saved = await onSaveLink(data);
+      if (!saved) throw new Error("분석 결과를 저장하지 못했습니다.");
+      setLinkPickerOpen(false);
+      resetLinkForm();
+    } catch (error) {
+      setLinkAnalysisError(
+        error instanceof Error && error.message
+          ? error.message
+          : "AI 분석을 완료하지 못했습니다.",
+      );
+      setLinkAnalysisState("idle");
+    }
   }
 
   return (
@@ -4464,10 +4604,12 @@ function TravelView({
             apiKey={googleMapsApiKey}
             emptyDetail="여행 연결 버튼에서 지도에 표시할 여행을 선택할 수 있습니다."
             emptyTitle={
-              trips.length
+              trips.length || travelLinkSources.length
                 ? "지도에 표시할 여행을 선택해 주세요"
                 : "등록된 여행이 없습니다"
             }
+            linkPlaces={travelLinkPlaces}
+            linkSources={travelLinkSources}
             theme={theme}
             trips={mapTrips}
           />
@@ -4496,16 +4638,60 @@ function TravelView({
           <section className="travel-link-library" aria-label="링크 여행지 목록">
             <header>
               <strong>링크로 모은 여행지</strong>
-              <small>0</small>
+              <small>{travelLinkSources.length}</small>
             </header>
-            <div className="travel-link-empty">
-              <span aria-hidden="true">🔗</span>
-              <strong>아직 추가된 링크가 없습니다</strong>
-              <small>
-                영상이나 게시물 링크를 추가하면 AI가 여행지를 정리해 이곳에
-                표시합니다.
-              </small>
-            </div>
+            {travelLinkSources.length ? (
+              <div className="travel-link-source-list">
+                {travelLinkSources.map((source) => {
+                  const sourcePlaces = travelLinkPlaces.filter(
+                    (place) => place.source_id === source.id,
+                  );
+                  const platform = travelLinkPlatformMeta(source.platform);
+                  return (
+                    <article className="travel-link-source" key={source.id}>
+                      <label className="travel-link-source-toggle">
+                        <input
+                          aria-label={`${source.title} 지도 표시`}
+                          checked={source.is_map_visible}
+                          onChange={(event) =>
+                            onToggleLinkSource(source, event.target.checked)
+                          }
+                          type="checkbox"
+                        />
+                      </label>
+                      <button
+                        className="travel-link-source-open"
+                        onClick={() => setSelectedLinkSourceId(source.id)}
+                        type="button"
+                      >
+                        <span className="travel-link-source-platform" aria-hidden="true">
+                          {platform.icon}
+                        </span>
+                        <span className="travel-link-source-copy">
+                          <strong>{source.title}</strong>
+                          <small>
+                            {platform.label} · 장소 {sourcePlaces.length}개
+                          </small>
+                          <span>{source.summary || "분석된 요약이 없습니다."}</span>
+                        </span>
+                        <span aria-hidden="true" className="travel-link-source-arrow">
+                          ›
+                        </span>
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="travel-link-empty">
+                <span aria-hidden="true">🔗</span>
+                <strong>아직 추가된 링크가 없습니다</strong>
+                <small>
+                  URL과 스크린샷을 추가하면 AI가 여행지를 함께 분석해 이곳에
+                  표시합니다.
+                </small>
+              </div>
+            )}
           </section>
         </div>
       )}
@@ -4595,36 +4781,160 @@ function TravelView({
       {linkPickerOpen ? (
         <Modal
           className="travel-link-picker"
-          description="영상이나 게시물 주소를 붙여넣어 여행지를 수집합니다."
-          onClose={() => {
-            setLinkPickerOpen(false);
-            setLinkUrl("");
-          }}
+          description="링크 정보와 첨부한 화면을 함께 분석해 여행지를 찾습니다."
+          onClose={closeLinkPicker}
           title="여행 링크 추가"
         >
-          <div className="travel-link-form">
+          <form className="travel-link-form" onSubmit={analyzeTravelLink}>
             <label className="field">
               <span>URL 주소</span>
               <input
+                disabled={linkAnalysisState === "analyzing"}
                 onChange={(event) => setLinkUrl(event.target.value)}
                 placeholder="https://..."
+                required
                 type="url"
                 value={linkUrl}
               />
             </label>
+
+            <div className="travel-link-screenshot-field">
+              <div className="travel-link-screenshot-heading">
+                <span>스크린샷</span>
+                <small>선택 · 최대 4장</small>
+              </div>
+              <label
+                className={`travel-link-screenshot-add${
+                  linkAnalysisState === "analyzing" || linkScreenshots.length >= 4
+                    ? " is-disabled"
+                    : ""
+                }`}
+              >
+                <input
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  disabled={
+                    linkAnalysisState === "analyzing" ||
+                    linkScreenshots.length >= 4
+                  }
+                  multiple
+                  onChange={(event) => {
+                    void addLinkScreenshots(event.currentTarget.files);
+                    event.currentTarget.value = "";
+                  }}
+                  type="file"
+                />
+                <span aria-hidden="true">＋</span>
+                <strong>화면 첨부</strong>
+                <small>간판, 자막, 장소명이 보이는 화면일수록 정확해요.</small>
+              </label>
+              {linkScreenshots.length ? (
+                <div className="travel-link-screenshot-list">
+                  {linkScreenshots.map((screenshot, index) => (
+                    <figure key={screenshot.id}>
+                      {/* Data URL previews are local-only and do not use remote optimization. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        alt={`첨부 스크린샷 ${index + 1}`}
+                        src={screenshot.preview}
+                      />
+                      <button
+                        aria-label={`첨부 스크린샷 ${index + 1} 삭제`}
+                        disabled={linkAnalysisState === "analyzing"}
+                        onClick={() =>
+                          setLinkScreenshots((current) =>
+                            current.filter((item) => item.id !== screenshot.id),
+                          )
+                        }
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    </figure>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
             <div className="travel-link-coming-soon">
               <span aria-hidden="true">AI</span>
               <p>
-                링크 분석과 여행지 자동 추출은 다음 단계에서 API와 연결할
-                예정입니다.
+                링크의 제목·설명·본문과 첨부 화면의 간판·자막을 종합해 실제
+                장소 후보를 찾습니다.
               </p>
             </div>
+            {linkAnalysisError ? (
+              <p className="travel-link-analysis-error" role="alert">
+                {linkAnalysisError}
+              </p>
+            ) : null}
             <button
-              type="button"
               className="button button--primary button--full"
-              disabled
+              disabled={linkAnalysisState === "analyzing" || !linkUrl.trim()}
+              type="submit"
             >
-              AI 분석 준비 중
+              {linkAnalysisState === "analyzing" ? (
+                <>
+                  <span aria-hidden="true" className="travel-link-button-spinner" />
+                  여행지 분석 중
+                </>
+              ) : (
+                "AI로 여행지 찾기"
+              )}
+            </button>
+          </form>
+        </Modal>
+      ) : null}
+
+      {selectedLinkSource ? (
+        <Modal
+          className="travel-link-detail"
+          description={`${travelLinkPlatformMeta(selectedLinkSource.platform).label}에서 가져온 장소 ${selectedLinkPlaces.length}개`}
+          onClose={() => setSelectedLinkSourceId(null)}
+          title={selectedLinkSource.title}
+        >
+          <div className="travel-link-detail-body">
+            <p>{selectedLinkSource.summary || "분석된 요약이 없습니다."}</p>
+            <a
+              className="travel-link-original"
+              href={selectedLinkSource.url}
+              rel="noreferrer"
+              target="_blank"
+            >
+              원본 링크 열기 ↗
+            </a>
+            {selectedLinkPlaces.length ? (
+              <div className="travel-link-place-list">
+                {selectedLinkPlaces.map((place) => (
+                  <article key={place.id}>
+                    <span aria-hidden="true">⌖</span>
+                    <div>
+                      <strong>{place.name}</strong>
+                      <small>
+                        {[place.category, place.city, place.country]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </small>
+                      {place.evidence ? <p>{place.evidence}</p> : null}
+                    </div>
+                    <em>{Math.round(place.confidence * 100)}%</em>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="trip-empty-copy">
+                링크와 첨부 화면에서 확실한 여행지를 찾지 못했습니다.
+              </p>
+            )}
+            <button
+              className="button button--soft button--full travel-link-delete-button"
+              onClick={() => {
+                if (onDeleteLinkSource(selectedLinkSource)) {
+                  setSelectedLinkSourceId(null);
+                }
+              }}
+              type="button"
+            >
+              링크 삭제
             </button>
           </div>
         </Modal>
@@ -5574,6 +5884,12 @@ export function OipApp({
   >([]);
   const [tripFoods, setTripFoods] = useState<TripFood[]>([]);
   const [tripPlaces, setTripPlaces] = useState<TripPlace[]>([]);
+  const [travelLinkSources, setTravelLinkSources] = useState<
+    TravelLinkSource[]
+  >([]);
+  const [travelLinkPlaces, setTravelLinkPlaces] = useState<TravelLinkPlace[]>(
+    [],
+  );
   const [fridge, setFridge] = useState<FridgeItem[]>([]);
   const [parking, setParking] = useState<ParkingRecord | null>(null);
   const loadedHolidayYears = useRef(new Set<number>());
@@ -5599,6 +5915,8 @@ export function OipApp({
       tripTransportations,
       tripFoods,
       tripPlaces,
+      travelLinkSources,
+      travelLinkPlaces,
       fridge,
       parking,
     }),
@@ -5616,6 +5934,8 @@ export function OipApp({
       tripTransportations,
       tripFoods,
       tripPlaces,
+      travelLinkSources,
+      travelLinkPlaces,
       fridge,
       parking,
     ],
@@ -5735,6 +6055,12 @@ export function OipApp({
     );
     setTripPlaces((current) =>
       retainEquivalentValue(current, data.tripPlaces ?? []),
+    );
+    setTravelLinkSources((current) =>
+      retainEquivalentValue(current, data.travelLinkSources ?? []),
+    );
+    setTravelLinkPlaces((current) =>
+      retainEquivalentValue(current, data.travelLinkPlaces ?? []),
     );
     setFridge((current) => retainEquivalentValue(current, data.fridge ?? []));
     setParking((current) =>
@@ -6156,6 +6482,41 @@ export function OipApp({
       active = false;
     };
   }, [applyDataSnapshot, authState, currentUser, showToast]);
+
+  useEffect(() => {
+    if (authState !== "ready") return;
+    let active = true;
+    Promise.all([
+      fetch(`/api/records?resource=travel_link_sources&user=${currentUser}`),
+      fetch(`/api/records?resource=travel_link_places&user=${currentUser}`),
+    ])
+      .then(async ([sourceResponse, placeResponse]) => {
+        if (!sourceResponse.ok || !placeResponse.ok) {
+          throw new Error("TRAVEL_LINK_STORAGE_UNAVAILABLE");
+        }
+        return Promise.all([
+          sourceResponse.json() as Promise<TravelLinkSource[]>,
+          placeResponse.json() as Promise<TravelLinkPlace[]>,
+        ]);
+      })
+      .then(([sources, places]) => {
+        if (!active) return;
+        startTransition(() => {
+          setTravelLinkSources((current) =>
+            retainEquivalentValue(current, sources),
+          );
+          setTravelLinkPlaces((current) =>
+            retainEquivalentValue(current, places),
+          );
+        });
+      })
+      .catch(() => {
+        // Keep the local cache usable until the new Supabase tables are applied.
+      });
+    return () => {
+      active = false;
+    };
+  }, [authState, currentUser]);
 
   useEffect(() => {
     if (authState !== "ready" || cacheReadyUser !== currentUser) return;
@@ -6746,6 +7107,108 @@ export function OipApp({
     void writeRecord("POST", "trips", next);
   }
 
+  async function saveTravelLink(analysis: TravelLinkAnalysis) {
+    const sourceId = newId();
+    const source: TravelLinkSource = {
+      id: sourceId,
+      ...analysis.source,
+      status: analysis.places.some((place) => place.confidence < 0.7)
+        ? "needs_review"
+        : "ready",
+      is_map_visible: true,
+      created_by: currentUser,
+      created_at: new Date().toISOString(),
+    };
+    const nextPlaces: TravelLinkPlace[] = analysis.places.map((place) => ({
+      id: newId(),
+      source_id: sourceId,
+      ...place,
+      city: place.city || null,
+      country: place.country || null,
+      address: place.address || null,
+      evidence: place.evidence || null,
+      created_at: new Date().toISOString(),
+    }));
+    setTravelLinkSources((items) => [source, ...items]);
+    setTravelLinkPlaces((items) => [...items, ...nextPlaces]);
+
+    const sourceSaved = await writeRecord(
+      "POST",
+      "travel_link_sources",
+      source,
+      undefined,
+      true,
+    );
+    const placeResults = sourceSaved
+      ? await Promise.all(
+          nextPlaces.map((place) =>
+            writeRecord(
+              "POST",
+              "travel_link_places",
+              place,
+              undefined,
+              true,
+            ),
+          ),
+        )
+      : [];
+    if (sourceSaved && placeResults.every(Boolean)) {
+      showToast(`여행지 ${nextPlaces.length}개를 찾았어요.`);
+      return true;
+    }
+    if (sourceSaved) {
+      await writeRecord(
+        "DELETE",
+        "travel_link_sources",
+        undefined,
+        source.id,
+        true,
+      );
+    }
+    showToast("서버 저장소 연결 전이라 이 기기에 저장했어요.");
+    return true;
+  }
+
+  function toggleTravelLinkSource(
+    source: TravelLinkSource,
+    isMapVisible: boolean,
+  ) {
+    setTravelLinkSources((items) =>
+      items.map((item) =>
+        item.id === source.id
+          ? { ...item, is_map_visible: isMapVisible }
+          : item,
+      ),
+    );
+    void writeRecord(
+      "PATCH",
+      "travel_link_sources",
+      { is_map_visible: isMapVisible },
+      source.id,
+      true,
+    );
+  }
+
+  function deleteTravelLinkSource(source: TravelLinkSource) {
+    if (!globalThis.confirm(`"${source.title}" 링크를 삭제할까요?`)) {
+      return false;
+    }
+    setTravelLinkSources((items) =>
+      items.filter((item) => item.id !== source.id),
+    );
+    setTravelLinkPlaces((items) =>
+      items.filter((item) => item.source_id !== source.id),
+    );
+    void writeRecord(
+      "DELETE",
+      "travel_link_sources",
+      undefined,
+      source.id,
+      true,
+    );
+    return true;
+  }
+
   function updateTripCountry(item: Trip, countryCode: string) {
     const memoWithoutCountry = composeTripMemo(item.memo, {
       countryCode: null,
@@ -7224,14 +7687,19 @@ export function OipApp({
               foods={tripFoods}
               googleMapsApiKey={googleMapsApiKey}
               onAdd={() => setModal("trip")}
+              onDeleteLinkSource={deleteTravelLinkSource}
               onDeleteDetail={deleteTripDetail}
               onDeleteTrip={deleteTrip}
               onSaveDetail={saveTripDetail}
+              onSaveLink={saveTravelLink}
+              onToggleLinkSource={toggleTravelLinkSource}
               onToggleVisited={toggleTripVisited}
               onUpdateChecklist={updateTripChecklist}
               onUpdateCountry={updateTripCountry}
               onUpdateMemo={updateTripMemo}
               places={tripPlaces}
+              travelLinkPlaces={travelLinkPlaces}
+              travelLinkSources={travelLinkSources}
               transportations={tripTransportations}
               trips={trips}
               theme={theme}

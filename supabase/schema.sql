@@ -289,6 +289,45 @@ create table if not exists public.trip_places (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.travel_link_sources (
+  id uuid primary key default gen_random_uuid(),
+  url text not null,
+  canonical_url text not null,
+  platform text not null default 'web',
+  title text not null,
+  author_name text,
+  thumbnail_url text,
+  summary text not null default '',
+  status text not null default 'ready'
+    check (status in ('ready', 'needs_review', 'failed')),
+  is_map_visible boolean not null default true,
+  created_by text not null references public.profiles(code),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists travel_link_sources_created_idx
+  on public.travel_link_sources (created_at desc);
+
+create table if not exists public.travel_link_places (
+  id uuid primary key default gen_random_uuid(),
+  source_id uuid not null references public.travel_link_sources(id) on delete cascade,
+  name text not null,
+  city text,
+  country text,
+  category text not null default '기타',
+  address text,
+  location_query text not null,
+  evidence text,
+  confidence numeric(4, 3) not null default 0.5
+    check (confidence between 0 and 1),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists travel_link_places_source_idx
+  on public.travel_link_places (source_id, created_at asc);
+
 create table if not exists public.fridge_items (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(name) between 1 and 120),
@@ -362,6 +401,8 @@ begin
     'trip_transportations',
     'trip_foods',
     'trip_places',
+    'travel_link_sources',
+    'travel_link_places',
     'fridge_items'
   ]
   loop
@@ -395,6 +436,8 @@ begin
     'trip_transportations',
     'trip_foods',
     'trip_places',
+    'travel_link_sources',
+    'travel_link_places',
     'fridge_items',
     'parking_records'
   ]

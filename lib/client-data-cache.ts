@@ -12,6 +12,8 @@ import type {
   TripAccommodation,
   TripFlight,
   TripFood,
+  TravelLinkPlace,
+  TravelLinkSource,
   TripPlace,
   TripTransportation,
   UserCode,
@@ -37,6 +39,8 @@ export type OipDataSnapshot = {
   tripTransportations: TripTransportation[];
   tripFoods: TripFood[];
   tripPlaces: TripPlace[];
+  travelLinkSources?: TravelLinkSource[];
+  travelLinkPlaces?: TravelLinkPlace[];
   fridge: FridgeItem[];
   parking: ParkingRecord | null;
 };

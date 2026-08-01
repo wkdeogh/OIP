@@ -2,7 +2,11 @@
 
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Trip } from "../oip-types";
+import type {
+  TravelLinkPlace,
+  TravelLinkSource,
+  Trip,
+} from "../oip-types";
 
 type ThemeMode = "light" | "dark";
 type MapStatus =
@@ -17,6 +21,11 @@ type DestinationGroup = {
   countryCode?: string | null;
   destination: string;
   trips: Trip[];
+};
+
+type LinkDestination = {
+  place: TravelLinkPlace;
+  source: TravelLinkSource;
 };
 
 const DEFAULT_CENTER = { lat: 20, lng: 15 };
@@ -123,6 +132,37 @@ function infoWindowContent(group: DestinationGroup) {
   return content;
 }
 
+function linkInfoWindowContent(group: LinkDestination) {
+  const content = document.createElement("div");
+  content.className = "travel-map-info";
+
+  const title = document.createElement("strong");
+  title.textContent = group.place.name;
+  content.append(title);
+
+  const list = document.createElement("div");
+  list.className = "travel-map-info-list";
+  const placeInfo = document.createElement("span");
+  const category = document.createElement("b");
+  const location = document.createElement("small");
+  category.textContent = group.place.category;
+  location.textContent =
+    group.place.address ||
+    [group.place.city, group.place.country].filter(Boolean).join(", ") ||
+    group.place.location_query;
+  placeInfo.append(category, location);
+  list.append(placeInfo);
+
+  const sourceLink = document.createElement("a");
+  sourceLink.href = group.source.url;
+  sourceLink.rel = "noreferrer";
+  sourceLink.target = "_blank";
+  sourceLink.textContent = `출처: ${group.source.title}`;
+  list.append(sourceLink);
+  content.append(list);
+  return content;
+}
+
 async function geocodeDestination(
   geocoder: google.maps.Geocoder,
   group: DestinationGroup,
@@ -165,12 +205,16 @@ export function TravelMap({
   apiKey,
   emptyDetail = "여행지를 추가하면 이곳에 마커가 생깁니다.",
   emptyTitle = "표시할 여행지가 없습니다",
+  linkPlaces = [],
+  linkSources = [],
   theme,
   trips,
 }: {
   apiKey: string;
   emptyDetail?: string;
   emptyTitle?: string;
+  linkPlaces?: TravelLinkPlace[];
+  linkSources?: TravelLinkSource[];
   theme: ThemeMode;
   trips: Trip[];
 }) {
@@ -181,6 +225,19 @@ export function TravelMap({
     () => groupTripsByDestination(trips),
     [trips],
   );
+  const linkDestinations = useMemo(() => {
+    const visibleSources = new Map(
+      linkSources
+        .filter((source) => source.is_map_visible)
+        .map((source) => [source.id, source]),
+    );
+    return linkPlaces
+      .map((place) => {
+        const source = visibleSources.get(place.source_id);
+        return source ? { place, source } : null;
+      })
+      .filter((group): group is LinkDestination => Boolean(group));
+  }, [linkPlaces, linkSources]);
 
   useEffect(() => {
     if (!apiKey) return;
@@ -211,42 +268,71 @@ export function TravelMap({
         mapTypeControl: false,
         streetViewControl: false,
         styles: theme === "dark" ? DARK_MAP_STYLES : undefined,
-        zoom: destinationGroups.length ? 3 : 2,
+        zoom: destinationGroups.length || linkDestinations.length ? 3 : 2,
         zoomControl: true,
       });
 
-      if (!destinationGroups.length) {
+      if (!destinationGroups.length && !linkDestinations.length) {
         if (!isCancelled) setStatus("empty");
         return;
       }
 
       const geocoder = new Geocoder();
       const infoWindow = new InfoWindow();
-      const located: Array<{
-        group: DestinationGroup;
-        location: google.maps.LatLngLiteral;
-      }> = [];
+      const located: Array<
+        | {
+            kind: "trip";
+            group: DestinationGroup;
+            location: google.maps.LatLngLiteral;
+          }
+        | {
+            kind: "link";
+            group: LinkDestination;
+            location: google.maps.LatLngLiteral;
+          }
+      > = [];
 
       for (const group of destinationGroups) {
         try {
           const location = await geocodeDestination(geocoder, group);
-          if (location) located.push({ group, location });
+          if (location) located.push({ kind: "trip", group, location });
         } catch {
           // A single destination should not prevent the remaining trips from rendering.
         }
         if (isCancelled) return;
       }
 
-      located.forEach(({ group, location }) => {
+      for (const group of linkDestinations) {
+        try {
+          const response = await geocoder.geocode({
+            address: group.place.location_query,
+            language: "ko",
+          });
+          const location = response.results[0]?.geometry.location.toJSON();
+          if (location) located.push({ kind: "link", group, location });
+        } catch {
+          // Keep rendering the other extracted places when one query is ambiguous.
+        }
+        if (isCancelled) return;
+      }
+
+      located.forEach((item) => {
         const marker = new Marker({
           map,
-          position: location,
-          title: group.destination,
+          position: item.location,
+          title:
+            item.kind === "trip"
+              ? item.group.destination
+              : item.group.place.name,
         });
         markers.push(marker);
         listeners.push(
           marker.addListener("click", () => {
-            infoWindow.setContent(infoWindowContent(group));
+            infoWindow.setContent(
+              item.kind === "trip"
+                ? infoWindowContent(item.group)
+                : linkInfoWindowContent(item.group),
+            );
             infoWindow.open({ anchor: marker, map });
           }),
         );
@@ -275,7 +361,9 @@ export function TravelMap({
       }
 
       if (!isCancelled) {
-        setUnlocatedCount(destinationGroups.length - located.length);
+        setUnlocatedCount(
+          destinationGroups.length + linkDestinations.length - located.length,
+        );
         setStatus(located.length ? "ready" : "unlocated");
       }
     }
@@ -289,7 +377,7 @@ export function TravelMap({
       listeners.forEach((listener) => listener.remove());
       markers.forEach((marker) => marker.setMap(null));
     };
-  }, [apiKey, destinationGroups, theme]);
+  }, [apiKey, destinationGroups, linkDestinations, theme]);
 
   const visibleStatus: MapStatus = apiKey ? status : "unconfigured";
   const statusCopy =

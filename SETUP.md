@@ -20,6 +20,8 @@
 - `OIP_SESSION_VERSION`: 기본값 `1`
 - `PUBLIC_HOLIDAY_API_KEY`: 공공데이터포털 한국천문연구원 특일 정보 API 키
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: 여행 지도용 Google Maps 브라우저 API 키
+- `OPENAI_API_KEY`: 여행 링크·스크린샷 분석용 OpenAI API 키
+- `OPENAI_TRAVEL_MODEL`: 여행 분석 모델(기본값 `gpt-5.6-sol`)
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: 웹 푸시용 VAPID 키 쌍
 - `VAPID_SUBJECT`: 푸시 발송자 연락처 (`mailto:본인이메일` 형식 권장)
 - `CRON_SECRET`: 오전 8시 알림 작업 API를 보호하는 16자 이상의 임의 문자열
@@ -37,6 +39,17 @@
 5. 키를 `.env.local`과 Vercel의 Production/Preview 환경 변수에 `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` 이름으로 저장하고 앱을 다시 실행하거나 재배포합니다.
 
 여행 탭을 열 때만 Google Maps 스크립트를 불러옵니다. 등록된 여행지 이름은 Geocoding API로 좌표를 찾아 지도 마커로 표시합니다.
+
+### 여행 링크 AI 분석
+
+1. OpenAI Platform에서 서버용 API 키를 발급합니다.
+2. `.env.local`과 배포 환경 변수에 `OPENAI_API_KEY`를 저장합니다.
+3. 필요하면 `OPENAI_TRAVEL_MODEL`로 분석 모델을 변경합니다.
+4. Supabase SQL Editor에서 최신 `supabase/schema.sql`을 다시 실행해
+   `travel_link_sources`, `travel_link_places` 테이블을 추가합니다.
+
+스크린샷은 OpenAI 분석 요청에만 사용하며 OIP나 Supabase에는 저장하지 않습니다.
+URL에서 읽을 수 있는 제목·설명·본문과 첨부 화면의 간판·자막을 함께 분석합니다.
 
 ## 4. 로컬 실행
 

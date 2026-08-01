@@ -176,6 +176,37 @@ export const resourceConfigs = {
     ],
     order: "is_visited.asc,desired_date.asc.nullslast,created_at.asc",
   },
+  travel_link_sources: {
+    table: "travel_link_sources",
+    fields: [
+      "url",
+      "canonical_url",
+      "platform",
+      "title",
+      "author_name",
+      "thumbnail_url",
+      "summary",
+      "status",
+      "is_map_visible",
+      "created_by",
+    ],
+    order: "created_at.desc",
+  },
+  travel_link_places: {
+    table: "travel_link_places",
+    fields: [
+      "source_id",
+      "name",
+      "city",
+      "country",
+      "category",
+      "address",
+      "location_query",
+      "evidence",
+      "confidence",
+    ],
+    order: "created_at.asc",
+  },
   fridge_items: {
     table: "fridge_items",
     fields: [

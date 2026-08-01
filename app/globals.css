@@ -2134,6 +2134,96 @@ p {
   line-height: 1.5;
 }
 
+.travel-link-source-list {
+  display: grid;
+}
+
+.travel-link-source {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+}
+
+.travel-link-source:last-child {
+  border-bottom: 0;
+}
+
+.travel-link-source-toggle {
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.travel-link-source-toggle input {
+  width: 19px;
+  height: 19px;
+  margin: 0;
+  accent-color: var(--green);
+}
+
+.travel-link-source-open {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 38px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px 12px 0;
+  background: transparent;
+  text-align: left;
+}
+
+.travel-link-source-open:hover {
+  background: var(--surface-soft);
+}
+
+.travel-link-source-platform {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.travel-link-source-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.travel-link-source-copy strong,
+.travel-link-source-copy small,
+.travel-link-source-copy > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.travel-link-source-copy strong {
+  font-size: 0.76rem;
+}
+
+.travel-link-source-copy small {
+  color: var(--green-dark);
+  font-size: 0.61rem;
+  font-weight: 800;
+}
+
+.travel-link-source-copy > span {
+  color: var(--muted);
+  font-size: 0.63rem;
+}
+
+.travel-link-source-arrow {
+  color: var(--muted);
+  font-size: 1.3rem;
+}
+
 .travel-map-panel {
   position: relative;
   left: 50%;
@@ -2276,8 +2366,16 @@ p {
   font-size: 0.64rem;
 }
 
+.travel-map-info-list a {
+  color: #3d6f5d;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 .travel-map-trip-picker,
-.travel-link-picker {
+.travel-link-picker,
+.travel-link-detail {
   width: min(100%, 520px);
 }
 
@@ -2375,6 +2473,117 @@ p {
   padding-top: 10px;
 }
 
+.travel-link-screenshot-field {
+  display: grid;
+  gap: 9px;
+}
+
+.travel-link-screenshot-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 2px;
+}
+
+.travel-link-screenshot-heading > span {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.travel-link-screenshot-heading > small {
+  color: var(--muted);
+  font-size: 0.61rem;
+}
+
+.travel-link-screenshot-add {
+  display: grid;
+  min-height: 100px;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  padding: 14px;
+  border: 1px dashed #a8bcb1;
+  border-radius: 16px;
+  background: var(--green-soft);
+  cursor: pointer;
+  text-align: center;
+}
+
+.travel-link-screenshot-add.is-disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.travel-link-screenshot-add input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.travel-link-screenshot-add > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 2px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: white;
+  font-size: 1.1rem;
+}
+
+.travel-link-screenshot-add > strong {
+  font-size: 0.72rem;
+}
+
+.travel-link-screenshot-add > small {
+  color: var(--muted);
+  font-size: 0.6rem;
+  line-height: 1.4;
+}
+
+.travel-link-screenshot-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.travel-link-screenshot-list figure {
+  position: relative;
+  aspect-ratio: 1;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.travel-link-screenshot-list img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.travel-link-screenshot-list button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(18, 22, 27, 0.78);
+  color: white;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .travel-link-coming-soon {
   display: flex;
   align-items: center;
@@ -2403,6 +2612,118 @@ p {
   color: var(--muted);
   font-size: 0.69rem;
   line-height: 1.5;
+}
+
+.travel-link-analysis-error {
+  margin: -4px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.67rem;
+  line-height: 1.45;
+}
+
+.travel-link-form .button--full {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.travel-link-button-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: travel-map-spin 750ms linear infinite;
+}
+
+.travel-link-detail-body {
+  display: grid;
+  gap: 14px;
+  padding-top: 8px;
+}
+
+.travel-link-detail-body > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.65;
+}
+
+.travel-link-original {
+  width: max-content;
+  color: var(--green-dark);
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.travel-link-place-list {
+  display: grid;
+  gap: 7px;
+}
+
+.travel-link-place-list article {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.travel-link-place-list article > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-weight: 900;
+}
+
+.travel-link-place-list article > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.travel-link-place-list strong {
+  font-size: 0.75rem;
+}
+
+.travel-link-place-list small {
+  color: var(--muted);
+  font-size: 0.61rem;
+}
+
+.travel-link-place-list p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.63rem;
+  line-height: 1.45;
+}
+
+.travel-link-place-list em {
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 0.58rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.travel-link-delete-button {
+  color: var(--danger);
 }
 
 .trip-list {

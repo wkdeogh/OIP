@@ -51,6 +51,10 @@ function applyReadFilters(
     const tripId = source.get("trip_id");
     if (tripId) search.set("trip_id", `eq.${tripId}`);
   }
+  if (resource === "travel_link_places") {
+    const sourceId = source.get("source_id");
+    if (sourceId) search.set("source_id", `eq.${sourceId}`);
+  }
 
   const id = source.get("id");
   if (id) search.set("id", `eq.${id}`);
