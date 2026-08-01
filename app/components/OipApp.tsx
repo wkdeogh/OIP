@@ -53,6 +53,7 @@ type MainTab =
   | "parking";
 type TaskTab = "todo" | "shopping";
 type ThemeMode = "light" | "dark";
+type TravelTab = "list" | "map";
 type PushStatus =
   | "checking"
   | "unsupported"
@@ -95,6 +96,21 @@ type TripChecklistItem = {
   title: string;
   is_checked: boolean;
 };
+
+const TRAVEL_MAP_SELECTION_KEY = "oip.travel-map.selected-trips.v1";
+
+function initialMapTripSelection() {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem(TRAVEL_MAP_SELECTION_KEY) ?? "null",
+    ) as unknown;
+    if (Array.isArray(stored)) {
+      return stored.filter((id): id is string => typeof id === "string");
+    }
+  } catch {}
+  return null;
+}
 
 function retainEquivalentValue<T>(current: T, next: T) {
   if (current === next) return current;
@@ -4266,6 +4282,14 @@ function TravelView({
   ) => void;
 }) {
   const today = toDateKey(new Date());
+  const [travelTab, setTravelTab] = useState<TravelTab>("list");
+  const [mapTripPickerOpen, setMapTripPickerOpen] = useState(false);
+  const [linkPickerOpen, setLinkPickerOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [selectedMapTripIds, setSelectedMapTripIds] = useState<string[] | null>(
+    initialMapTripSelection,
+  );
+  const [draftMapTripIds, setDraftMapTripIds] = useState<string[]>([]);
   const upcoming = [...trips]
     .filter((trip) => trip.end_date >= today)
     .sort((a, b) => a.start_date.localeCompare(b.start_date));
@@ -4295,6 +4319,22 @@ function TravelView({
   );
   const detailFoods = foods.filter((item) => item.trip_id === detail?.id);
   const detailPlaces = places.filter((item) => item.trip_id === detail?.id);
+  const availableTripIds = new Set(trips.map((trip) => trip.id));
+  const activeMapTripIds = (
+    selectedMapTripIds ?? trips.map((trip) => trip.id)
+  ).filter((id) => availableTripIds.has(id));
+  const activeMapTripIdSet = new Set(activeMapTripIds);
+  const mapTrips = trips.filter((trip) => activeMapTripIdSet.has(trip.id));
+
+  useEffect(() => {
+    if (selectedMapTripIds === null) return;
+    try {
+      localStorage.setItem(
+        TRAVEL_MAP_SELECTION_KEY,
+        JSON.stringify(selectedMapTripIds),
+      );
+    } catch {}
+  }, [selectedMapTripIds]);
 
   useEffect(() => {
     if (!actionMenuTrip) return;
@@ -4312,85 +4352,283 @@ function TravelView({
     onDeleteDetail(resource, id);
   }
 
-  return (
-    <section className="travel-layout">
-      <TravelMap apiKey={googleMapsApiKey} theme={theme} trips={trips} />
+  function openMapTripPicker() {
+    setDraftMapTripIds(activeMapTripIds);
+    setMapTripPickerOpen(true);
+  }
 
-      <div className="travel-actions">
+  return (
+    <section className="travel-view">
+      <div className="travel-sub-tabs" role="tablist" aria-label="여행 메뉴">
         <button
-          className="button button--primary travel-add-button"
-          onClick={onAdd}
+          aria-selected={travelTab === "list"}
+          className={travelTab === "list" ? "is-active" : ""}
+          onClick={() => setTravelTab("list")}
+          role="tab"
           type="button"
         >
-          + 여행 추가
+          여행목록
+        </button>
+        <button
+          aria-selected={travelTab === "map"}
+          className={travelTab === "map" ? "is-active" : ""}
+          onClick={() => setTravelTab("map")}
+          role="tab"
+          type="button"
+        >
+          지도
         </button>
       </div>
 
-      <div className="travel-list-panel">
-        {upcoming.length ? (
-          <div className="trip-list">
-            {upcoming.map((trip, index) => (
-              <TripListCard
-                index={index}
-                isActionMenuOpen={actionMenuTrip === trip.id}
-                isSelected={selectedTrip === trip.id}
-                key={trip.id}
-                onChooseCountry={() => setCountryPickerTrip(trip.id)}
-                onDelete={() => {
-                  setActionMenuTrip(null);
-                  onDeleteTrip(trip);
-                }}
-                onOpen={() => {
-                  setActionMenuTrip(null);
-                  setSelectedTrip(trip.id);
-                  setSection("overview");
-                }}
-                onOpenActionMenu={() => setActionMenuTrip(trip.id)}
-                today={today}
-                trip={trip}
-              />
-            ))}
+      {travelTab === "list" ? (
+        <div className="travel-list-layout">
+          <div className="travel-list-actions">
+            <button
+              className="button button--primary travel-add-button"
+              onClick={onAdd}
+              type="button"
+            >
+              + 여행 추가
+            </button>
           </div>
-        ) : (
-          <div className="card">
-            <EmptyState
-              action="여행 추가"
-              icon="✈"
-              onAction={onAdd}
-              title="등록된 여행이 없습니다"
-            />
-          </div>
-        )}
 
-        {past.length ? (
-          <details className="past-trips">
-            <summary>지난 여행 {past.length}개</summary>
-            <div className="trip-list trip-list--past">
-              {past.map((trip) => (
-                <TripListCard
-                  isPast
-                  isActionMenuOpen={actionMenuTrip === trip.id}
-                  isSelected={selectedTrip === trip.id}
-                  key={trip.id}
-                  onChooseCountry={() => setCountryPickerTrip(trip.id)}
-                  onDelete={() => {
-                    setActionMenuTrip(null);
-                    onDeleteTrip(trip);
-                  }}
-                  onOpen={() => {
-                    setActionMenuTrip(null);
-                    setSelectedTrip(trip.id);
-                    setSection("overview");
-                  }}
-                  onOpenActionMenu={() => setActionMenuTrip(trip.id)}
-                  today={today}
-                  trip={trip}
+          <div className="travel-list-panel">
+            {upcoming.length ? (
+              <div className="trip-list">
+                {upcoming.map((trip, index) => (
+                  <TripListCard
+                    index={index}
+                    isActionMenuOpen={actionMenuTrip === trip.id}
+                    isSelected={selectedTrip === trip.id}
+                    key={trip.id}
+                    onChooseCountry={() => setCountryPickerTrip(trip.id)}
+                    onDelete={() => {
+                      setActionMenuTrip(null);
+                      onDeleteTrip(trip);
+                    }}
+                    onOpen={() => {
+                      setActionMenuTrip(null);
+                      setSelectedTrip(trip.id);
+                      setSection("overview");
+                    }}
+                    onOpenActionMenu={() => setActionMenuTrip(trip.id)}
+                    today={today}
+                    trip={trip}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="card">
+                <EmptyState
+                  action="여행 추가"
+                  icon="✈"
+                  onAction={onAdd}
+                  title="등록된 여행이 없습니다"
                 />
-              ))}
+              </div>
+            )}
+
+            {past.length ? (
+              <details className="past-trips">
+                <summary>지난 여행 {past.length}개</summary>
+                <div className="trip-list trip-list--past">
+                  {past.map((trip) => (
+                    <TripListCard
+                      isPast
+                      isActionMenuOpen={actionMenuTrip === trip.id}
+                      isSelected={selectedTrip === trip.id}
+                      key={trip.id}
+                      onChooseCountry={() => setCountryPickerTrip(trip.id)}
+                      onDelete={() => {
+                        setActionMenuTrip(null);
+                        onDeleteTrip(trip);
+                      }}
+                      onOpen={() => {
+                        setActionMenuTrip(null);
+                        setSelectedTrip(trip.id);
+                        setSection("overview");
+                      }}
+                      onOpenActionMenu={() => setActionMenuTrip(trip.id)}
+                      today={today}
+                      trip={trip}
+                    />
+                  ))}
+                </div>
+              </details>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <div className="travel-map-layout">
+          <TravelMap
+            apiKey={googleMapsApiKey}
+            emptyDetail="여행 연결 버튼에서 지도에 표시할 여행을 선택할 수 있습니다."
+            emptyTitle={
+              trips.length
+                ? "지도에 표시할 여행을 선택해 주세요"
+                : "등록된 여행이 없습니다"
+            }
+            theme={theme}
+            trips={mapTrips}
+          />
+
+          <div className="travel-map-actions">
+            <button
+              className="button button--soft travel-map-action-button"
+              onClick={openMapTripPicker}
+              type="button"
+            >
+              <span aria-hidden="true">☑</span>
+              여행 연결
+              <small>
+                {activeMapTripIds.length}/{trips.length}
+              </small>
+            </button>
+            <button
+              className="button button--primary travel-map-action-button"
+              onClick={() => setLinkPickerOpen(true)}
+              type="button"
+            >
+              + 링크
+            </button>
+          </div>
+
+          <section className="travel-link-library" aria-label="링크 여행지 목록">
+            <header>
+              <strong>링크로 모은 여행지</strong>
+              <small>0</small>
+            </header>
+            <div className="travel-link-empty">
+              <span aria-hidden="true">🔗</span>
+              <strong>아직 추가된 링크가 없습니다</strong>
+              <small>
+                영상이나 게시물 링크를 추가하면 AI가 여행지를 정리해 이곳에
+                표시합니다.
+              </small>
             </div>
-          </details>
-        ) : null}
-      </div>
+          </section>
+        </div>
+      )}
+
+      {mapTripPickerOpen ? (
+        <Modal
+          className="travel-map-trip-picker"
+          description="체크한 여행만 지도에 표시됩니다."
+          onClose={() => setMapTripPickerOpen(false)}
+          title="지도에 연결할 여행"
+        >
+          {trips.length ? (
+            <>
+              <div className="travel-map-trip-picker-toolbar">
+                <span>{draftMapTripIds.length}개 선택</span>
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    setDraftMapTripIds(
+                      draftMapTripIds.length === trips.length
+                        ? []
+                        : trips.map((trip) => trip.id),
+                    )
+                  }
+                  type="button"
+                >
+                  {draftMapTripIds.length === trips.length
+                    ? "전체 해제"
+                    : "전체 선택"}
+                </button>
+              </div>
+              <div className="travel-map-trip-options">
+                {trips.map((trip) => {
+                  const isChecked = draftMapTripIds.includes(trip.id);
+                  return (
+                    <label className="travel-map-trip-option" key={trip.id}>
+                      <input
+                        checked={isChecked}
+                        onChange={() =>
+                          setDraftMapTripIds((current) =>
+                            isChecked
+                              ? current.filter((id) => id !== trip.id)
+                              : [...current, trip.id],
+                          )
+                        }
+                        type="checkbox"
+                      />
+                      <span aria-hidden="true" className="travel-map-trip-flag">
+                        {countryFlag(tripCountryCode(trip))}
+                      </span>
+                      <span className="travel-map-trip-copy">
+                        <strong>{trip.title}</strong>
+                        <small>
+                          {trip.destination} · {formatKoreanDate(trip.start_date)}
+                        </small>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="travel-modal-actions">
+                <button
+                  className="button button--soft"
+                  onClick={() => setMapTripPickerOpen(false)}
+                  type="button"
+                >
+                  취소
+                </button>
+                <button
+                  className="button button--primary"
+                  onClick={() => {
+                    setSelectedMapTripIds(draftMapTripIds);
+                    setMapTripPickerOpen(false);
+                  }}
+                  type="button"
+                >
+                  지도에 적용
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="trip-empty-copy">먼저 여행목록에 여행을 추가해 주세요.</p>
+          )}
+        </Modal>
+      ) : null}
+
+      {linkPickerOpen ? (
+        <Modal
+          className="travel-link-picker"
+          description="영상이나 게시물 주소를 붙여넣어 여행지를 수집합니다."
+          onClose={() => {
+            setLinkPickerOpen(false);
+            setLinkUrl("");
+          }}
+          title="여행 링크 추가"
+        >
+          <div className="travel-link-form">
+            <label className="field">
+              <span>URL 주소</span>
+              <input
+                onChange={(event) => setLinkUrl(event.target.value)}
+                placeholder="https://..."
+                type="url"
+                value={linkUrl}
+              />
+            </label>
+            <div className="travel-link-coming-soon">
+              <span aria-hidden="true">AI</span>
+              <p>
+                링크 분석과 여행지 자동 추출은 다음 단계에서 API와 연결할
+                예정입니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="button button--primary button--full"
+              disabled
+            >
+              AI 분석 준비 중
+            </button>
+          </div>
+        </Modal>
+      ) : null}
 
       {detail ? (
         <Modal

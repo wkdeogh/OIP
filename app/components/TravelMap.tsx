@@ -163,10 +163,14 @@ function groupTripsByDestination(trips: Trip[]) {
 
 export function TravelMap({
   apiKey,
+  emptyDetail = "여행지를 추가하면 이곳에 마커가 생깁니다.",
+  emptyTitle = "표시할 여행지가 없습니다",
   theme,
   trips,
 }: {
   apiKey: string;
+  emptyDetail?: string;
+  emptyTitle?: string;
   theme: ThemeMode;
   trips: Trip[];
 }) {
@@ -310,8 +314,8 @@ export function TravelMap({
         : visibleStatus === "empty"
           ? {
               icon: "📍",
-              title: "표시할 여행지가 없습니다",
-              detail: "여행지를 추가하면 이곳에 마커가 생깁니다.",
+              title: emptyTitle,
+              detail: emptyDetail,
             }
           : {
               icon: "",
