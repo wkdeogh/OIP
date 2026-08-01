@@ -635,11 +635,12 @@ function fitCalendarEventLabels(container: HTMLElement) {
     if (!chip) return;
 
     const style = window.getComputedStyle(chip);
+    const labelStyle = window.getComputedStyle(label);
     const availableWidth = Math.max(
       0,
-      chip.clientWidth -
-        Number.parseFloat(style.paddingLeft) -
-        Number.parseFloat(style.paddingRight),
+      label.clientWidth -
+        Number.parseFloat(labelStyle.paddingLeft) -
+        Number.parseFloat(labelStyle.paddingRight),
     );
     const font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
     const letterSpacing = Number.parseFloat(style.letterSpacing) || 0;
@@ -2257,6 +2258,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                   const isSegmentEnd =
                     isRange && (range.end === key || date.getDay() === 6);
                   const showTitle = !isRange || isSegmentStart;
+                  const showTimeIndicator = showTitle && !event.is_all_day;
                   const chipText = showTitle ? event.title : "\u00a0";
 
                   return (
@@ -2267,6 +2269,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                         isRange ? "event-chip--range" : "",
                         isSegmentStart ? "event-chip--segment-start" : "",
                         isSegmentEnd ? "event-chip--segment-end" : "",
+                        showTimeIndicator ? "event-chip--timed" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -2277,6 +2280,12 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                         color: eventTextColor(resolvedColor),
                       }}
                     >
+                      {showTimeIndicator ? (
+                        <span
+                          aria-hidden="true"
+                          className="event-chip-time-dot"
+                        />
+                      ) : null}
                       <span
                         className="event-chip-label"
                         data-full-text={showTitle ? chipText : undefined}

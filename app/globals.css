@@ -1176,6 +1176,7 @@ p {
 }
 
 .event-chip {
+  position: relative;
   display: block;
   overflow: hidden;
   margin-inline: calc(1px - var(--calendar-day-inline-padding));
@@ -1194,6 +1195,22 @@ p {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
+}
+
+.event-chip--timed .event-chip-label {
+  padding-left: 7px;
+}
+
+.event-chip-time-dot {
+  position: absolute;
+  z-index: 1;
+  top: 3px;
+  left: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  pointer-events: none;
 }
 
 .event-chip.event-chip--range {
