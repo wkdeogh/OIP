@@ -50,8 +50,8 @@ const MARKER_KIND_META: Record<
   MapEntryKind,
   { icon: string; label: string }
 > = {
-  accommodation: { icon: "🏨", label: "숙소" },
-  food: { icon: "🍴", label: "식당·음식" },
+  accommodation: { icon: "🏠", label: "숙소" },
+  food: { icon: "🍳", label: "식당·음식" },
   place: { icon: "📍", label: "일반 장소" },
 };
 
@@ -603,7 +603,7 @@ export function TravelMap({
           icon: makeMarkerIcon(group.source),
           label: {
             color: "#ffffff",
-            fontSize: "13px",
+            fontSize: "18px",
             fontWeight: "700",
             text: MARKER_KIND_META[kind].icon,
           },
