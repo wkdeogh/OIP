@@ -1957,9 +1957,8 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
   );
 });
 
-const CALENDAR_SWIPE_BUFFER_RADIUS = 8;
+const CALENDAR_SWIPE_BUFFER_RADIUS = 1;
 const CALENDAR_SWIPE_CENTER_INDEX = CALENDAR_SWIPE_BUFFER_RADIUS;
-const CALENDAR_INITIAL_RENDER_RADIUS = 2;
 const CALENDAR_SWIPE_PANEL_OFFSETS = Array.from(
   { length: CALENDAR_SWIPE_BUFFER_RADIUS * 2 + 1 },
   (_, index) => index - CALENDAR_SWIPE_BUFFER_RADIUS,
@@ -2016,20 +2015,6 @@ function CalendarView({
         new Date(selected.getFullYear(), selected.getMonth() + offset, 1),
     ),
   );
-  const [preparedPanelMonths, setPreparedPanelMonths] = useState(() =>
-    new Set(
-      CALENDAR_SWIPE_PANEL_OFFSETS.filter(
-        (offset) => Math.abs(offset) <= CALENDAR_INITIAL_RENDER_RADIUS,
-      ).map(
-        (offset) =>
-          new Date(
-            selected.getFullYear(),
-            selected.getMonth() + offset,
-            1,
-          ).getTime(),
-      ),
-    ),
-  );
   const [holidaysByYear, setHolidaysByYear] = useState<
     Map<number, PublicHoliday[]>
   >(() => groupPublicHolidaysByYear(holidays));
@@ -2059,7 +2044,6 @@ function CalendarView({
   const monthTitleRef = useRef<HTMLElement | null>(null);
   const activeMonthRef = useRef(visibleMonth);
   const calendarPanelMonthsRef = useRef(calendarPanelMonths);
-  const pendingPrependedPanelsRef = useRef(0);
   const trackIndexRef = useRef(CALENDAR_SWIPE_CENTER_INDEX);
   const finishSwipeAnimationRef = useRef<(() => void) | null>(null);
   const swipeFrameRef = useRef<number | null>(null);
@@ -2144,26 +2128,6 @@ function CalendarView({
 
   useLayoutEffect(() => {
     calendarPanelMonthsRef.current = calendarPanelMonths;
-    const prependedPanels = pendingPrependedPanelsRef.current;
-    if (prependedPanels > 0) {
-      pendingPrependedPanelsRef.current = 0;
-      trackIndexRef.current += prependedPanels;
-      if (gestureRef.current) {
-        gestureRef.current.trackIndex += prependedPanels;
-      }
-      const track = calendarTrackRef.current;
-      const width = Math.max(
-        1,
-        track?.parentElement?.clientWidth ?? track?.clientWidth ?? 1,
-      );
-      if (track) {
-        const offset = gestureRef.current
-          ? pendingSwipeOffsetRef.current
-          : 0;
-        track.style.transform =
-          `translate3d(${Math.round(-width * trackIndexRef.current + offset)}px, 0, 0)`;
-      }
-    }
     if (monthTitleRef.current) {
       const activeMonth = activeMonthRef.current;
       monthTitleRef.current.textContent =
@@ -2234,61 +2198,6 @@ function CalendarView({
       });
   }
 
-  function prepareCalendarWindow(index: number) {
-    const panelMonths = calendarPanelMonthsRef.current;
-    const startIndex = Math.max(0, index - CALENDAR_INITIAL_RENDER_RADIUS);
-    const endIndex = Math.min(
-      panelMonths.length - 1,
-      index + CALENDAR_INITIAL_RENDER_RADIUS,
-    );
-    startTransition(() => {
-      setPreparedPanelMonths((current) => {
-        let changed = false;
-        const next = new Set(current);
-        for (let panelIndex = startIndex; panelIndex <= endIndex; panelIndex += 1) {
-          const panelTime = panelMonths[panelIndex].getTime();
-          if (!next.has(panelTime)) {
-            next.add(panelTime);
-            changed = true;
-          }
-        }
-        return changed ? next : current;
-      });
-    });
-  }
-
-  function expandCalendarBuffer(direction: -1 | 1) {
-    const currentMonths = calendarPanelMonthsRef.current;
-    const edgeMonth =
-      direction > 0
-        ? currentMonths[currentMonths.length - 1]
-        : currentMonths[0];
-    const addedMonths = Array.from({ length: 3 }, (_, index) => {
-      const distance = direction > 0 ? index + 1 : -(3 - index);
-      return new Date(
-        edgeMonth.getFullYear(),
-        edgeMonth.getMonth() + distance,
-        1,
-      );
-    });
-    const nextMonths =
-      direction > 0
-        ? [...currentMonths, ...addedMonths]
-        : [...addedMonths, ...currentMonths];
-    calendarPanelMonthsRef.current = nextMonths;
-    if (direction < 0) {
-      pendingPrependedPanelsRef.current += addedMonths.length;
-    }
-    flushSync(() => {
-      setCalendarPanelMonths(nextMonths);
-      setPreparedPanelMonths((current) => {
-        const next = new Set(current);
-        addedMonths.forEach((panelMonth) => next.add(panelMonth.getTime()));
-        return next;
-      });
-    });
-  }
-
   function settleMonthTrack(
     direction: -1 | 0 | 1,
     targetMonth?: Date,
@@ -2297,16 +2206,8 @@ function CalendarView({
     finishSwipeAnimationRef.current?.();
     const track = calendarTrackRef.current;
     if (!track) return;
-    let currentTrackIndex = trackIndexRef.current;
-    let destinationTrackIndex = currentTrackIndex + direction;
-    if (
-      destinationTrackIndex < 0 ||
-      destinationTrackIndex >= calendarPanelMonthsRef.current.length
-    ) {
-      expandCalendarBuffer(direction < 0 ? -1 : 1);
-      currentTrackIndex = trackIndexRef.current;
-      destinationTrackIndex = currentTrackIndex + direction;
-    }
+    const currentTrackIndex = trackIndexRef.current;
+    const destinationTrackIndex = currentTrackIndex + direction;
     if (swipeFrameRef.current !== null) {
       window.cancelAnimationFrame(swipeFrameRef.current);
       swipeFrameRef.current = null;
@@ -2349,9 +2250,30 @@ function CalendarView({
       activeTrack.removeEventListener("transitionend", handleTransitionEnd);
       activeTrack.style.transition = "none";
       activeTrack.style.transform = `translate3d(${destination}px, 0, 0)`;
-      trackIndexRef.current = destinationTrackIndex;
-      syncActiveCalendarPanel(destinationTrackIndex);
-      prepareCalendarWindow(destinationTrackIndex);
+      if (direction !== 0 && targetMonth) {
+        const nextPanelMonths = CALENDAR_SWIPE_PANEL_OFFSETS.map(
+          (offset) =>
+            new Date(
+              targetMonth.getFullYear(),
+              targetMonth.getMonth() + offset,
+              1,
+            ),
+        );
+        calendarPanelMonthsRef.current = nextPanelMonths;
+        trackIndexRef.current = CALENDAR_SWIPE_CENTER_INDEX;
+        pendingSwipeOffsetRef.current = 0;
+        flushSync(() => {
+          setCalendarPanelMonths(nextPanelMonths);
+          setVisibleMonth(targetMonth);
+          setSelectedDate(targetDate ?? toDateKey(targetMonth));
+        });
+        activeTrack.style.transform =
+          `translate3d(${-width * CALENDAR_SWIPE_CENTER_INDEX}px, 0, 0)`;
+        syncActiveCalendarPanel(CALENDAR_SWIPE_CENTER_INDEX);
+      } else {
+        trackIndexRef.current = destinationTrackIndex;
+        syncActiveCalendarPanel(destinationTrackIndex);
+      }
       window.requestAnimationFrame(() => {
         if (
           swipeAnimationRef.current.token === token &&
@@ -2361,12 +2283,6 @@ function CalendarView({
         }
       });
       suppressClickRef.current = false;
-      if (direction !== 0 && targetMonth) {
-        startTransition(() => {
-          setVisibleMonth(targetMonth);
-          setSelectedDate(targetDate ?? toDateKey(targetMonth));
-        });
-      }
     }
 
     function handleTransitionEnd(event: TransitionEvent) {
@@ -2625,55 +2541,33 @@ function CalendarView({
               );
               finishSwipeAnimationRef.current?.();
               activeMonthRef.current = todayMonth;
-              let targetIndex = calendarPanelMonthsRef.current.findIndex(
-                (panelMonth) =>
-                  panelMonth.getTime() === todayMonth.getTime(),
+              const nextPanelMonths = CALENDAR_SWIPE_PANEL_OFFSETS.map(
+                (offset) =>
+                  new Date(
+                    todayMonth.getFullYear(),
+                    todayMonth.getMonth() + offset,
+                    1,
+                  ),
               );
-              if (targetIndex < 0) {
-                const nextPanelMonths = CALENDAR_SWIPE_PANEL_OFFSETS.map(
-                  (offset) =>
-                    new Date(
-                      todayMonth.getFullYear(),
-                      todayMonth.getMonth() + offset,
-                      1,
-                    ),
-                );
-                calendarPanelMonthsRef.current = nextPanelMonths;
-                trackIndexRef.current = CALENDAR_SWIPE_CENTER_INDEX;
-                targetIndex = CALENDAR_SWIPE_CENTER_INDEX;
-                flushSync(() => {
-                  setCalendarPanelMonths(nextPanelMonths);
-                  setPreparedPanelMonths(
-                    new Set(
-                      nextPanelMonths
-                        .slice(
-                          CALENDAR_SWIPE_CENTER_INDEX -
-                            CALENDAR_INITIAL_RENDER_RADIUS,
-                          CALENDAR_SWIPE_CENTER_INDEX +
-                            CALENDAR_INITIAL_RENDER_RADIUS +
-                            1,
-                        )
-                        .map((panelMonth) => panelMonth.getTime()),
-                    ),
-                  );
-                });
-              }
-              trackIndexRef.current = targetIndex;
+              calendarPanelMonthsRef.current = nextPanelMonths;
+              trackIndexRef.current = CALENDAR_SWIPE_CENTER_INDEX;
+              pendingSwipeOffsetRef.current = 0;
               const track = calendarTrackRef.current;
               const width = Math.max(
                 1,
                 track?.parentElement?.clientWidth ?? track?.clientWidth ?? 1,
               );
-              if (track) {
-                track.style.transition = "none";
-                track.style.transform =
-                  `translate3d(${-width * targetIndex}px, 0, 0)`;
-              }
-              syncActiveCalendarPanel(targetIndex);
+              if (track) track.style.transition = "none";
               flushSync(() => {
+                setCalendarPanelMonths(nextPanelMonths);
                 setVisibleMonth(todayMonth);
                 setSelectedDate(toDateKey(today));
               });
+              if (track) {
+                track.style.transform =
+                  `translate3d(${-width * CALENDAR_SWIPE_CENTER_INDEX}px, 0, 0)`;
+              }
+              syncActiveCalendarPanel(CALENDAR_SWIPE_CENTER_INDEX);
             }}
             type="button"
           >
@@ -2710,9 +2604,6 @@ function CalendarView({
               const panelMonthIndex = panelMonth.getMonth();
               const isActivePanel =
                 panelMonth.getTime() === visibleMonth.getTime();
-              const isPanelPrepared = preparedPanelMonths.has(
-                panelMonth.getTime(),
-              );
 
               return (
                 <div
@@ -2726,24 +2617,17 @@ function CalendarView({
                   inert={!isActivePanel}
                   key={`${panelYear}-${panelMonthIndex}`}
                 >
-                  {isPanelPrepared ? (
-                    <CalendarMonthGrid
-                      backgroundByDate={backgroundByDate}
-                      daysOff={daysOff}
-                      events={events}
-                      holidays={
-                        holidaysByYear.get(panelYear) ?? EMPTY_PUBLIC_HOLIDAYS
-                      }
-                      monthIndex={panelMonthIndex}
-                      selectedRange={isActivePanel ? dragRange : null}
-                      year={panelYear}
-                    />
-                  ) : (
-                    <div
-                      aria-hidden="true"
-                      className="calendar-grid calendar-grid--deferred"
-                    />
-                  )}
+                  <CalendarMonthGrid
+                    backgroundByDate={backgroundByDate}
+                    daysOff={daysOff}
+                    events={events}
+                    holidays={
+                      holidaysByYear.get(panelYear) ?? EMPTY_PUBLIC_HOLIDAYS
+                    }
+                    monthIndex={panelMonthIndex}
+                    selectedRange={isActivePanel ? dragRange : null}
+                    year={panelYear}
+                  />
                 </div>
               );
             })}
