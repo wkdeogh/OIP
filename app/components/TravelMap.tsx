@@ -42,6 +42,17 @@ type MapLocationGroup = {
   source: MapEntrySource;
 };
 
+type MapFocusRequest = {
+  placeId: string;
+  requestKey: string;
+};
+
+type MapMarkerTarget = {
+  group: MapLocationGroup;
+  location: google.maps.LatLngLiteral;
+  marker: google.maps.Marker;
+};
+
 const DEFAULT_CENTER = { lat: 20, lng: 15 };
 const WATERDROP_PATH =
   "M 0,-22 C -12,-22 -20,-13 -20,-2 C -20,11 -8,21 0,29 C 8,21 20,11 20,-2 C 20,-13 12,-22 0,-22 Z";
@@ -303,6 +314,18 @@ function infoWindowContent(group: MapLocationGroup) {
   return content;
 }
 
+function openMarkerTarget(
+  map: google.maps.Map,
+  infoWindow: google.maps.InfoWindow,
+  target: MapMarkerTarget,
+) {
+  map.panTo(target.location);
+  if ((map.getZoom() ?? 0) < 16) map.setZoom(16);
+  infoWindow.setHeaderContent(infoWindowHeader(target.group));
+  infoWindow.setContent(infoWindowContent(target.group));
+  infoWindow.open({ anchor: target.marker, map });
+}
+
 function makeMarkerIcon(source: MapEntrySource) {
   return {
     anchor: new google.maps.Point(0, 29),
@@ -381,7 +404,9 @@ export function TravelMap({
   apiKey,
   emptyDetail = "상세 위치를 입력하면 이곳에 마커가 생깁니다.",
   emptyTitle = "표시할 상세 위치가 없습니다",
+  focusRequest = null,
   foods = [],
+  isVisible = true,
   linkPlaces = [],
   linkSources = [],
   places = [],
@@ -392,7 +417,9 @@ export function TravelMap({
   apiKey: string;
   emptyDetail?: string;
   emptyTitle?: string;
+  focusRequest?: MapFocusRequest | null;
   foods?: TripFood[];
+  isVisible?: boolean;
   linkPlaces?: TravelLinkPlace[];
   linkSources?: TravelLinkSource[];
   places?: TripPlace[];
@@ -400,6 +427,9 @@ export function TravelMap({
   trips?: Trip[];
 }) {
   const mapElementRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const markerTargetsRef = useRef<Map<string, MapMarkerTarget>>(new Map());
   const [status, setStatus] = useState<MapStatus>("loading");
   const [unlocatedEntries, setUnlocatedEntries] = useState<MapEntry[]>([]);
   const [unlocatedDialogOpen, setUnlocatedDialogOpen] = useState(false);
@@ -511,8 +541,10 @@ export function TravelMap({
     let isCancelled = false;
     const markers: google.maps.Marker[] = [];
     const listeners: google.maps.MapsEventListener[] = [];
+    const markerTargets = markerTargetsRef.current;
 
     async function renderMap() {
+      markerTargets.clear();
       setStatus("loading");
       setUnlocatedEntries([]);
       setUnlocatedDialogOpen(false);
@@ -537,14 +569,17 @@ export function TravelMap({
         zoom: locationGroups.length ? 3 : 2,
         zoomControl: true,
       });
+      mapRef.current = map;
 
       if (!locationGroups.length) {
+        infoWindowRef.current = null;
         if (!isCancelled) setStatus("empty");
         return;
       }
 
       const geocoder = new Geocoder();
       const infoWindow = new InfoWindow();
+      infoWindowRef.current = infoWindow;
       const destinationBoundsCache = new globalThis.Map<
         string,
         google.maps.LatLngBounds | null
@@ -613,11 +648,16 @@ export function TravelMap({
             group.entries.length === 1 ? group.entries[0].title : group.query,
         });
         markers.push(marker);
+        group.entries.forEach((entry) => {
+          markerTargets.set(`${entry.source}:${entry.id}`, {
+            group,
+            location,
+            marker,
+          });
+        });
         listeners.push(
           marker.addListener("click", () => {
-            infoWindow.setHeaderContent(infoWindowHeader(group));
-            infoWindow.setContent(infoWindowContent(group));
-            infoWindow.open({ anchor: marker, map });
+            openMarkerTarget(map, infoWindow, { group, location, marker });
           }),
         );
       });
@@ -658,8 +698,31 @@ export function TravelMap({
       isCancelled = true;
       listeners.forEach((listener) => listener.remove());
       markers.forEach((marker) => marker.setMap(null));
+      markerTargets.clear();
+      mapRef.current = null;
+      infoWindowRef.current = null;
     };
   }, [apiKey, locationGroups, theme]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const map = mapRef.current;
+    if (!map) return;
+    const center = map.getCenter();
+    google.maps.event.trigger(map, "resize");
+    if (center) map.setCenter(center);
+  }, [isVisible, status]);
+
+  useEffect(() => {
+    if (!focusRequest || status !== "ready") return;
+    const map = mapRef.current;
+    const infoWindow = infoWindowRef.current;
+    const target = markerTargetsRef.current.get(
+      `link:${focusRequest.placeId}`,
+    );
+    if (!map || !infoWindow || !target) return;
+    openMarkerTarget(map, infoWindow, target);
+  }, [focusRequest, status]);
 
   const visibleStatus: MapStatus = apiKey ? status : "unconfigured";
   const statusCopy =

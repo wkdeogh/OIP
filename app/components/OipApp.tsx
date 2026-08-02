@@ -4279,6 +4279,7 @@ function travelLinkPlatformMeta(platform: string) {
 
 function TravelView({
   googleMapsApiKey,
+  isActive,
   theme,
   trips,
   flights,
@@ -4301,6 +4302,7 @@ function TravelView({
   onUpdateMemo,
 }: {
   googleMapsApiKey: string;
+  isActive: boolean;
   theme: ThemeMode;
   trips: Trip[];
   flights: TripFlight[];
@@ -4335,6 +4337,11 @@ function TravelView({
 }) {
   const today = toDateKey(new Date());
   const [travelTab, setTravelTab] = useState<TravelTab>("list");
+  const [mapHasMounted, setMapHasMounted] = useState(false);
+  const [mapFocusRequest, setMapFocusRequest] = useState<{
+    placeId: string;
+    requestKey: string;
+  } | null>(null);
   const [mapTripPickerOpen, setMapTripPickerOpen] = useState(false);
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
@@ -4381,21 +4388,43 @@ function TravelView({
   );
   const detailFoods = foods.filter((item) => item.trip_id === detail?.id);
   const detailPlaces = places.filter((item) => item.trip_id === detail?.id);
-  const availableTripIds = new Set(trips.map((trip) => trip.id));
-  const activeMapTripIds = (
-    selectedMapTripIds ?? trips.map((trip) => trip.id)
-  ).filter((id) => availableTripIds.has(id));
-  const activeMapTripIdSet = new Set(activeMapTripIds);
-  const mapAccommodations = accommodations.filter(
-    (item) => activeMapTripIdSet.has(item.trip_id) && item.address?.trim(),
+  const availableTripIds = useMemo(
+    () => new Set(trips.map((trip) => trip.id)),
+    [trips],
   );
-  const mapFoods = foods.filter(
-    (item) => activeMapTripIdSet.has(item.trip_id) && item.location?.trim(),
+  const activeMapTripIds = useMemo(
+    () =>
+      (selectedMapTripIds ?? trips.map((trip) => trip.id)).filter((id) =>
+        availableTripIds.has(id),
+      ),
+    [availableTripIds, selectedMapTripIds, trips],
   );
-  const mapPlaces = places.filter(
-    (item) => activeMapTripIdSet.has(item.trip_id),
+  const activeMapTripIdSet = useMemo(
+    () => new Set(activeMapTripIds),
+    [activeMapTripIds],
   );
-  const mapTrips = trips.filter((trip) => activeMapTripIdSet.has(trip.id));
+  const mapAccommodations = useMemo(
+    () =>
+      accommodations.filter(
+        (item) => activeMapTripIdSet.has(item.trip_id) && item.address?.trim(),
+      ),
+    [accommodations, activeMapTripIdSet],
+  );
+  const mapFoods = useMemo(
+    () =>
+      foods.filter(
+        (item) => activeMapTripIdSet.has(item.trip_id) && item.location?.trim(),
+      ),
+    [activeMapTripIdSet, foods],
+  );
+  const mapPlaces = useMemo(
+    () => places.filter((item) => activeMapTripIdSet.has(item.trip_id)),
+    [activeMapTripIdSet, places],
+  );
+  const mapTrips = useMemo(
+    () => trips.filter((trip) => activeMapTripIdSet.has(trip.id)),
+    [activeMapTripIdSet, trips],
+  );
   const selectedLinkSource = travelLinkSources.find(
     (source) => source.id === selectedLinkSourceId,
   );
@@ -4432,6 +4461,24 @@ function TravelView({
   function openMapTripPicker() {
     setDraftMapTripIds(activeMapTripIds);
     setMapTripPickerOpen(true);
+  }
+
+  function openMapTab() {
+    setMapHasMounted(true);
+    setTravelTab("map");
+  }
+
+  function focusLinkPlace(place: TravelLinkPlace) {
+    const source = travelLinkSources.find(
+      (item) => item.id === place.source_id,
+    );
+    if (source && !source.is_map_visible) {
+      onToggleLinkSource(source, true);
+    }
+    setSelectedLinkSourceId(null);
+    setMapHasMounted(true);
+    setTravelTab("map");
+    setMapFocusRequest({ placeId: place.id, requestKey: newId() });
   }
 
   function resetLinkForm() {
@@ -4549,7 +4596,7 @@ function TravelView({
         <button
           aria-selected={travelTab === "map"}
           className={travelTab === "map" ? "is-active" : ""}
-          onClick={() => setTravelTab("map")}
+          onClick={openMapTab}
           role="tab"
           type="button"
         >
@@ -4557,8 +4604,7 @@ function TravelView({
         </button>
       </div>
 
-      {travelTab === "list" ? (
-        <div className="travel-list-layout">
+      <div className="travel-list-layout" hidden={travelTab !== "list"}>
           <div className="travel-list-actions">
             <button
               className="button button--primary travel-add-button"
@@ -4634,9 +4680,9 @@ function TravelView({
               </details>
             ) : null}
           </div>
-        </div>
-      ) : (
-        <div className="travel-map-layout">
+      </div>
+      {mapHasMounted ? (
+        <div className="travel-map-layout" hidden={travelTab !== "map"}>
           <TravelMap
             accommodations={mapAccommodations}
             apiKey={googleMapsApiKey}
@@ -4646,7 +4692,9 @@ function TravelView({
                 ? "지도에 표시할 상세 위치가 없습니다"
                 : "등록된 여행이 없습니다"
             }
+            focusRequest={mapFocusRequest}
             foods={mapFoods}
+            isVisible={isActive && travelTab === "map"}
             linkPlaces={travelLinkPlaces}
             linkSources={travelLinkSources}
             places={mapPlaces}
@@ -4734,7 +4782,7 @@ function TravelView({
             )}
           </section>
         </div>
-      )}
+      ) : null}
 
       {mapTripPickerOpen ? (
         <Modal
@@ -4949,22 +4997,32 @@ function TravelView({
                     splitTravelPlaceName(place.name);
                   return (
                     <article key={place.id}>
-                      <span aria-hidden="true">⌖</span>
-                      <div>
-                        <strong>{originalName}</strong>
-                        {translatedName ? (
-                          <span className="travel-link-place-translation">
-                            {translatedName}
-                          </span>
-                        ) : null}
-                        <small>
-                          {[place.category, place.city, place.country]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </small>
-                        {place.evidence ? <p>{place.evidence}</p> : null}
-                      </div>
-                      <em>{Math.round(place.confidence * 100)}%</em>
+                      <button
+                        aria-label={`${originalName} 지도에서 보기`}
+                        className="travel-link-place-map-button"
+                        onClick={() => focusLinkPlace(place)}
+                        type="button"
+                      >
+                        <span aria-hidden="true">⌖</span>
+                        <div>
+                          <strong>{originalName}</strong>
+                          {translatedName ? (
+                            <span className="travel-link-place-translation">
+                              {translatedName}
+                            </span>
+                          ) : null}
+                          <small>
+                            {[place.category, place.city, place.country]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </small>
+                          {place.evidence ? <p>{place.evidence}</p> : null}
+                        </div>
+                        <span className="travel-link-place-map-meta">
+                          <em>{Math.round(place.confidence * 100)}%</em>
+                          <small>지도에서 보기 ›</small>
+                        </span>
+                      </button>
                     </article>
                   );
                 })}
@@ -7811,12 +7869,13 @@ export function OipApp({
             </>
           ) : null}
 
-          {mainTab === "travel" ? (
+          <div className="travel-view-shell" hidden={mainTab !== "travel"}>
             <TravelView
               accommodations={tripAccommodations}
               flights={tripFlights}
               foods={tripFoods}
               googleMapsApiKey={googleMapsApiKey}
+              isActive={mainTab === "travel"}
               onAdd={() => setModal("trip")}
               onDeleteLinkSource={deleteTravelLinkSource}
               onDeleteDetail={deleteTripDetail}
@@ -7835,7 +7894,7 @@ export function OipApp({
               trips={trips}
               theme={theme}
             />
-          ) : null}
+          </div>
 
           {mainTab === "fridge" ? (
             <FridgeView
