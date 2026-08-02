@@ -2533,11 +2533,29 @@ p {
   font-size: 0.64rem;
 }
 
-.travel-map-info-list a {
+.travel-map-info-list a,
+.travel-map-info-source {
   color: #3d6f5d;
   font-size: 0.65rem;
   font-weight: 800;
   text-decoration: none;
+}
+
+.travel-map-info-source {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0 0;
+  background: transparent;
+  text-align: left;
+}
+
+.travel-map-info-source::after {
+  content: "›";
+  flex: 0 0 auto;
+  font-size: 0.8rem;
 }
 
 .travel-map-trip-picker,

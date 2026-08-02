@@ -30,6 +30,8 @@ type MapEntry = {
   href?: string | null;
   id: string;
   kind: MapEntryKind;
+  linkSourceId?: string;
+  linkSourceTitle?: string;
   query: string;
   source: MapEntrySource;
   title: string;
@@ -272,7 +274,10 @@ function infoWindowHeader(group: MapLocationGroup) {
   return header;
 }
 
-function infoWindowContent(group: MapLocationGroup) {
+function infoWindowContent(
+  group: MapLocationGroup,
+  onOpenLinkSource?: (sourceId: string) => void,
+) {
   const content = document.createElement("div");
   content.className = "travel-map-info";
 
@@ -299,7 +304,18 @@ function infoWindowContent(group: MapLocationGroup) {
       : entry.query;
     item.append(detail);
 
-    if (entry.href) {
+    const linkSourceId = entry.linkSourceId;
+    if (linkSourceId && entry.linkSourceTitle && onOpenLinkSource) {
+      const sourceButton = document.createElement("button");
+      sourceButton.ariaLabel = `${entry.linkSourceTitle} 링크 목록 보기`;
+      sourceButton.className = "travel-map-info-source";
+      sourceButton.textContent = entry.linkSourceTitle;
+      sourceButton.type = "button";
+      sourceButton.addEventListener("click", () => {
+        onOpenLinkSource(linkSourceId);
+      });
+      item.append(sourceButton);
+    } else if (entry.href) {
       const link = document.createElement("a");
       link.href = entry.href;
       link.rel = "noreferrer";
@@ -318,11 +334,22 @@ function openMarkerTarget(
   map: google.maps.Map,
   infoWindow: google.maps.InfoWindow,
   target: MapMarkerTarget,
+  onOpenLinkSource?: (sourceId: string) => void,
 ) {
   map.panTo(target.location);
   if ((map.getZoom() ?? 0) < 16) map.setZoom(16);
   infoWindow.setHeaderContent(infoWindowHeader(target.group));
-  infoWindow.setContent(infoWindowContent(target.group));
+  infoWindow.setContent(
+    infoWindowContent(
+      target.group,
+      onOpenLinkSource
+        ? (sourceId) => {
+            infoWindow.close();
+            onOpenLinkSource(sourceId);
+          }
+        : undefined,
+    ),
+  );
   infoWindow.open({ anchor: target.marker, map });
 }
 
@@ -409,6 +436,7 @@ export function TravelMap({
   isVisible = true,
   linkPlaces = [],
   linkSources = [],
+  onOpenLinkSource,
   places = [],
   theme,
   trips = [],
@@ -422,6 +450,7 @@ export function TravelMap({
   isVisible?: boolean;
   linkPlaces?: TravelLinkPlace[];
   linkSources?: TravelLinkSource[];
+  onOpenLinkSource?: (sourceId: string) => void;
   places?: TripPlace[];
   theme: ThemeMode;
   trips?: Trip[];
@@ -430,9 +459,14 @@ export function TravelMap({
   const mapRef = useRef<google.maps.Map | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const markerTargetsRef = useRef<Map<string, MapMarkerTarget>>(new Map());
+  const onOpenLinkSourceRef = useRef(onOpenLinkSource);
   const [status, setStatus] = useState<MapStatus>("loading");
   const [unlocatedEntries, setUnlocatedEntries] = useState<MapEntry[]>([]);
   const [unlocatedDialogOpen, setUnlocatedDialogOpen] = useState(false);
+
+  useEffect(() => {
+    onOpenLinkSourceRef.current = onOpenLinkSource;
+  }, [onOpenLinkSource]);
 
   const locationGroups = useMemo(() => {
     const visibleSources = new Map(
@@ -504,9 +538,10 @@ export function TravelMap({
           ? [
               {
                 detail: `AI 링크 · ${place.category}`,
-                href: source.url,
                 id: place.id,
                 kind: linkPlaceKind(place.category),
+                linkSourceId: source.id,
+                linkSourceTitle: source.title,
                 query: place.location_query,
                 source: "link" as const,
                 title: originalName,
@@ -657,7 +692,12 @@ export function TravelMap({
         });
         listeners.push(
           marker.addListener("click", () => {
-            openMarkerTarget(map, infoWindow, { group, location, marker });
+            openMarkerTarget(
+              map,
+              infoWindow,
+              { group, location, marker },
+              (sourceId) => onOpenLinkSourceRef.current?.(sourceId),
+            );
           }),
         );
       });
@@ -721,7 +761,9 @@ export function TravelMap({
       `link:${focusRequest.placeId}`,
     );
     if (!map || !infoWindow || !target) return;
-    openMarkerTarget(map, infoWindow, target);
+    openMarkerTarget(map, infoWindow, target, (sourceId) =>
+      onOpenLinkSourceRef.current?.(sourceId),
+    );
   }, [focusRequest, status]);
 
   const visibleStatus: MapStatus = apiKey ? status : "unconfigured";

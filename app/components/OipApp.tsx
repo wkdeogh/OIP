@@ -4697,6 +4697,7 @@ function TravelView({
             isVisible={isActive && travelTab === "map"}
             linkPlaces={travelLinkPlaces}
             linkSources={travelLinkSources}
+            onOpenLinkSource={setSelectedLinkSourceId}
             places={mapPlaces}
             theme={theme}
             trips={mapTrips}
