@@ -156,7 +156,7 @@ export function visibleReminderEvents(
 }
 
 function eventTimeLabel(event: CalendarReminderEvent, dateKey: string) {
-  if (event.is_all_day) return "하루 종일";
+  if (event.is_all_day) return "";
   if (seoulDateKey(event.start_at) < dateKey) return "진행 중";
   return new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
@@ -172,7 +172,10 @@ export function calendarReminderPayload(
 ) {
   const summaries = [...events]
     .sort((left, right) => left.start_at.localeCompare(right.start_at))
-    .map((event) => `${eventTimeLabel(event, dateKey)} ${event.title}`);
+    .map((event) => {
+      const timeLabel = eventTimeLabel(event, dateKey);
+      return timeLabel ? `${timeLabel} ${event.title}` : event.title;
+    });
   const visible = summaries.slice(0, 3);
   const remaining = summaries.length - visible.length;
   return {
