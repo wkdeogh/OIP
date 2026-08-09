@@ -15,3 +15,9 @@
 
 - For routine changes, rely on relevant automated checks and do not run live/manual browser verification unless the user explicitly asks for it.
 - The user will perform final real-world usage verification; after implementation and automated checks succeed, commit and push the change.
+
+## Hosting workflow
+
+- This project is hosted through Vercel from the GitHub `main` branch.
+- Do not use OpenAI Sites hosting, Sites deployment tools, or a separate Sites source repository for this project.
+- Publishing means pushing the verified commit to `origin/main` so the existing Vercel workflow can deploy it.
