@@ -106,6 +106,7 @@ type TripChecklistItem = {
 };
 
 const TRAVEL_MAP_SELECTION_KEY = "oip.travel-map.selected-trips.v1";
+const LIVE_SYNC_INTERVAL_MS = 4_000;
 
 function initialMapTripSelection() {
   if (typeof window === "undefined") return null;
@@ -3311,12 +3312,14 @@ function ShoppingView({
   currentUser,
   onCreate,
   onToggle,
+  onDelete,
   onClearCompleted,
 }: {
   items: ShoppingItem[];
   currentUser: UserCode;
   onCreate: (name: string) => void;
   onToggle: (item: ShoppingItem) => void;
+  onDelete: (item: ShoppingItem) => void;
   onClearCompleted: () => void;
 }) {
   const [name, setName] = useState("");
@@ -3372,6 +3375,18 @@ function ShoppingView({
                     {item.unit ?? "개"} · {item.category} ·{" "}
                     {USER_META[item.added_by].name} 추가
                   </small>
+                </span>
+                <span
+                  aria-label="삭제"
+                  className="row-delete"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDelete(item);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  ×
                 </span>
               </button>
             ))}
@@ -6008,6 +6023,8 @@ export function OipApp({
   const authenticationRejectedRef = useRef(false);
   const cacheRestoredAtRef = useRef(0);
   const lastUiInteractionRef = useRef(0);
+  const pendingWritesRef = useRef(0);
+  const localMutationVersionRef = useRef(0);
   const travelPlaceTranslationAttemptsRef = useRef(new Set<string>());
 
   const currentDataSnapshot = useMemo<OipDataSnapshot>(
@@ -6706,6 +6723,213 @@ export function OipApp({
   }, [authState, currentUser]);
 
   useEffect(() => {
+    if (
+      authState !== "ready" ||
+      cacheReadyUser !== currentUser ||
+      isDataLoading
+    ) {
+      return;
+    }
+
+    const resourcesByTab = {
+      schedule: [
+        "calendar_color_settings",
+        "calendar_events",
+        "calendar_days_off",
+        "calendar_day_backgrounds",
+      ],
+      tasks: ["todos", "shopping_items"],
+      travel: [
+        "trips",
+        "trip_flights",
+        "trip_accommodations",
+        "trip_transportations",
+        "trip_foods",
+        "trip_places",
+        "travel_link_sources",
+        "travel_link_places",
+      ],
+      fridge: ["fridge_items"],
+      parking: ["parking_records"],
+    } as const;
+    type LiveResource = (typeof resourcesByTab)[MainTab][number];
+
+    let active = true;
+    let syncing = false;
+    let timer: number | undefined;
+    const controller = new AbortController();
+    const resources: readonly LiveResource[] = resourcesByTab[mainTab];
+
+    function applyLiveResource(resource: LiveResource, value: unknown) {
+      switch (resource) {
+        case "calendar_color_settings": {
+          const row = (value as CalendarColorSettings[])[0];
+          if (!row) return;
+          const next = calendarColorDefaultsFromSettings(row);
+          setCalendarColorDefaults((current) =>
+            retainEquivalentValue(current, next),
+          );
+          return;
+        }
+        case "calendar_events":
+          setEvents((current) =>
+            retainEquivalentValue(current, value as CalendarEvent[]),
+          );
+          return;
+        case "calendar_days_off":
+          setDaysOff((current) =>
+            retainEquivalentValue(
+              current,
+              (value as DayOff[]).map(normalizeDayOff),
+            ),
+          );
+          return;
+        case "calendar_day_backgrounds":
+          setDayBackgrounds((current) =>
+            retainEquivalentValue(current, value as CalendarDayBackground[]),
+          );
+          return;
+        case "todos":
+          setTodos((current) =>
+            retainEquivalentValue(current, value as Todo[]),
+          );
+          return;
+        case "shopping_items":
+          setShopping((current) =>
+            retainEquivalentValue(current, value as ShoppingItem[]),
+          );
+          return;
+        case "trips":
+          setTrips((current) =>
+            retainEquivalentValue(current, value as Trip[]),
+          );
+          return;
+        case "trip_flights":
+          setTripFlights((current) =>
+            retainEquivalentValue(current, value as TripFlight[]),
+          );
+          return;
+        case "trip_accommodations":
+          setTripAccommodations((current) =>
+            retainEquivalentValue(current, value as TripAccommodation[]),
+          );
+          return;
+        case "trip_transportations":
+          setTripTransportations((current) =>
+            retainEquivalentValue(current, value as TripTransportation[]),
+          );
+          return;
+        case "trip_foods":
+          setTripFoods((current) =>
+            retainEquivalentValue(current, value as TripFood[]),
+          );
+          return;
+        case "trip_places":
+          setTripPlaces((current) =>
+            retainEquivalentValue(current, value as TripPlace[]),
+          );
+          return;
+        case "travel_link_sources":
+          setTravelLinkSources((current) =>
+            retainEquivalentValue(current, value as TravelLinkSource[]),
+          );
+          return;
+        case "travel_link_places":
+          setTravelLinkPlaces((current) =>
+            retainEquivalentValue(current, value as TravelLinkPlace[]),
+          );
+          return;
+        case "fridge_items":
+          setFridge((current) =>
+            retainEquivalentValue(current, value as FridgeItem[]),
+          );
+          return;
+        case "parking_records":
+          setParking((current) =>
+            retainEquivalentValue(
+              current,
+              (value as ParkingRecord[])[0] ?? null,
+            ),
+          );
+      }
+    }
+
+    function scheduleNextSync() {
+      if (!active || document.visibilityState === "hidden") return;
+      if (timer !== undefined) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = undefined;
+        void syncVisibleData();
+      }, LIVE_SYNC_INTERVAL_MS);
+    }
+
+    async function syncVisibleData() {
+      if (
+        !active ||
+        syncing ||
+        document.visibilityState === "hidden" ||
+        pendingWritesRef.current > 0
+      ) {
+        scheduleNextSync();
+        return;
+      }
+
+      syncing = true;
+      const mutationVersion = localMutationVersionRef.current;
+      try {
+        const entries = await Promise.all(
+          resources.map(async (resource) => {
+            const response = await fetch(
+              `/api/records?resource=${resource}&user=${currentUser}`,
+              { cache: "no-store", signal: controller.signal },
+            );
+            if (!response.ok) throw new Error("LIVE_SYNC_FAILED");
+            return [resource, await response.json()] as const;
+          }),
+        );
+        if (
+          !active ||
+          pendingWritesRef.current > 0 ||
+          localMutationVersionRef.current !== mutationVersion
+        ) {
+          return;
+        }
+        startTransition(() => {
+          entries.forEach(([resource, value]) =>
+            applyLiveResource(resource, value),
+          );
+        });
+      } catch {
+        // Keep the current screen usable and retry quietly on the next interval.
+      } finally {
+        syncing = false;
+        scheduleNextSync();
+      }
+    }
+
+    function syncNow() {
+      if (timer !== undefined) window.clearTimeout(timer);
+      timer = undefined;
+      if (document.visibilityState === "hidden") return;
+      void syncVisibleData();
+    }
+
+    window.addEventListener("focus", syncNow);
+    window.addEventListener("online", syncNow);
+    document.addEventListener("visibilitychange", syncNow);
+    void syncVisibleData();
+
+    return () => {
+      active = false;
+      controller.abort();
+      if (timer !== undefined) window.clearTimeout(timer);
+      window.removeEventListener("focus", syncNow);
+      window.removeEventListener("online", syncNow);
+      document.removeEventListener("visibilitychange", syncNow);
+    };
+  }, [authState, cacheReadyUser, currentUser, isDataLoading, mainTab]);
+
+  useEffect(() => {
     if (authState !== "ready" || cacheReadyUser !== currentUser) return;
     let active = true;
     fetch(
@@ -6826,6 +7050,8 @@ export function OipApp({
   ) {
     const query = new URLSearchParams({ resource });
     if (id) query.set("id", id);
+    pendingWritesRef.current += 1;
+    localMutationVersionRef.current += 1;
     try {
       const response = await fetch(`/api/records?${query.toString()}`, {
         method,
@@ -6848,6 +7074,8 @@ export function OipApp({
         showToast("저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
       }
       return false;
+    } finally {
+      pendingWritesRef.current = Math.max(0, pendingWritesRef.current - 1);
     }
   }
 
@@ -7261,6 +7489,19 @@ export function OipApp({
           items.map((entry) => (entry.id === item.id ? item : entry)),
         );
       }
+    });
+  }
+
+  function deleteShopping(item: ShoppingItem) {
+    if (!globalThis.confirm(`"${item.name}" 품목을 삭제할까요?`)) return;
+    setShopping((items) => items.filter((entry) => entry.id !== item.id));
+    void writeRecord(
+      "DELETE",
+      "shopping_items",
+      undefined,
+      item.id,
+    ).then((saved) => {
+      if (!saved) setShopping((items) => [item, ...items]);
     });
   }
 
@@ -7864,6 +8105,7 @@ export function OipApp({
                   items={shopping}
                   onClearCompleted={clearShopping}
                   onCreate={createShopping}
+                  onDelete={deleteShopping}
                   onToggle={toggleShopping}
                 />
               )}

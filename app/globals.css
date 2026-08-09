@@ -1957,7 +1957,7 @@ p {
 }
 
 .shopping-row {
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: 28px minmax(0, 1fr) 36px;
 }
 
 .page-lead {
