@@ -997,6 +997,7 @@ p {
   border: 0;
   border-radius: 0;
   background: transparent;
+  box-shadow: none;
   color: #9aa1aa;
   font-size: 1.3rem;
   font-weight: 400;
@@ -1004,6 +1005,7 @@ p {
 
 .calendar-toolbar .icon-button:hover:not(:disabled) {
   background: transparent;
+  box-shadow: none;
   color: #707983;
 }
 
@@ -1060,7 +1062,7 @@ p {
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  border-top: 1px solid var(--line);
+  border-top: 0;
   background: #fafbfc;
 }
 
@@ -5553,7 +5555,14 @@ body {
   bottom: auto;
   left: auto;
   width: auto;
-  margin: 0 10px max(8px, env(safe-area-inset-bottom));
+  margin: 0 12px max(10px, env(safe-area-inset-bottom));
+}
+
+.app-header .notification-toggle-button,
+.app-header .theme-toggle-button,
+.app-header .notification-toggle-button:hover:not(:disabled),
+.app-header .theme-toggle-button:hover {
+  box-shadow: none;
 }
 
 .sub-tabs {
