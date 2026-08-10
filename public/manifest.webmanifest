@@ -6,8 +6,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#dfe7f0",
-  "theme_color": "#dfe7f0",
+  "background_color": "#edf4f0",
+  "theme_color": "#edf4f0",
   "icons": [
     {
       "src": "/oip_logo.png",

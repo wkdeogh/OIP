@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #dfe7f0;
-  --surface: #e7edf4;
-  --surface-soft: #d9e2ec;
-  --ink: #465366;
-  --muted: #7b8798;
-  --line: #cbd5e1;
-  --green: #687991;
-  --green-dark: #4e5e76;
-  --green-soft: #ced9e5;
+  --paper: #edf4f0;
+  --surface: #f2f7f4;
+  --surface-soft: #e3eee8;
+  --ink: #3d4b44;
+  --muted: #5f7067;
+  --line: #d0ddd5;
+  --green: #6f9483;
+  --green-dark: #4d7062;
+  --green-soft: #dce9df;
   --blue: #3478f6;
   --blue-dark: #235fc7;
   --blue-soft: #eaf2ff;
@@ -30,13 +30,13 @@
   --event-system: #d7d0e9;
   --danger: #c75d58;
   --shadow:
-    18px 18px 38px rgba(109, 127, 147, 0.3),
+    18px 18px 38px rgba(112, 137, 124, 0.27),
     -14px -14px 34px rgba(255, 255, 255, 0.9);
   --shadow-soft:
-    8px 8px 18px rgba(109, 127, 147, 0.25),
+    8px 8px 18px rgba(112, 137, 124, 0.22),
     -8px -8px 18px rgba(255, 255, 255, 0.82);
   --shadow-inset:
-    inset 5px 5px 12px rgba(109, 127, 147, 0.2),
+    inset 5px 5px 12px rgba(112, 137, 124, 0.18),
     inset -5px -5px 12px rgba(255, 255, 255, 0.72);
   --radius-lg: 34px;
   --radius-md: 24px;
@@ -44,15 +44,15 @@
 }
 
 [data-theme="dark"] {
-  --paper: #171d25;
-  --surface: #1e2630;
-  --surface-soft: #242e3a;
-  --ink: #edf3f9;
-  --muted: #a7b2c1;
-  --line: #354251;
-  --green: #8e9db2;
-  --green-dark: #c4cfdd;
-  --green-soft: #2d3947;
+  --paper: #171d1a;
+  --surface: #1e2723;
+  --surface-soft: #25312c;
+  --ink: #edf3ef;
+  --muted: #a3b1aa;
+  --line: #35443d;
+  --green: #7fa99b;
+  --green-dark: #b7d1c5;
+  --green-soft: #2a4037;
   --blue: #558cfa;
   --blue-dark: #79a6ff;
   --blue-soft: #1e2c45;
@@ -74,27 +74,27 @@
   --danger: #e0706b;
   --shadow:
     18px 18px 38px rgba(4, 8, 13, 0.56),
-    -12px -12px 28px rgba(68, 82, 99, 0.2);
+    -12px -12px 28px rgba(70, 91, 81, 0.2);
   --shadow-soft:
     8px 8px 18px rgba(4, 8, 13, 0.48),
-    -7px -7px 16px rgba(68, 82, 99, 0.16);
+    -7px -7px 16px rgba(70, 91, 81, 0.16);
   --shadow-inset:
     inset 5px 5px 12px rgba(4, 8, 13, 0.42),
-    inset -5px -5px 12px rgba(68, 82, 99, 0.12);
+    inset -5px -5px 12px rgba(70, 91, 81, 0.12);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]):not([data-theme="dark"]) {
-    --paper: #171d25;
-    --surface: #1e2630;
-    --surface-soft: #242e3a;
-    --ink: #edf3f9;
-    --muted: #a7b2c1;
-    --line: #354251;
-    --green: #8e9db2;
-    --green-dark: #c4cfdd;
-    --green-soft: #2d3947;
+    --paper: #171d1a;
+    --surface: #1e2723;
+    --surface-soft: #25312c;
+    --ink: #edf3ef;
+    --muted: #a3b1aa;
+    --line: #35443d;
+    --green: #7fa99b;
+    --green-dark: #b7d1c5;
+    --green-soft: #2a4037;
     --blue: #558cfa;
     --blue-dark: #79a6ff;
     --blue-soft: #1e2c45;
@@ -116,13 +116,13 @@
     --danger: #e0706b;
     --shadow:
       18px 18px 38px rgba(4, 8, 13, 0.56),
-      -12px -12px 28px rgba(68, 82, 99, 0.2);
+      -12px -12px 28px rgba(70, 91, 81, 0.2);
     --shadow-soft:
       8px 8px 18px rgba(4, 8, 13, 0.48),
-      -7px -7px 16px rgba(68, 82, 99, 0.16);
+      -7px -7px 16px rgba(70, 91, 81, 0.16);
     --shadow-inset:
       inset 5px 5px 12px rgba(4, 8, 13, 0.42),
-      inset -5px -5px 12px rgba(68, 82, 99, 0.12);
+      inset -5px -5px 12px rgba(70, 91, 81, 0.12);
     color-scheme: dark;
   }
 }
@@ -5379,22 +5379,22 @@ p {
   }
 }
 
-/* Version 4 · soft blue neumorphism */
+/* Version 4 · mint and blush neumorphism */
 body {
   background:
     radial-gradient(circle at 12% 2%, rgba(255, 255, 255, 0.72), transparent 30rem),
-    radial-gradient(circle at 92% 88%, rgba(173, 190, 208, 0.34), transparent 36rem),
+    radial-gradient(circle at 92% 88%, rgba(233, 166, 173, 0.22), transparent 36rem),
     var(--paper);
   background-attachment: fixed;
 }
 
 ::selection {
-  background: rgba(104, 121, 145, 0.24);
+  background: rgba(233, 166, 173, 0.32);
   color: var(--ink);
 }
 
 :focus-visible {
-  outline-color: rgba(104, 121, 145, 0.42);
+  outline-color: rgba(111, 148, 131, 0.42);
 }
 
 .card:not(.calendar-card),
@@ -5430,18 +5430,18 @@ body {
 .button--primary,
 .button--parking {
   border: 1px solid rgba(255, 255, 255, 0.2);
-  background: linear-gradient(145deg, #75859c, #596a83);
+  background: linear-gradient(145deg, #5b7d6f, #4d7062);
   box-shadow:
-    7px 7px 15px rgba(99, 116, 136, 0.34),
+    7px 7px 15px rgba(105, 132, 118, 0.32),
     -5px -5px 12px rgba(255, 255, 255, 0.48);
   color: #ffffff;
 }
 
 .button--primary:hover:not(:disabled),
 .button--parking:hover:not(:disabled) {
-  background: linear-gradient(145deg, #697990, #4f6078);
+  background: linear-gradient(145deg, #557668, #45695b);
   box-shadow:
-    4px 4px 10px rgba(99, 116, 136, 0.34),
+    4px 4px 10px rgba(105, 132, 118, 0.32),
     -3px -3px 8px rgba(255, 255, 255, 0.42);
 }
 
@@ -5464,7 +5464,7 @@ body {
 .notification-toggle-button:hover:not(:disabled),
 .theme-toggle-button:hover,
 .choice-grid button:hover {
-  border-color: rgba(104, 121, 145, 0.28);
+  border-color: rgba(111, 148, 131, 0.3);
   background: var(--surface-soft);
   box-shadow: var(--shadow-inset);
 }
@@ -5480,7 +5480,7 @@ body {
 .trip-notepad textarea,
 .country-search,
 .check-field {
-  border: 1px solid rgba(153, 169, 187, 0.32);
+  border: 1px solid rgba(159, 179, 168, 0.34);
   background: var(--surface-soft);
   box-shadow: var(--shadow-inset);
 }
@@ -5490,23 +5490,23 @@ body {
 .field textarea:focus,
 .inline-input input:focus,
 .quick-form input:focus {
-  border-color: rgba(104, 121, 145, 0.62);
+  border-color: rgba(111, 148, 131, 0.62);
   box-shadow:
     var(--shadow-inset),
-    0 0 0 4px rgba(104, 121, 145, 0.12);
+    0 0 0 4px rgba(111, 148, 131, 0.12);
 }
 
 .desktop-nav {
   border-right: 0;
-  background: rgba(223, 231, 240, 0.9);
-  box-shadow: 10px 0 28px rgba(109, 127, 147, 0.18);
+  background: rgba(237, 244, 240, 0.9);
+  box-shadow: 10px 0 28px rgba(112, 137, 124, 0.17);
   backdrop-filter: blur(22px);
 }
 
 .desktop-nav nav button.is-active {
-  background: linear-gradient(145deg, #74849b, #596a82);
+  background: linear-gradient(145deg, #5b7d6f, #4d7062);
   box-shadow:
-    7px 7px 14px rgba(99, 116, 136, 0.3),
+    7px 7px 14px rgba(105, 132, 118, 0.28),
     -5px -5px 12px rgba(255, 255, 255, 0.5);
 }
 
@@ -5517,8 +5517,8 @@ body {
 
 .app-header {
   border-bottom: 0;
-  background: rgba(223, 231, 240, 0.82);
-  box-shadow: 0 9px 24px rgba(109, 127, 147, 0.14);
+  background: rgba(237, 244, 240, 0.84);
+  box-shadow: 0 9px 24px rgba(112, 137, 124, 0.13);
   backdrop-filter: blur(22px);
 }
 
@@ -5530,16 +5530,16 @@ body {
   padding: 7px 8px;
   border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: 24px;
-  background: rgba(225, 233, 242, 0.94);
+  background: rgba(250, 230, 234, 0.95);
   box-shadow:
-    10px 10px 24px rgba(101, 119, 139, 0.28),
+    10px 10px 24px rgba(180, 130, 140, 0.24),
     -8px -8px 20px rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(22px);
 }
 
 .mobile-nav button {
   border-radius: 18px;
-  color: #758296;
+  color: #735c64;
 }
 
 .mobile-nav button.is-active {
@@ -5569,7 +5569,7 @@ body {
 }
 
 .sub-tabs button.is-active {
-  background: var(--surface);
+  background: color-mix(in srgb, var(--sanghee-soft) 46%, var(--surface));
   box-shadow: var(--shadow-soft);
   color: var(--green-dark);
 }
@@ -5587,7 +5587,7 @@ body {
 .travel-link-coming-soon,
 .travel-map-trip-option,
 .travel-map-unlocated-list article {
-  border-color: rgba(153, 169, 187, 0.3);
+  border-color: rgba(159, 179, 168, 0.32);
   background: var(--surface-soft);
   box-shadow: var(--shadow-inset);
 }
@@ -5615,7 +5615,7 @@ body {
 .modal-backdrop,
 .day-sheet-backdrop,
 .event-color-picker-backdrop {
-  background: rgba(58, 70, 84, 0.38);
+  background: rgba(55, 72, 63, 0.38);
   backdrop-filter: blur(10px);
 }
 
@@ -5639,49 +5639,56 @@ body {
 
 [data-theme="dark"] body {
   background:
-    radial-gradient(circle at 12% 2%, rgba(79, 94, 112, 0.2), transparent 30rem),
+    radial-gradient(circle at 12% 2%, rgba(78, 105, 92, 0.2), transparent 30rem),
+    radial-gradient(circle at 92% 88%, rgba(84, 47, 53, 0.2), transparent 32rem),
     radial-gradient(circle at 90% 86%, rgba(4, 8, 13, 0.38), transparent 36rem),
     var(--paper);
 }
 
 [data-theme="dark"] .desktop-nav {
   border-color: transparent;
-  background: rgba(23, 29, 37, 0.92);
+  background: rgba(23, 29, 26, 0.92);
   box-shadow: 10px 0 28px rgba(3, 7, 12, 0.38);
 }
 
 [data-theme="dark"] .app-header {
   border-color: transparent;
-  background: rgba(23, 29, 37, 0.86);
+  background: rgba(23, 29, 26, 0.86);
   box-shadow: 0 9px 24px rgba(3, 7, 12, 0.34);
 }
 
 [data-theme="dark"] .mobile-nav {
-  border-color: rgba(77, 91, 108, 0.36);
-  background: rgba(30, 38, 48, 0.95);
+  border-color: rgba(105, 72, 86, 0.42);
+  background: rgba(48, 34, 41, 0.96);
   box-shadow:
     10px 10px 24px rgba(3, 7, 12, 0.52),
-    -7px -7px 18px rgba(70, 84, 101, 0.14);
+    -7px -7px 18px rgba(104, 75, 88, 0.14);
 }
 
 [data-theme="dark"] .mobile-nav button {
-  color: #98a5b7;
+  color: #c1adb6;
 }
 
 [data-theme="dark"] .mobile-nav button.is-active {
   background: var(--surface-soft);
   box-shadow: var(--shadow-inset);
-  color: #d9e2ec;
+  color: #d7e6df;
+}
+
+[data-theme="dark"] .sub-tabs,
+[data-theme="dark"] .travel-sub-tabs {
+  border-color: rgba(76, 96, 86, 0.38);
+  background: var(--surface-soft);
 }
 
 [data-theme="dark"] .button--primary,
 [data-theme="dark"] .button--parking,
 [data-theme="dark"] .desktop-nav nav button.is-active {
-  border-color: rgba(164, 178, 197, 0.16);
-  background: linear-gradient(145deg, #708097, #53647c);
+  border-color: rgba(159, 190, 176, 0.16);
+  background: linear-gradient(145deg, #779f8f, #55796b);
   box-shadow:
     7px 7px 15px rgba(3, 7, 12, 0.5),
-    -5px -5px 12px rgba(78, 93, 111, 0.16);
+    -5px -5px 12px rgba(72, 96, 84, 0.16);
 }
 
 [data-theme="dark"] .button--soft,
@@ -5694,7 +5701,7 @@ body {
 [data-theme="dark"] .trip-overview-secondary button,
 [data-theme="dark"] .travel-check,
 [data-theme="dark"] .modal-head {
-  border-color: rgba(77, 91, 108, 0.34);
+  border-color: rgba(76, 96, 86, 0.38);
   background: var(--surface);
 }
 
@@ -5709,13 +5716,13 @@ body {
 [data-theme="dark"] .trip-notepad textarea,
 [data-theme="dark"] .country-search,
 [data-theme="dark"] .check-field {
-  border-color: rgba(77, 91, 108, 0.34);
+  border-color: rgba(76, 96, 86, 0.38);
   background: var(--surface-soft);
 }
 
 [data-theme="dark"] .parking-current-card {
   background:
-    radial-gradient(circle at 86% 18%, rgba(74, 89, 106, 0.18) 0, transparent 16rem),
+    radial-gradient(circle at 86% 18%, rgba(72, 98, 85, 0.2) 0, transparent 16rem),
     var(--surface);
 }
 
