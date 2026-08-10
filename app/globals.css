@@ -5656,11 +5656,12 @@ body {
 }
 
 .parking-current-card p {
-  color: #2f3f68;
+  color: var(--green-dark);
 }
 
 .parking-current-card h2 {
-  color: var(--green-dark);
+  color: #2f3f68;
+  font-weight: 900;
 }
 
 .parking-mark {
@@ -5800,11 +5801,11 @@ body {
 }
 
 [data-theme="dark"] .parking-current-card p {
-  color: #b9c6e5;
+  color: var(--green-dark);
 }
 
 [data-theme="dark"] .parking-current-card h2 {
-  color: var(--green-dark);
+  color: #b9c6e5;
 }
 
 [data-theme="dark"] .parking-mark {
