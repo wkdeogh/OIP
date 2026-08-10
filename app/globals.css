@@ -6031,3 +6031,222 @@ body {
   box-shadow: var(--shadow-soft);
   color: #2f3f68;
 }
+
+/* Keep theme and notification controls together behind one compact header menu. */
+.header-settings {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.header-settings-trigger {
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.header-settings-trigger svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+}
+
+.header-settings-trigger:hover,
+.header-settings-trigger[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--green) 28%, var(--line));
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.header-settings-popover {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(292px, calc(100vw - 24px));
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: 0 18px 42px rgba(56, 63, 59, 0.18);
+  backdrop-filter: blur(22px);
+}
+
+.header-settings-heading {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 3px 7px 7px;
+}
+
+.header-settings-heading strong {
+  font-size: 0.92rem;
+  letter-spacing: -0.025em;
+}
+
+.header-settings-heading button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0 0 2px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.header-setting-row {
+  display: grid;
+  width: 100%;
+  min-height: 68px;
+  grid-template-columns: 40px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 15px;
+  color: var(--ink);
+  text-align: left;
+  box-shadow: none;
+}
+
+.header-setting-row + .header-setting-row {
+  margin-top: 7px;
+}
+
+.header-setting-row--theme {
+  background: color-mix(in srgb, var(--green-soft) 46%, var(--surface));
+}
+
+.header-setting-row--notification {
+  background: color-mix(in srgb, var(--pink-soft) 52%, var(--surface));
+}
+
+.header-setting-row:hover:not(:disabled) {
+  box-shadow: none;
+  transform: none;
+}
+
+.header-setting-row:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.header-setting-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  color: var(--green-dark);
+  font-size: 1.05rem;
+}
+
+.header-setting-row--notification .header-setting-icon {
+  color: var(--pink);
+}
+
+.header-setting-icon svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.header-setting-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.header-setting-copy strong {
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.header-setting-copy small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-setting-switch {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 24%, var(--surface));
+  transition: background 160ms ease;
+}
+
+.header-setting-switch::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 4px rgba(45, 53, 49, 0.2);
+  content: "";
+  transition: transform 160ms ease;
+}
+
+.header-setting-switch.is-on {
+  background: var(--green);
+}
+
+.header-setting-row--notification .header-setting-switch.is-on {
+  background: var(--pink);
+}
+
+.header-setting-switch.is-on::after {
+  transform: translateX(16px);
+}
+
+[data-theme="dark"] .header-settings-trigger,
+[data-theme="dark"] .header-settings-popover {
+  border-color: rgba(76, 82, 79, 0.52);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+}
+
+[data-theme="dark"] .header-settings-popover {
+  box-shadow: 0 18px 42px rgba(3, 7, 12, 0.52);
+}
+
+@media (max-width: 959px) {
+  .header-settings-trigger {
+    width: 32px;
+    height: 32px;
+  }
+
+  .header-settings-trigger svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .header-settings-popover {
+    top: calc(100% + 7px);
+  }
+}

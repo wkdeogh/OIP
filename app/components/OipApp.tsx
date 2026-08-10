@@ -5882,40 +5882,122 @@ function ThemeToggleButton({
   );
 }
 
-function NotificationToggleButton({
+function HeaderSettingsMenu({
+  theme,
   status,
-  onToggle,
+  onToggleTheme,
+  onToggleNotifications,
 }: {
+  theme: ThemeMode;
   status: PushStatus;
-  onToggle: () => void;
+  onToggleTheme: () => void;
+  onToggleNotifications: () => void;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const enabled = status === "enabled";
-  const labels: Record<PushStatus, string> = {
-    checking: "일정 알림 확인 중",
-    unsupported: "이 기기에서는 일정 알림을 사용할 수 없음",
-    unconfigured: "일정 알림 서버 설정 필요",
-    disabled: "매일 오전 8시 일정 알림 켜기",
-    denied: "일정 알림 권한이 차단됨",
-    enabled: "매일 오전 8시 일정 알림 켜짐, 끄기",
-    loading: "일정 알림 설정 중",
+  const notificationDescriptions: Record<PushStatus, string> = {
+    checking: "알림 상태를 확인하고 있어요",
+    unsupported: "이 기기에서는 사용할 수 없어요",
+    unconfigured: "알림 서버 설정이 필요해요",
+    disabled: "매일 오전 8시 알림 꺼짐",
+    denied: "기기 설정에서 권한을 허용해 주세요",
+    enabled: "매일 오전 8시 알림 켜짐",
+    loading: "알림 설정을 변경하고 있어요",
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
   return (
-    <button
-      aria-label={labels[status]}
-      aria-pressed={enabled}
-      className={`notification-toggle-button${enabled ? " is-enabled" : ""}${
-        status === "denied" ? " is-denied" : ""
-      }`}
-      disabled={status === "checking" || status === "loading"}
-      onClick={onToggle}
-      title={labels[status]}
-      type="button"
-    >
-      <svg aria-hidden="true" viewBox="0 0 24 24">
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
-      </svg>
-    </button>
+    <div className="header-settings" ref={menuRef}>
+      <button
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
+        aria-label="설정 열기"
+        className="header-settings-trigger"
+        onClick={() => setIsOpen((current) => !current)}
+        type="button"
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.94 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.57 15 1.7 1.7 0 0 0 3 14H3v-4h.08A1.7 1.7 0 0 0 4.6 8.94a1.7 1.7 0 0 0-.34-1.88L4.2 7l2.83-2.83.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3.08V3h4v.08a1.7 1.7 0 0 0 1.06 1.52 1.7 1.7 0 0 0 1.88-.34L17 4.2 19.83 7l-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z" />
+        </svg>
+      </button>
+
+      {isOpen ? (
+        <div aria-label="설정" className="header-settings-popover" role="dialog">
+          <div className="header-settings-heading">
+            <strong>설정</strong>
+            <button
+              aria-label="설정 닫기"
+              onClick={() => setIsOpen(false)}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+          <button
+            aria-pressed={theme === "dark"}
+            className="header-setting-row header-setting-row--theme"
+            onClick={onToggleTheme}
+            type="button"
+          >
+            <span aria-hidden="true" className="header-setting-icon">
+              {theme === "dark" ? "☀" : "☾"}
+            </span>
+            <span className="header-setting-copy">
+              <strong>다크 모드</strong>
+              <small>{theme === "dark" ? "사용 중" : "사용 안 함"}</small>
+            </span>
+            <span
+              aria-hidden="true"
+              className={`header-setting-switch${
+                theme === "dark" ? " is-on" : ""
+              }`}
+            />
+          </button>
+          <button
+            aria-pressed={enabled}
+            className="header-setting-row header-setting-row--notification"
+            disabled={status === "checking" || status === "loading"}
+            onClick={onToggleNotifications}
+            type="button"
+          >
+            <span aria-hidden="true" className="header-setting-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+              </svg>
+            </span>
+            <span className="header-setting-copy">
+              <strong>일정 알림</strong>
+              <small>{notificationDescriptions[status]}</small>
+            </span>
+            <span
+              aria-hidden="true"
+              className={`header-setting-switch${enabled ? " is-on" : ""}`}
+            />
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -8009,11 +8091,6 @@ export function OipApp({
             <h1>{activeTab.title}</h1>
           </div>
           <div className="header-actions">
-            <NotificationToggleButton
-              onToggle={togglePushNotifications}
-              status={pushStatus}
-            />
-            <ThemeToggleButton theme={theme} onToggle={toggleTheme} />
             <button
               aria-label={`현재 사용자 ${USER_META[currentUser].name}, 사용자 변경`}
               className={`user-pill user-pill--${currentUser}`}
@@ -8030,6 +8107,12 @@ export function OipApp({
             >
               인증 해제
             </button>
+            <HeaderSettingsMenu
+              onToggleNotifications={togglePushNotifications}
+              onToggleTheme={toggleTheme}
+              status={pushStatus}
+              theme={theme}
+            />
           </div>
         </header>
 
