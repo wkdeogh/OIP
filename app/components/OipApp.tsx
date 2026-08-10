@@ -5951,7 +5951,7 @@ export function OipApp({
       'meta[name="theme-color"]',
     );
     if (themeMeta) {
-      themeMeta.content = theme === "dark" ? "#111111" : "#f2ede1";
+      themeMeta.content = theme === "dark" ? "#12161b" : "#f5f6f8";
     }
   }, [theme]);
 
@@ -8216,7 +8216,6 @@ export function OipApp({
 
       {modal === "dayoff" ? (
         <Modal
-          className="modal-card--calendar"
           description="휴무는 날짜 칸의 연한 배경으로 표시됩니다."
           onClose={() => setModal(null)}
           title="휴무 추가"
@@ -8271,7 +8270,6 @@ export function OipApp({
 
       {modal === "day-background" ? (
         <Modal
-          className="modal-card--calendar"
           onClose={() => setModal(null)}
           title="배경색 설정"
         >
