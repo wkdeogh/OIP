@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f5f6f8;
+  /* App chrome palette. Calendar event and day-off colors stay independent below. */
+  --paper: #ecf8f1;
   --surface: #ffffff;
-  --surface-soft: #f1f3f6;
-  --ink: #252a31;
-  --muted: #747b86;
-  --line: #e1e4e8;
-  --green: #4d7667;
-  --green-dark: #365a4d;
-  --green-soft: #dce9df;
+  --surface-soft: #e3f2e9;
+  --ink: #173128;
+  --muted: #62766c;
+  --line: #cfe3d9;
+  --green: #07875f;
+  --green-dark: #045b41;
+  --green-soft: #d3f3e3;
+  --green-rgb: 7 135 95;
   --blue: #3478f6;
   --blue-dark: #235fc7;
   --blue-soft: #eaf2ff;
@@ -29,23 +31,24 @@
   --event-private: #d9cbe8;
   --event-system: #d7d0e9;
   --danger: #c75d58;
-  --shadow: 0 14px 34px rgba(28, 34, 43, 0.08);
-  --shadow-soft: 0 7px 20px rgba(28, 34, 43, 0.055);
+  --shadow: 0 14px 34px rgba(14, 54, 40, 0.12);
+  --shadow-soft: 0 7px 20px rgba(14, 54, 40, 0.08);
   --radius-lg: 28px;
   --radius-md: 20px;
   --radius-sm: 14px;
 }
 
 [data-theme="dark"] {
-  --paper: #12161b;
-  --surface: #1a2027;
-  --surface-soft: #242c36;
-  --ink: #e8ecf1;
-  --muted: #959fae;
-  --line: #2d3644;
-  --green: #5f8c7b;
-  --green-dark: #81b3a1;
-  --green-soft: #1d332c;
+  --paper: #0c1712;
+  --surface: #13231c;
+  --surface-soft: #1b3228;
+  --ink: #edf8f2;
+  --muted: #9bafa5;
+  --line: #294a3c;
+  --green: #07875f;
+  --green-dark: #43d9a3;
+  --green-soft: #123d2e;
+  --green-rgb: 7 135 95;
   --blue: #558cfa;
   --blue-dark: #79a6ff;
   --blue-soft: #1e2c45;
@@ -72,15 +75,16 @@
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]):not([data-theme="dark"]) {
-    --paper: #12161b;
-    --surface: #1a2027;
-    --surface-soft: #242c36;
-    --ink: #e8ecf1;
-    --muted: #959fae;
-    --line: #2d3644;
-    --green: #5f8c7b;
-    --green-dark: #81b3a1;
-    --green-soft: #1d332c;
+    --paper: #0c1712;
+    --surface: #13231c;
+    --surface-soft: #1b3228;
+    --ink: #edf8f2;
+    --muted: #9bafa5;
+    --line: #294a3c;
+    --green: #07875f;
+    --green-dark: #43d9a3;
+    --green-soft: #123d2e;
+    --green-rgb: 7 135 95;
     --blue: #558cfa;
     --blue-dark: #79a6ff;
     --blue-soft: #1e2c45;
@@ -123,7 +127,13 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--paper);
+  background:
+    radial-gradient(
+      circle at 88% 4%,
+      rgb(var(--green-rgb) / 0.11),
+      transparent 25rem
+    ),
+    var(--paper);
   color: var(--ink);
   touch-action: manipulation;
 }
@@ -180,7 +190,7 @@ textarea {
 }
 
 :focus-visible {
-  outline: 3px solid rgba(77, 118, 103, 0.3);
+  outline: 3px solid rgb(var(--green-rgb) / 0.32);
   outline-offset: 3px;
 }
 
@@ -213,9 +223,9 @@ p {
 }
 
 .card {
-  border: 1px solid rgba(225, 228, 232, 0.94);
+  border: 1px solid color-mix(in srgb, var(--line) 94%, transparent);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   box-shadow: var(--shadow-soft);
 }
 
@@ -235,7 +245,7 @@ p {
 .button--primary {
   background: var(--green);
   color: white;
-  box-shadow: 0 7px 18px rgba(77, 118, 103, 0.2);
+  box-shadow: 0 7px 18px rgb(var(--green-rgb) / 0.25);
 }
 
 .button--primary:hover:not(:disabled) {
@@ -249,7 +259,7 @@ p {
 }
 
 .button--soft:hover:not(:disabled) {
-  border-color: #c8d5ca;
+  border-color: color-mix(in srgb, var(--green) 38%, var(--line));
   background: var(--green-soft);
 }
 
@@ -310,9 +320,9 @@ p {
 .gate-card {
   width: min(100%, 430px);
   padding: clamp(26px, 7vw, 44px);
-  border: 1px solid rgba(225, 228, 232, 0.96);
+  border: 1px solid color-mix(in srgb, var(--line) 96%, transparent);
   border-radius: 34px;
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   box-shadow: var(--shadow);
   backdrop-filter: blur(16px);
 }
@@ -349,7 +359,7 @@ p {
 
 .field > span,
 .mini-field > span {
-  color: #526157;
+  color: var(--green-dark);
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -364,7 +374,7 @@ p {
   padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 13px;
-  background: #fbfcfd;
+  background: var(--surface);
   outline: 0;
 }
 
@@ -388,7 +398,7 @@ p {
 .inline-input input:focus,
 .quick-form input:focus {
   border-color: var(--green);
-  box-shadow: 0 0 0 4px rgba(77, 118, 103, 0.1);
+  box-shadow: 0 0 0 4px rgb(var(--green-rgb) / 0.12);
 }
 
 .field input[aria-invalid="true"] {
@@ -429,7 +439,12 @@ p {
   width: 100%;
   height: 18px;
   border-radius: 10px;
-  background: linear-gradient(90deg, #edf0e9 25%, #f8faf5 45%, #edf0e9 65%);
+  background: linear-gradient(
+    90deg,
+    var(--surface-soft) 25%,
+    var(--surface) 45%,
+    var(--surface-soft) 65%
+  );
   background-size: 220% 100%;
   animation: skeleton 1.5s infinite linear;
 }
@@ -463,7 +478,7 @@ p {
   place-items: center;
   border: 1px solid var(--line);
   border-radius: 22px;
-  background: white;
+  background: var(--surface);
 }
 
 .user-choice:hover {
@@ -512,8 +527,8 @@ p {
   display: none;
   width: 228px;
   padding: 28px 22px;
-  border-right: 1px solid rgba(221, 228, 220, 0.8);
-  background: rgba(252, 252, 253, 0.94);
+  border-right: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   backdrop-filter: blur(18px);
 }
 
@@ -573,7 +588,7 @@ p {
 .desktop-nav nav button.is-active {
   background: var(--green);
   color: white;
-  box-shadow: 0 7px 18px rgba(77, 118, 103, 0.18);
+  box-shadow: 0 7px 18px rgb(var(--green-rgb) / 0.23);
 }
 
 .app-main {
@@ -589,8 +604,8 @@ p {
   align-items: center;
   gap: 12px;
   padding: 8px 14px;
-  border-bottom: 1px solid rgba(221, 228, 220, 0.7);
-  background: rgba(247, 248, 250, 0.92);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
   backdrop-filter: blur(18px);
 }
 
@@ -812,9 +827,9 @@ p {
   padding: 7px max(8px, env(safe-area-inset-right))
     max(30px, calc(env(safe-area-inset-bottom) + 22px))
     max(8px, env(safe-area-inset-left));
-  border-top: 1px solid rgba(221, 228, 220, 0.9);
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 -8px 25px rgba(52, 76, 65, 0.08);
+  border-top: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  box-shadow: 0 -8px 25px rgb(var(--green-rgb) / 0.1);
   backdrop-filter: blur(18px);
 }
 
@@ -826,7 +841,7 @@ p {
   gap: 3px;
   border-radius: 13px;
   background: transparent;
-  color: #8b9890;
+  color: var(--muted);
 }
 
 .mobile-nav button span {
@@ -855,7 +870,7 @@ p {
   padding: 5px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.82);
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
 }
 
 .sub-tabs button {
@@ -871,7 +886,7 @@ p {
 .sub-tabs button.is-active {
   background: var(--green);
   color: white;
-  box-shadow: 0 5px 14px rgba(77, 118, 103, 0.17);
+  box-shadow: 0 5px 14px rgb(var(--green-rgb) / 0.22);
 }
 
 .sub-tabs--tasks {
@@ -888,7 +903,12 @@ p {
 .data-loading-day b {
   display: block;
   border-radius: 9px;
-  background: linear-gradient(90deg, #e9ece8 25%, #f7f9f6 45%, #e9ece8 65%);
+  background: linear-gradient(
+    90deg,
+    var(--surface-soft) 25%,
+    var(--surface) 45%,
+    var(--surface-soft) 65%
+  );
   background-size: 220% 100%;
   animation: skeleton 1.5s infinite linear;
 }
@@ -1033,7 +1053,7 @@ p {
   border-color: var(--green);
   background: var(--green);
   color: white;
-  box-shadow: 0 6px 16px rgba(77, 118, 103, 0.2);
+  box-shadow: 0 6px 16px rgb(var(--green-rgb) / 0.25);
 }
 
 .calendar-weekdays {
@@ -1997,7 +2017,7 @@ p {
   margin: -18px -14px 12px;
   padding: 4px 14px;
   border-bottom: 1px solid var(--line);
-  background: rgba(245, 246, 248, 0.92);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
   backdrop-filter: blur(18px);
 }
 
@@ -2014,7 +2034,7 @@ p {
 .travel-sub-tabs button.is-active {
   background: var(--green);
   color: white;
-  box-shadow: 0 4px 12px rgba(77, 118, 103, 0.17);
+  box-shadow: 0 4px 12px rgb(var(--green-rgb) / 0.22);
 }
 
 .travel-list-layout,
@@ -2075,7 +2095,7 @@ p {
   place-items: center;
   padding-inline: 5px;
   border-radius: 999px;
-  background: rgba(77, 118, 103, 0.13);
+  background: rgb(var(--green-rgb) / 0.15);
   color: var(--green-dark);
   font-size: 0.6rem;
   font-weight: 900;
@@ -2258,9 +2278,9 @@ p {
   z-index: -1;
   inset: 0;
   background:
-    linear-gradient(32deg, transparent 46%, rgba(77, 118, 103, 0.16) 47% 49%, transparent 50%),
-    linear-gradient(147deg, transparent 54%, rgba(77, 118, 103, 0.12) 55% 57%, transparent 58%),
-    radial-gradient(circle at 72% 28%, rgba(77, 118, 103, 0.14) 0 11%, transparent 12%),
+    linear-gradient(32deg, transparent 46%, rgb(var(--green-rgb) / 0.18) 47% 49%, transparent 50%),
+    linear-gradient(147deg, transparent 54%, rgb(var(--green-rgb) / 0.14) 55% 57%, transparent 58%),
+    radial-gradient(circle at 72% 28%, rgb(var(--green-rgb) / 0.16) 0 11%, transparent 12%),
     var(--surface-soft);
   content: "";
 }
@@ -2281,7 +2301,7 @@ p {
   flex-direction: column;
   gap: 7px;
   padding: 30px;
-  background: rgba(245, 246, 248, 0.78);
+  background: color-mix(in srgb, var(--paper) 80%, transparent);
   color: var(--ink);
   text-align: center;
   pointer-events: none;
@@ -2289,7 +2309,7 @@ p {
 }
 
 .travel-map-status--loading {
-  background: rgba(245, 246, 248, 0.52);
+  background: color-mix(in srgb, var(--paper) 54%, transparent);
 }
 
 .travel-map-status strong {
@@ -2322,7 +2342,7 @@ p {
 .travel-map-spinner {
   width: 34px;
   height: 34px;
-  border: 3px solid rgba(77, 118, 103, 0.2);
+  border: 3px solid rgb(var(--green-rgb) / 0.22);
   border-top-color: var(--green);
   border-radius: 50%;
   animation: travel-map-spin 800ms linear infinite;
@@ -2598,7 +2618,7 @@ p {
 }
 
 .travel-map-trip-option:has(input:checked) {
-  border-color: rgba(77, 118, 103, 0.62);
+  border-color: rgb(var(--green-rgb) / 0.65);
   background: var(--green-soft);
 }
 
@@ -2687,7 +2707,7 @@ p {
   align-content: center;
   gap: 3px;
   padding: 14px;
-  border: 1px dashed #a8bcb1;
+  border: 1px dashed color-mix(in srgb, var(--green) 52%, var(--line));
   border-radius: 16px;
   background: var(--green-soft);
   cursor: pointer;
@@ -2969,7 +2989,7 @@ p {
 
 .trip-card:hover,
 .trip-card--selected {
-  border-color: #a9c0b0;
+  border-color: color-mix(in srgb, var(--green) 42%, var(--line));
   transform: translateY(-2px);
 }
 
@@ -3438,7 +3458,7 @@ p {
 }
 
 .travel-check {
-  border: 1px solid #bed0c8;
+  border: 1px solid color-mix(in srgb, var(--green) 32%, var(--line));
   background: white;
 }
 
@@ -3623,7 +3643,7 @@ p {
 
 .country-option:hover,
 .country-option[aria-pressed="true"] {
-  border-color: #a9c0b0;
+  border-color: color-mix(in srgb, var(--green) 42%, var(--line));
   background: var(--green-soft);
 }
 
@@ -3786,12 +3806,12 @@ p {
   justify-content: space-between;
   overflow: hidden;
   padding: clamp(20px, 4vw, 30px);
-  border: 1px solid #d9e5df;
+  border: 1px solid var(--line);
   border-radius: 30px;
   background:
-    radial-gradient(circle at 88% 18%, #edf5f0 0, transparent 15rem),
-    white;
-  box-shadow: 0 15px 34px rgba(54, 90, 77, 0.09);
+    radial-gradient(circle at 88% 18%, var(--green-soft) 0, transparent 15rem),
+    var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .parking-current-card::before {
@@ -3800,7 +3820,7 @@ p {
   bottom: -100px;
   width: 250px;
   height: 250px;
-  border: 42px solid rgba(77, 118, 103, 0.065);
+  border: 42px solid rgb(var(--green-rgb) / 0.09);
   border-radius: 50%;
   content: "";
 }
@@ -3812,7 +3832,7 @@ p {
 
 .parking-current-card p {
   margin-bottom: 6px;
-  color: #587064;
+  color: var(--muted);
   font-size: 0.8rem;
   font-weight: 750;
 }
@@ -3838,7 +3858,7 @@ p {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  color: #687970;
+  color: var(--muted);
   font-size: 0.69rem;
 }
 
@@ -3848,7 +3868,7 @@ p {
   width: 88px;
   height: 88px;
   flex: 0 0 88px;
-  border: 5px solid rgba(77, 118, 103, 0.46);
+  border: 5px solid rgb(var(--green-rgb) / 0.54);
   border-radius: 28px;
   background: url("/parking-car.jpeg") center / cover no-repeat;
   box-shadow: 0 8px 20px rgba(31, 52, 44, 0.16);
@@ -3892,10 +3912,10 @@ p {
 
 .choice-grid button {
   min-height: 52px;
-  border: 1px solid #dce2ea;
+  border: 1px solid var(--line);
   border-radius: 15px;
-  background: white;
-  color: #4c596b;
+  background: var(--surface);
+  color: var(--ink);
   font-size: 0.9rem;
   font-weight: 850;
 }
@@ -3908,7 +3928,7 @@ p {
   border-color: var(--green);
   background: var(--green);
   color: white;
-  box-shadow: 0 6px 15px rgba(77, 118, 103, 0.2);
+  box-shadow: 0 6px 15px rgb(var(--green-rgb) / 0.25);
 }
 
 .button--parking {
@@ -3917,7 +3937,7 @@ p {
   border-radius: 17px;
   background: var(--green);
   color: white;
-  box-shadow: 0 9px 20px rgba(77, 118, 103, 0.22);
+  box-shadow: 0 9px 20px rgb(var(--green-rgb) / 0.28);
 }
 
 .button--parking:hover:not(:disabled) {
@@ -4310,7 +4330,7 @@ p {
 
 .event-color-picker-options > button.is-selected {
   border-color: var(--green);
-  box-shadow: 0 0 0 2px rgba(77, 118, 103, 0.18);
+  box-shadow: 0 0 0 2px rgb(var(--green-rgb) / 0.2);
 }
 
 .event-color-picker-swatch {
@@ -4356,7 +4376,7 @@ p {
 
 .event-color-default-targets > button.is-selected {
   border-color: var(--green);
-  box-shadow: 0 0 0 2px rgba(77, 118, 103, 0.18);
+  box-shadow: 0 0 0 2px rgb(var(--green-rgb) / 0.2);
 }
 
 .event-color-default-targets > button > span {
@@ -4445,7 +4465,7 @@ p {
 }
 
 .event-date-selection > button.is-active {
-  border-color: rgba(77, 118, 103, 0.28);
+  border-color: rgb(var(--green-rgb) / 0.3);
   background: var(--green-soft);
   color: var(--green-dark);
 }
@@ -4811,7 +4831,7 @@ p {
 
 [data-theme="dark"] .trip-card:hover,
 [data-theme="dark"] .trip-card--selected {
-  border-color: #547c6d;
+  border-color: color-mix(in srgb, var(--green-dark) 48%, var(--line));
 }
 
 [data-theme="dark"] .travel-sub-tabs {
@@ -4826,7 +4846,7 @@ p {
 }
 
 [data-theme="dark"] .travel-map-trip-option:has(input:checked) {
-  border-color: #547c6d;
+  border-color: color-mix(in srgb, var(--green-dark) 48%, var(--line));
   background: var(--green-soft);
 }
 
@@ -4911,7 +4931,7 @@ p {
 
 [data-theme="dark"] .choice-grid button[aria-pressed="true"] {
   border-color: #9ac5b6;
-  background: #4b7a69;
+  background: var(--green);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.16),
     0 7px 18px rgba(0, 0, 0, 0.32);
@@ -4919,7 +4939,7 @@ p {
 }
 
 [data-theme="dark"] .choice-grid button[aria-pressed="true"]:hover {
-  background: #568875;
+  background: color-mix(in srgb, var(--green) 82%, white);
 }
 
 [data-theme="dark"] .modal-backdrop {
