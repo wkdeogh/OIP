@@ -5552,13 +5552,16 @@ body {
 }
 
 .mobile-nav {
-  right: 12px;
-  bottom: max(10px, env(safe-area-inset-bottom));
-  left: 12px;
-  min-height: 72px;
-  padding: 7px 8px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  min-height: 76px;
+  padding: 7px max(8px, env(safe-area-inset-right))
+    max(30px, calc(env(safe-area-inset-bottom) + 22px))
+    max(8px, env(safe-area-inset-left));
   border: 1px solid rgba(255, 255, 255, 0.58);
-  border-radius: 24px;
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
   background: rgba(251, 251, 250, 0.96);
   box-shadow:
     10px 10px 24px rgba(113, 119, 116, 0.19),
@@ -5582,7 +5585,7 @@ body {
   bottom: auto;
   left: auto;
   width: auto;
-  margin: 0 12px max(10px, env(safe-area-inset-bottom));
+  margin: 0;
 }
 
 .app-header .notification-toggle-button,
