@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #edf4f0;
-  --surface: #f2f7f4;
-  --surface-soft: #e3eee8;
-  --ink: #3d4b44;
-  --muted: #5f7067;
-  --line: #d0ddd5;
+  --paper: #f5f6f5;
+  --surface: #fbfbfa;
+  --surface-soft: #eff0ef;
+  --ink: #343a37;
+  --muted: #68716c;
+  --line: #dfe2e0;
   --green: #6f9483;
   --green-dark: #4d7062;
   --green-soft: #dce9df;
@@ -30,13 +30,13 @@
   --event-system: #d7d0e9;
   --danger: #c75d58;
   --shadow:
-    18px 18px 38px rgba(112, 137, 124, 0.27),
+    18px 18px 38px rgba(113, 119, 116, 0.22),
     -14px -14px 34px rgba(255, 255, 255, 0.9);
   --shadow-soft:
-    8px 8px 18px rgba(112, 137, 124, 0.22),
+    8px 8px 18px rgba(113, 119, 116, 0.17),
     -8px -8px 18px rgba(255, 255, 255, 0.82);
   --shadow-inset:
-    inset 5px 5px 12px rgba(112, 137, 124, 0.18),
+    inset 5px 5px 12px rgba(113, 119, 116, 0.15),
     inset -5px -5px 12px rgba(255, 255, 255, 0.72);
   --radius-lg: 34px;
   --radius-md: 24px;
@@ -44,12 +44,12 @@
 }
 
 [data-theme="dark"] {
-  --paper: #171d1a;
-  --surface: #1e2723;
-  --surface-soft: #25312c;
-  --ink: #edf3ef;
-  --muted: #a3b1aa;
-  --line: #35443d;
+  --paper: #171918;
+  --surface: #1f2220;
+  --surface-soft: #282b29;
+  --ink: #eef1ef;
+  --muted: #a8afab;
+  --line: #3a3f3c;
   --green: #7fa99b;
   --green-dark: #b7d1c5;
   --green-soft: #2a4037;
@@ -74,24 +74,24 @@
   --danger: #e0706b;
   --shadow:
     18px 18px 38px rgba(4, 8, 13, 0.56),
-    -12px -12px 28px rgba(70, 91, 81, 0.2);
+    -12px -12px 28px rgba(76, 82, 79, 0.2);
   --shadow-soft:
     8px 8px 18px rgba(4, 8, 13, 0.48),
-    -7px -7px 16px rgba(70, 91, 81, 0.16);
+    -7px -7px 16px rgba(76, 82, 79, 0.16);
   --shadow-inset:
     inset 5px 5px 12px rgba(4, 8, 13, 0.42),
-    inset -5px -5px 12px rgba(70, 91, 81, 0.12);
+    inset -5px -5px 12px rgba(76, 82, 79, 0.12);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]):not([data-theme="dark"]) {
-    --paper: #171d1a;
-    --surface: #1e2723;
-    --surface-soft: #25312c;
-    --ink: #edf3ef;
-    --muted: #a3b1aa;
-    --line: #35443d;
+    --paper: #171918;
+    --surface: #1f2220;
+    --surface-soft: #282b29;
+    --ink: #eef1ef;
+    --muted: #a8afab;
+    --line: #3a3f3c;
     --green: #7fa99b;
     --green-dark: #b7d1c5;
     --green-soft: #2a4037;
@@ -116,13 +116,13 @@
     --danger: #e0706b;
     --shadow:
       18px 18px 38px rgba(4, 8, 13, 0.56),
-      -12px -12px 28px rgba(70, 91, 81, 0.2);
+      -12px -12px 28px rgba(76, 82, 79, 0.2);
     --shadow-soft:
       8px 8px 18px rgba(4, 8, 13, 0.48),
-      -7px -7px 16px rgba(70, 91, 81, 0.16);
+      -7px -7px 16px rgba(76, 82, 79, 0.16);
     --shadow-inset:
       inset 5px 5px 12px rgba(4, 8, 13, 0.42),
-      inset -5px -5px 12px rgba(70, 91, 81, 0.12);
+      inset -5px -5px 12px rgba(76, 82, 79, 0.12);
     color-scheme: dark;
   }
 }
@@ -5384,13 +5384,14 @@ p {
 /* Version 4 · mint and blush neumorphism */
 body {
   background:
-    linear-gradient(rgba(77, 112, 98, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(77, 112, 98, 0.055) 1px, transparent 1px),
+    linear-gradient(rgba(67, 75, 71, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(67, 75, 71, 0.045) 1px, transparent 1px),
     radial-gradient(circle at 12% 2%, rgba(255, 255, 255, 0.72), transparent 30rem),
-    radial-gradient(circle at 92% 88%, rgba(233, 166, 173, 0.22), transparent 36rem),
+    radial-gradient(circle at 8% 18%, rgba(127, 169, 155, 0.1), transparent 28rem),
+    radial-gradient(circle at 92% 88%, rgba(233, 166, 173, 0.1), transparent 34rem),
     var(--paper);
   background-attachment: fixed;
-  background-size: 28px 28px, 28px 28px, auto, auto, auto;
+  background-size: 28px 28px, 28px 28px, auto, auto, auto, auto;
 }
 
 ::selection {
@@ -5485,7 +5486,7 @@ body {
 .trip-notepad textarea,
 .country-search,
 .check-field {
-  border: 1px solid rgba(159, 179, 168, 0.34);
+  border: 1px solid rgba(161, 166, 163, 0.34);
   background: var(--surface-soft);
   box-shadow: var(--shadow-inset);
 }
@@ -5503,8 +5504,8 @@ body {
 
 .desktop-nav {
   border-right: 0;
-  background: rgba(237, 244, 240, 0.9);
-  box-shadow: 10px 0 28px rgba(112, 137, 124, 0.17);
+  background: rgba(245, 246, 245, 0.92);
+  box-shadow: 10px 0 28px rgba(113, 119, 116, 0.14);
   backdrop-filter: blur(22px);
 }
 
@@ -5522,8 +5523,8 @@ body {
 
 .app-header {
   border-bottom: 0;
-  background: rgba(237, 244, 240, 0.84);
-  box-shadow: 0 9px 24px rgba(112, 137, 124, 0.13);
+  background: rgba(245, 246, 245, 0.88);
+  box-shadow: 0 9px 24px rgba(113, 119, 116, 0.11);
   backdrop-filter: blur(22px);
 }
 
@@ -5535,20 +5536,20 @@ body {
   padding: 7px 8px;
   border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: 24px;
-  background: rgba(250, 230, 234, 0.95);
+  background: rgba(251, 251, 250, 0.96);
   box-shadow:
-    10px 10px 24px rgba(180, 130, 140, 0.24),
+    10px 10px 24px rgba(113, 119, 116, 0.19),
     -8px -8px 20px rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(22px);
 }
 
 .mobile-nav button {
   border-radius: 18px;
-  color: #735c64;
+  color: var(--muted);
 }
 
 .mobile-nav button.is-active {
-  background: var(--surface-soft);
+  background: color-mix(in srgb, var(--sanghee-soft) 58%, var(--surface));
   box-shadow: var(--shadow-inset);
   color: var(--green-dark);
 }
@@ -5599,7 +5600,7 @@ body {
 .travel-link-coming-soon,
 .travel-map-trip-option,
 .travel-map-unlocated-list article {
-  border-color: rgba(159, 179, 168, 0.32);
+  border-color: rgba(161, 166, 163, 0.32);
   background: var(--surface-soft);
   box-shadow: var(--shadow-inset);
 }
@@ -5627,7 +5628,7 @@ body {
 .modal-backdrop,
 .day-sheet-backdrop,
 .event-color-picker-backdrop {
-  background: rgba(55, 72, 63, 0.38);
+  background: rgba(48, 52, 50, 0.38);
   backdrop-filter: blur(10px);
 }
 
@@ -5651,10 +5652,10 @@ body {
 
 [data-theme="dark"] body {
   background:
-    linear-gradient(rgba(183, 209, 197, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(183, 209, 197, 0.045) 1px, transparent 1px),
-    radial-gradient(circle at 12% 2%, rgba(78, 105, 92, 0.2), transparent 30rem),
-    radial-gradient(circle at 92% 88%, rgba(84, 47, 53, 0.2), transparent 32rem),
+    linear-gradient(rgba(220, 226, 222, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(220, 226, 222, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 12% 2%, rgba(78, 105, 92, 0.12), transparent 30rem),
+    radial-gradient(circle at 92% 88%, rgba(84, 47, 53, 0.12), transparent 32rem),
     radial-gradient(circle at 90% 86%, rgba(4, 8, 13, 0.38), transparent 36rem),
     var(--paper);
   background-size: 28px 28px, 28px 28px, auto, auto, auto, auto;
@@ -5662,37 +5663,37 @@ body {
 
 [data-theme="dark"] .desktop-nav {
   border-color: transparent;
-  background: rgba(23, 29, 26, 0.92);
+  background: rgba(23, 25, 24, 0.92);
   box-shadow: 10px 0 28px rgba(3, 7, 12, 0.38);
 }
 
 [data-theme="dark"] .app-header {
   border-color: transparent;
-  background: rgba(23, 29, 26, 0.86);
+  background: rgba(23, 25, 24, 0.88);
   box-shadow: 0 9px 24px rgba(3, 7, 12, 0.34);
 }
 
 [data-theme="dark"] .mobile-nav {
-  border-color: rgba(105, 72, 86, 0.42);
-  background: rgba(48, 34, 41, 0.96);
+  border-color: rgba(76, 82, 79, 0.42);
+  background: rgba(31, 34, 32, 0.96);
   box-shadow:
     10px 10px 24px rgba(3, 7, 12, 0.52),
-    -7px -7px 18px rgba(104, 75, 88, 0.14);
+    -7px -7px 18px rgba(76, 82, 79, 0.14);
 }
 
 [data-theme="dark"] .mobile-nav button {
-  color: #c1adb6;
+  color: #abb2ae;
 }
 
 [data-theme="dark"] .mobile-nav button.is-active {
-  background: var(--surface-soft);
+  background: color-mix(in srgb, var(--sanghee-soft) 58%, var(--surface));
   box-shadow: var(--shadow-inset);
   color: #d7e6df;
 }
 
 [data-theme="dark"] .sub-tabs,
 [data-theme="dark"] .travel-sub-tabs {
-  border-color: rgba(76, 96, 86, 0.38);
+  border-color: rgba(76, 82, 79, 0.42);
   background: var(--surface-soft);
 }
 
@@ -5716,7 +5717,7 @@ body {
 [data-theme="dark"] .trip-overview-secondary button,
 [data-theme="dark"] .travel-check,
 [data-theme="dark"] .modal-head {
-  border-color: rgba(76, 96, 86, 0.38);
+  border-color: rgba(76, 82, 79, 0.42);
   background: var(--surface);
 }
 
@@ -5731,13 +5732,13 @@ body {
 [data-theme="dark"] .trip-notepad textarea,
 [data-theme="dark"] .country-search,
 [data-theme="dark"] .check-field {
-  border-color: rgba(76, 96, 86, 0.38);
+  border-color: rgba(76, 82, 79, 0.42);
   background: var(--surface-soft);
 }
 
 [data-theme="dark"] .parking-current-card {
   background:
-    radial-gradient(circle at 86% 18%, rgba(72, 98, 85, 0.2) 0, transparent 16rem),
+    radial-gradient(circle at 86% 18%, rgba(72, 98, 85, 0.12) 0, transparent 16rem),
     var(--surface);
 }
 
