@@ -6254,23 +6254,3 @@ body {
     top: calc(100% + 7px);
   }
 }
-
-/* Safari tabs need a slimmer bar; installed standalone mode keeps its current spacing. */
-@media (display-mode: browser) and (max-width: 959px) {
-  .mobile-nav {
-    min-height: 64px;
-    padding-top: 4px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
-  }
-
-  .mobile-nav button {
-    min-height: 50px;
-  }
-
-  .content:not(.content--calendar) {
-    padding-bottom: max(
-      106px,
-      calc(78px + env(safe-area-inset-bottom))
-    );
-  }
-}
