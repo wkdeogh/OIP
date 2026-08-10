@@ -5951,7 +5951,7 @@ export function OipApp({
       'meta[name="theme-color"]',
     );
     if (themeMeta) {
-      themeMeta.content = theme === "dark" ? "#12161b" : "#f5f6f8";
+      themeMeta.content = theme === "dark" ? "#171d25" : "#dfe7f0";
     }
   }, [theme]);
 

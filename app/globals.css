@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f5f6f8;
-  --surface: #ffffff;
-  --surface-soft: #f1f3f6;
-  --ink: #252a31;
-  --muted: #747b86;
-  --line: #e1e4e8;
-  --green: #4d7667;
-  --green-dark: #365a4d;
-  --green-soft: #dce9df;
+  --paper: #dfe7f0;
+  --surface: #e7edf4;
+  --surface-soft: #d9e2ec;
+  --ink: #465366;
+  --muted: #7b8798;
+  --line: #cbd5e1;
+  --green: #687991;
+  --green-dark: #4e5e76;
+  --green-soft: #ced9e5;
   --blue: #3478f6;
   --blue-dark: #235fc7;
   --blue-soft: #eaf2ff;
@@ -29,23 +29,30 @@
   --event-private: #d9cbe8;
   --event-system: #d7d0e9;
   --danger: #c75d58;
-  --shadow: 0 14px 34px rgba(28, 34, 43, 0.08);
-  --shadow-soft: 0 7px 20px rgba(28, 34, 43, 0.055);
-  --radius-lg: 28px;
-  --radius-md: 20px;
-  --radius-sm: 14px;
+  --shadow:
+    18px 18px 38px rgba(109, 127, 147, 0.3),
+    -14px -14px 34px rgba(255, 255, 255, 0.9);
+  --shadow-soft:
+    8px 8px 18px rgba(109, 127, 147, 0.25),
+    -8px -8px 18px rgba(255, 255, 255, 0.82);
+  --shadow-inset:
+    inset 5px 5px 12px rgba(109, 127, 147, 0.2),
+    inset -5px -5px 12px rgba(255, 255, 255, 0.72);
+  --radius-lg: 34px;
+  --radius-md: 24px;
+  --radius-sm: 17px;
 }
 
 [data-theme="dark"] {
-  --paper: #12161b;
-  --surface: #1a2027;
-  --surface-soft: #242c36;
-  --ink: #e8ecf1;
-  --muted: #959fae;
-  --line: #2d3644;
-  --green: #5f8c7b;
-  --green-dark: #81b3a1;
-  --green-soft: #1d332c;
+  --paper: #171d25;
+  --surface: #1e2630;
+  --surface-soft: #242e3a;
+  --ink: #edf3f9;
+  --muted: #a7b2c1;
+  --line: #354251;
+  --green: #8e9db2;
+  --green-dark: #c4cfdd;
+  --green-soft: #2d3947;
   --blue: #558cfa;
   --blue-dark: #79a6ff;
   --blue-soft: #1e2c45;
@@ -65,22 +72,29 @@
   --event-private: #403252;
   --event-system: #3c3652;
   --danger: #e0706b;
-  --shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
-  --shadow-soft: 0 7px 20px rgba(0, 0, 0, 0.35);
+  --shadow:
+    18px 18px 38px rgba(4, 8, 13, 0.56),
+    -12px -12px 28px rgba(68, 82, 99, 0.2);
+  --shadow-soft:
+    8px 8px 18px rgba(4, 8, 13, 0.48),
+    -7px -7px 16px rgba(68, 82, 99, 0.16);
+  --shadow-inset:
+    inset 5px 5px 12px rgba(4, 8, 13, 0.42),
+    inset -5px -5px 12px rgba(68, 82, 99, 0.12);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]):not([data-theme="dark"]) {
-    --paper: #12161b;
-    --surface: #1a2027;
-    --surface-soft: #242c36;
-    --ink: #e8ecf1;
-    --muted: #959fae;
-    --line: #2d3644;
-    --green: #5f8c7b;
-    --green-dark: #81b3a1;
-    --green-soft: #1d332c;
+    --paper: #171d25;
+    --surface: #1e2630;
+    --surface-soft: #242e3a;
+    --ink: #edf3f9;
+    --muted: #a7b2c1;
+    --line: #354251;
+    --green: #8e9db2;
+    --green-dark: #c4cfdd;
+    --green-soft: #2d3947;
     --blue: #558cfa;
     --blue-dark: #79a6ff;
     --blue-soft: #1e2c45;
@@ -100,8 +114,15 @@
     --event-private: #403252;
     --event-system: #3c3652;
     --danger: #e0706b;
-    --shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
-    --shadow-soft: 0 7px 20px rgba(0, 0, 0, 0.35);
+    --shadow:
+      18px 18px 38px rgba(4, 8, 13, 0.56),
+      -12px -12px 28px rgba(68, 82, 99, 0.2);
+    --shadow-soft:
+      8px 8px 18px rgba(4, 8, 13, 0.48),
+      -7px -7px 16px rgba(68, 82, 99, 0.16);
+    --shadow-inset:
+      inset 5px 5px 12px rgba(4, 8, 13, 0.42),
+      inset -5px -5px 12px rgba(68, 82, 99, 0.12);
     color-scheme: dark;
   }
 }
@@ -5356,4 +5377,361 @@ p {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
+}
+
+/* Version 4 · soft blue neumorphism */
+body {
+  background:
+    radial-gradient(circle at 12% 2%, rgba(255, 255, 255, 0.72), transparent 30rem),
+    radial-gradient(circle at 92% 88%, rgba(173, 190, 208, 0.34), transparent 36rem),
+    var(--paper);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(104, 121, 145, 0.24);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline-color: rgba(104, 121, 145, 0.42);
+}
+
+.card:not(.calendar-card),
+.gate-card,
+.trip-card,
+.travel-link-library,
+.parking-current-card,
+.modal-card,
+.day-sheet,
+.event-date-picker,
+.event-color-picker {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.card:not(.calendar-card),
+.gate-card,
+.modal-card {
+  border-radius: var(--radius-lg);
+}
+
+.gate-card {
+  backdrop-filter: blur(20px);
+}
+
+.button,
+.travel-map-action-button,
+.choice-grid button {
+  border-radius: var(--radius-sm);
+}
+
+.button--primary,
+.button--parking {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(145deg, #75859c, #596a83);
+  box-shadow:
+    7px 7px 15px rgba(99, 116, 136, 0.34),
+    -5px -5px 12px rgba(255, 255, 255, 0.48);
+  color: #ffffff;
+}
+
+.button--primary:hover:not(:disabled),
+.button--parking:hover:not(:disabled) {
+  background: linear-gradient(145deg, #697990, #4f6078);
+  box-shadow:
+    4px 4px 10px rgba(99, 116, 136, 0.34),
+    -3px -3px 8px rgba(255, 255, 255, 0.42);
+}
+
+.button--soft,
+.icon-button,
+.notification-toggle-button,
+.theme-toggle-button,
+.user-choice,
+.choice-grid button,
+.fridge-edit-button,
+.trip-overview-secondary button,
+.travel-check {
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.button--soft:hover:not(:disabled),
+.icon-button:hover:not(:disabled),
+.notification-toggle-button:hover:not(:disabled),
+.theme-toggle-button:hover,
+.choice-grid button:hover {
+  border-color: rgba(104, 121, 145, 0.28);
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-inset);
+}
+
+.field input,
+.field select,
+.field textarea,
+.mini-field input,
+.mini-field select,
+.inline-input input,
+.quick-form input,
+.trip-checklist-add input,
+.trip-notepad textarea,
+.country-search,
+.check-field {
+  border: 1px solid rgba(153, 169, 187, 0.32);
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-inset);
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.inline-input input:focus,
+.quick-form input:focus {
+  border-color: rgba(104, 121, 145, 0.62);
+  box-shadow:
+    var(--shadow-inset),
+    0 0 0 4px rgba(104, 121, 145, 0.12);
+}
+
+.desktop-nav {
+  border-right: 0;
+  background: rgba(223, 231, 240, 0.9);
+  box-shadow: 10px 0 28px rgba(109, 127, 147, 0.18);
+  backdrop-filter: blur(22px);
+}
+
+.desktop-nav nav button.is-active {
+  background: linear-gradient(145deg, #74849b, #596a82);
+  box-shadow:
+    7px 7px 14px rgba(99, 116, 136, 0.3),
+    -5px -5px 12px rgba(255, 255, 255, 0.5);
+}
+
+.desktop-nav nav button:hover:not(.is-active) {
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-inset);
+}
+
+.app-header {
+  border-bottom: 0;
+  background: rgba(223, 231, 240, 0.82);
+  box-shadow: 0 9px 24px rgba(109, 127, 147, 0.14);
+  backdrop-filter: blur(22px);
+}
+
+.mobile-nav {
+  right: 12px;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  left: 12px;
+  min-height: 72px;
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 24px;
+  background: rgba(225, 233, 242, 0.94);
+  box-shadow:
+    10px 10px 24px rgba(101, 119, 139, 0.28),
+    -8px -8px 20px rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(22px);
+}
+
+.mobile-nav button {
+  border-radius: 18px;
+  color: #758296;
+}
+
+.mobile-nav button.is-active {
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-inset);
+  color: var(--green-dark);
+}
+
+.app-shell--calendar .mobile-nav {
+  right: auto;
+  bottom: auto;
+  left: auto;
+  width: auto;
+  margin: 0 10px max(8px, env(safe-area-inset-bottom));
+}
+
+.sub-tabs {
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 21px;
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-inset);
+}
+
+.sub-tabs button {
+  border-radius: 16px;
+}
+
+.sub-tabs button.is-active {
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  color: var(--green-dark);
+}
+
+.trip-card,
+.travel-link-library,
+.parking-current-card {
+  border-radius: 28px;
+}
+
+.trip-visual,
+.trip-overview-summary,
+.trip-checklist-item,
+.travel-detail-item,
+.travel-link-coming-soon,
+.travel-map-trip-option,
+.travel-map-unlocated-list article {
+  border-color: rgba(153, 169, 187, 0.3);
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-inset);
+}
+
+.trip-overview-row,
+.trip-overview-empty,
+.trip-overview-secondary button,
+.trip-memo,
+.travel-check,
+.trip-checklist-add input,
+.trip-notepad textarea,
+.country-search,
+.fridge-edit-button,
+.choice-grid button,
+.modal-head {
+  background: var(--surface);
+}
+
+.parking-current-card {
+  background:
+    radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.56) 0, transparent 16rem),
+    var(--surface);
+}
+
+.modal-backdrop,
+.day-sheet-backdrop,
+.event-color-picker-backdrop {
+  background: rgba(58, 70, 84, 0.38);
+  backdrop-filter: blur(10px);
+}
+
+/* Keep the established calendar colors independent from the version 4 chrome. */
+.content--calendar {
+  --surface: #ffffff;
+  --surface-soft: #f1f3f6;
+  --ink: #252a31;
+  --muted: #747b86;
+  --line: #e1e4e8;
+  --green: #4d7667;
+  --green-dark: #365a4d;
+  --green-soft: #dce9df;
+}
+
+.calendar-card {
+  border-color: rgba(225, 228, 232, 0.94);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 7px 20px rgba(28, 34, 43, 0.055);
+}
+
+[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 12% 2%, rgba(79, 94, 112, 0.2), transparent 30rem),
+    radial-gradient(circle at 90% 86%, rgba(4, 8, 13, 0.38), transparent 36rem),
+    var(--paper);
+}
+
+[data-theme="dark"] .desktop-nav {
+  border-color: transparent;
+  background: rgba(23, 29, 37, 0.92);
+  box-shadow: 10px 0 28px rgba(3, 7, 12, 0.38);
+}
+
+[data-theme="dark"] .app-header {
+  border-color: transparent;
+  background: rgba(23, 29, 37, 0.86);
+  box-shadow: 0 9px 24px rgba(3, 7, 12, 0.34);
+}
+
+[data-theme="dark"] .mobile-nav {
+  border-color: rgba(77, 91, 108, 0.36);
+  background: rgba(30, 38, 48, 0.95);
+  box-shadow:
+    10px 10px 24px rgba(3, 7, 12, 0.52),
+    -7px -7px 18px rgba(70, 84, 101, 0.14);
+}
+
+[data-theme="dark"] .mobile-nav button {
+  color: #98a5b7;
+}
+
+[data-theme="dark"] .mobile-nav button.is-active {
+  background: var(--surface-soft);
+  box-shadow: var(--shadow-inset);
+  color: #d9e2ec;
+}
+
+[data-theme="dark"] .button--primary,
+[data-theme="dark"] .button--parking,
+[data-theme="dark"] .desktop-nav nav button.is-active {
+  border-color: rgba(164, 178, 197, 0.16);
+  background: linear-gradient(145deg, #708097, #53647c);
+  box-shadow:
+    7px 7px 15px rgba(3, 7, 12, 0.5),
+    -5px -5px 12px rgba(78, 93, 111, 0.16);
+}
+
+[data-theme="dark"] .button--soft,
+[data-theme="dark"] .icon-button,
+[data-theme="dark"] .notification-toggle-button,
+[data-theme="dark"] .theme-toggle-button,
+[data-theme="dark"] .user-choice,
+[data-theme="dark"] .choice-grid button,
+[data-theme="dark"] .fridge-edit-button,
+[data-theme="dark"] .trip-overview-secondary button,
+[data-theme="dark"] .travel-check,
+[data-theme="dark"] .modal-head {
+  border-color: rgba(77, 91, 108, 0.34);
+  background: var(--surface);
+}
+
+[data-theme="dark"] .field input,
+[data-theme="dark"] .field select,
+[data-theme="dark"] .field textarea,
+[data-theme="dark"] .mini-field input,
+[data-theme="dark"] .mini-field select,
+[data-theme="dark"] .inline-input input,
+[data-theme="dark"] .quick-form input,
+[data-theme="dark"] .trip-checklist-add input,
+[data-theme="dark"] .trip-notepad textarea,
+[data-theme="dark"] .country-search,
+[data-theme="dark"] .check-field {
+  border-color: rgba(77, 91, 108, 0.34);
+  background: var(--surface-soft);
+}
+
+[data-theme="dark"] .parking-current-card {
+  background:
+    radial-gradient(circle at 86% 18%, rgba(74, 89, 106, 0.18) 0, transparent 16rem),
+    var(--surface);
+}
+
+[data-theme="dark"] .content--calendar {
+  --surface: #1a2027;
+  --surface-soft: #242c36;
+  --ink: #e8ecf1;
+  --muted: #959fae;
+  --line: #2d3644;
+  --green: #5f8c7b;
+  --green-dark: #81b3a1;
+  --green-soft: #1d332c;
+}
+
+[data-theme="dark"] .calendar-card {
+  border-color: #2d3644;
+  background: #1a2027;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.35);
 }
