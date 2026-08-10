@@ -5384,10 +5384,13 @@ p {
 /* Version 4 · mint and blush neumorphism */
 body {
   background:
+    linear-gradient(rgba(77, 112, 98, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(77, 112, 98, 0.055) 1px, transparent 1px),
     radial-gradient(circle at 12% 2%, rgba(255, 255, 255, 0.72), transparent 30rem),
     radial-gradient(circle at 92% 88%, rgba(233, 166, 173, 0.22), transparent 36rem),
     var(--paper);
   background-attachment: fixed;
+  background-size: 28px 28px, 28px 28px, auto, auto, auto;
 }
 
 ::selection {
@@ -5648,10 +5651,13 @@ body {
 
 [data-theme="dark"] body {
   background:
+    linear-gradient(rgba(183, 209, 197, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(183, 209, 197, 0.045) 1px, transparent 1px),
     radial-gradient(circle at 12% 2%, rgba(78, 105, 92, 0.2), transparent 30rem),
     radial-gradient(circle at 92% 88%, rgba(84, 47, 53, 0.2), transparent 32rem),
     radial-gradient(circle at 90% 86%, rgba(4, 8, 13, 0.38), transparent 36rem),
     var(--paper);
+  background-size: 28px 28px, 28px 28px, auto, auto, auto, auto;
 }
 
 [data-theme="dark"] .desktop-nav {
