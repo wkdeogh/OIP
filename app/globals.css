@@ -5978,3 +5978,27 @@ body {
   box-shadow: var(--shadow-soft);
   color: var(--green-dark);
 }
+
+.fridge-add-button,
+.travel-add-button {
+  min-height: 36px;
+  padding-inline: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--pink-soft) 46%, var(--surface));
+  box-shadow: var(--shadow-soft);
+  color: var(--green-dark);
+  font-size: 0.72rem;
+}
+
+.fridge-add-button:hover:not(:disabled),
+.travel-add-button:hover:not(:disabled),
+[data-theme="dark"] .fridge-add-button,
+[data-theme="dark"] .travel-add-button,
+[data-theme="dark"] .fridge-add-button:hover:not(:disabled),
+[data-theme="dark"] .travel-add-button:hover:not(:disabled) {
+  border: 0;
+  background: color-mix(in srgb, var(--pink-soft) 46%, var(--surface));
+  box-shadow: var(--shadow-soft);
+  color: var(--green-dark);
+}

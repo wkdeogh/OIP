@@ -5661,7 +5661,11 @@ function FridgeView({
         <div>
           <h2>🍰</h2>
         </div>
-        <button className="button button--primary" onClick={onAdd} type="button">
+        <button
+          className="button button--primary fridge-add-button"
+          onClick={onAdd}
+          type="button"
+        >
           + 아이템 추가
         </button>
       </div>
