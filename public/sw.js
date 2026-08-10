@@ -24,8 +24,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(message.title, {
       body: message.body,
-      icon: "/oip_app_icon.png",
-      badge: "/oip_app_icon.png",
+      icon: "/oip_logo.png",
+      badge: "/oip_logo.png",
       tag: message.date ? `oip-calendar-${message.date}` : "oip-notification",
       data: { url: message.url || "/" },
     }),

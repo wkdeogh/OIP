@@ -30,13 +30,13 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: {
       icon: [
         {
-          url: "/oip_app_icon.png",
+          url: "/oip_logo.png",
           type: "image/png",
           sizes: "1024x1024",
         },
       ],
-      shortcut: "/oip_app_icon.png",
-      apple: "/oip_app_icon.png",
+      shortcut: "/oip_logo.png",
+      apple: "/oip_logo.png",
     },
     openGraph: {
       type: "website",
