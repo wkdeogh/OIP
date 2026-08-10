@@ -3933,15 +3933,18 @@ p {
   font-weight: 850;
 }
 
-.choice-grid button:hover {
-  background: var(--green-soft);
-}
-
-.choice-grid button.is-selected {
+.choice-grid button.is-selected,
+.choice-grid button[aria-pressed="true"] {
   border-color: var(--green);
   background: var(--green);
   color: white;
   box-shadow: 0 6px 15px rgba(77, 118, 103, 0.2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice-grid button:hover:not(.is-selected):not([aria-pressed="true"]) {
+    background: var(--green-soft);
+  }
 }
 
 .button--parking {
@@ -5483,11 +5486,18 @@ body {
 .button--soft:hover:not(:disabled),
 .icon-button:hover:not(:disabled),
 .notification-toggle-button:hover:not(:disabled),
-.theme-toggle-button:hover,
-.choice-grid button:hover {
+.theme-toggle-button:hover {
   border-color: rgba(111, 148, 131, 0.3);
   background: var(--surface-soft);
   box-shadow: var(--shadow-inset);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice-grid button:hover:not(.is-selected):not([aria-pressed="true"]) {
+    border-color: rgba(111, 148, 131, 0.3);
+    background: var(--surface-soft);
+    box-shadow: var(--shadow-inset);
+  }
 }
 
 .field input,
@@ -5636,34 +5646,39 @@ body {
 
 .parking-current-card {
   background:
-    radial-gradient(circle at 86% 18%, rgba(233, 166, 173, 0.18) 0, transparent 16rem),
+    radial-gradient(circle at 86% 18%, rgba(127, 169, 155, 0.12) 0, transparent 16rem),
     var(--surface);
 }
 
 .parking-current-card::before {
-  border-color: rgba(164, 81, 94, 0.08);
+  border-color: rgba(77, 118, 103, 0.065);
 }
 
-.parking-current-card p,
-.parking-current-card h2 {
+.parking-current-card p {
   color: var(--pink);
 }
 
+.parking-current-card h2 {
+  color: var(--green-dark);
+}
+
 .parking-mark {
-  border-color: rgba(164, 81, 94, 0.38);
+  border-color: rgba(77, 118, 103, 0.46);
 }
 
 .button--parking {
-  background: linear-gradient(145deg, #ad5865, #934954);
+  border-color: rgba(233, 166, 173, 0.5);
+  background: linear-gradient(145deg, #f9e1e4, #f1c9ce);
   box-shadow:
-    7px 7px 15px rgba(164, 81, 94, 0.28),
+    7px 7px 15px rgba(180, 130, 140, 0.2),
     -5px -5px 12px rgba(255, 255, 255, 0.48);
+  color: var(--pink-dark);
 }
 
 .button--parking:hover:not(:disabled) {
-  background: linear-gradient(145deg, #9d4b58, #7e3743);
+  background: linear-gradient(145deg, #f5d5d9, #eebfc5);
   box-shadow:
-    4px 4px 10px rgba(164, 81, 94, 0.26),
+    4px 4px 10px rgba(180, 130, 140, 0.2),
     -3px -3px 8px rgba(255, 255, 255, 0.42);
 }
 
@@ -5779,29 +5794,33 @@ body {
 
 [data-theme="dark"] .parking-current-card {
   background:
-    radial-gradient(circle at 86% 18%, rgba(217, 136, 147, 0.14) 0, transparent 16rem),
+    radial-gradient(circle at 86% 18%, rgba(72, 98, 85, 0.12) 0, transparent 16rem),
     var(--surface);
 }
 
-[data-theme="dark"] .parking-current-card p,
-[data-theme="dark"] .parking-current-card h2 {
+[data-theme="dark"] .parking-current-card p {
   color: var(--pink);
 }
 
+[data-theme="dark"] .parking-current-card h2 {
+  color: var(--green-dark);
+}
+
 [data-theme="dark"] .parking-mark {
-  border-color: rgba(217, 136, 147, 0.42);
+  border-color: rgba(127, 169, 155, 0.46);
 }
 
 [data-theme="dark"] .button--parking {
-  border-color: rgba(240, 180, 187, 0.18);
-  background: linear-gradient(145deg, #ad5865, #934954);
+  border-color: rgba(240, 180, 187, 0.28);
+  background: linear-gradient(145deg, #f0c5ca, #dfa5ad);
   box-shadow:
     7px 7px 15px rgba(3, 7, 12, 0.5),
     -5px -5px 12px rgba(95, 66, 72, 0.18);
+  color: #5d3039;
 }
 
 [data-theme="dark"] .button--parking:hover:not(:disabled) {
-  background: linear-gradient(145deg, #b7626e, #9d4b58);
+  background: linear-gradient(145deg, #eab7be, #d8959f);
 }
 
 [data-theme="dark"] .content--calendar {
