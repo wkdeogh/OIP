@@ -5839,3 +5839,51 @@ body {
   background: #1a2027;
   box-shadow: 0 7px 20px rgba(0, 0, 0, 0.35);
 }
+
+/* Blush accents for counts, completion, and travel actions. */
+.list-title span {
+  background: color-mix(in srgb, var(--pink-soft) 84%, var(--surface));
+  color: var(--pink);
+  box-shadow: var(--shadow-inset);
+}
+
+.check-row--completed .round-check,
+.check-row--completed .square-check {
+  border-color: color-mix(in srgb, var(--pink) 42%, var(--pink-soft));
+  background: var(--pink-soft);
+  color: var(--pink);
+}
+
+.travel-add-button,
+.travel-map-actions .travel-map-action-button {
+  border-color: color-mix(in srgb, var(--pink) 24%, var(--pink-soft));
+  background: color-mix(in srgb, var(--pink-soft) 78%, var(--surface));
+  box-shadow: var(--shadow-soft);
+  color: var(--pink-dark);
+}
+
+.travel-add-button:hover:not(:disabled),
+.travel-map-actions .travel-map-action-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--pink) 34%, var(--pink-soft));
+  background: color-mix(in srgb, var(--pink-soft) 90%, var(--surface));
+  box-shadow: var(--shadow-inset);
+  color: var(--pink-dark);
+}
+
+.travel-map-action-button small {
+  background: color-mix(in srgb, var(--pink-soft) 82%, var(--surface));
+  color: var(--pink);
+}
+
+.trip-section-tabs {
+  border: 1px solid color-mix(in srgb, var(--pink) 16%, var(--line));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--pink-soft) 34%, var(--surface-soft));
+  box-shadow: var(--shadow-inset);
+}
+
+.trip-section-tabs button.is-active {
+  background: color-mix(in srgb, var(--pink-soft) 76%, var(--surface));
+  box-shadow: var(--shadow-soft);
+  color: var(--pink);
+}
