@@ -5893,3 +5893,77 @@ body {
   box-shadow: var(--shadow-soft);
   color: var(--pink);
 }
+
+/* Filled buttons stay borderless; only white and neutral buttons use outlines. */
+.button--primary,
+.button--parking,
+.notification-toggle-button.is-enabled,
+.month-picker-months button.is-selected,
+.choice-grid button.is-selected,
+.choice-grid button[aria-pressed="true"],
+.travel-check[aria-pressed="true"],
+.travel-add-button,
+.travel-map-actions .travel-map-action-button {
+  border: 0;
+}
+
+[data-theme="dark"] .button--primary,
+[data-theme="dark"] .button--parking,
+[data-theme="dark"] .choice-grid button.is-selected,
+[data-theme="dark"] .choice-grid button[aria-pressed="true"] {
+  border: 0;
+}
+
+/* Keep desktop hover feedback flat for this mobile-first interface. */
+@media (hover: hover) and (pointer: fine) {
+  .button--primary:hover:not(:disabled) {
+    box-shadow:
+      7px 7px 15px rgba(105, 132, 118, 0.32),
+      -5px -5px 12px rgba(255, 255, 255, 0.48);
+  }
+
+  .button--parking:hover:not(:disabled) {
+    box-shadow:
+      7px 7px 15px rgba(180, 130, 140, 0.2),
+      -5px -5px 12px rgba(255, 255, 255, 0.48);
+  }
+
+  .button--soft:hover:not(:disabled),
+  .icon-button:hover:not(:disabled),
+  .notification-toggle-button:hover:not(:disabled),
+  .theme-toggle-button:hover,
+  .choice-grid button:hover:not(.is-selected):not([aria-pressed="true"]),
+  .travel-add-button:hover:not(:disabled),
+  .travel-map-actions .travel-map-action-button:hover:not(:disabled) {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .travel-add-button:hover:not(:disabled),
+  .travel-map-actions .travel-map-action-button:hover:not(:disabled) {
+    border: 0;
+  }
+
+  .app-header .notification-toggle-button:hover:not(:disabled),
+  .app-header .theme-toggle-button:hover,
+  .desktop-nav nav button:hover:not(.is-active) {
+    box-shadow: none;
+  }
+
+  .user-choice:hover,
+  .trip-card:hover:not(.trip-card--selected) {
+    box-shadow: var(--shadow-soft);
+    transform: none;
+  }
+
+  [data-theme="dark"] .button--primary:hover:not(:disabled) {
+    box-shadow:
+      7px 7px 15px rgba(3, 7, 12, 0.5),
+      -5px -5px 12px rgba(72, 96, 84, 0.16);
+  }
+
+  [data-theme="dark"] .button--parking:hover:not(:disabled) {
+    box-shadow:
+      7px 7px 15px rgba(3, 7, 12, 0.5),
+      -5px -5px 12px rgba(95, 66, 72, 0.18);
+  }
+}
