@@ -30,7 +30,7 @@ test("server-renders the OIP application shell", async () => {
   const html = await response.text();
   assert.match(html, /<html[^>]+lang="ko"/i);
   assert.match(html, /<title>OIP<\/title>/i);
-  assert.match(html, /oip_logo\.png/i);
+  assert.match(html, /oip_app_icon\.png/i);
   assert.match(html, /manifest\.webmanifest/i);
   assert.match(html, /oip\.theme/i);
   assert.match(html, /data-theme="light"/i);

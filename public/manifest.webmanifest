@@ -10,7 +10,7 @@
   "theme_color": "#f5f6f5",
   "icons": [
     {
-      "src": "/oip_logo.png",
+      "src": "/oip_app_icon.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any maskable"
