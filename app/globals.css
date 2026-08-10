@@ -4666,9 +4666,18 @@ p {
 }
 
 [data-theme="dark"] .mobile-nav {
-  border-color: var(--line);
-  background: rgba(252, 232, 238, 0.96);
+  border-color: #533744;
+  background: rgba(45, 34, 40, 0.96);
   box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="dark"] .mobile-nav button {
+  color: #bda9b2;
+}
+
+[data-theme="dark"] .mobile-nav button.is-active {
+  background: #5b3848;
+  color: #ffd1dc;
 }
 
 [data-theme="dark"] .sub-tabs {
