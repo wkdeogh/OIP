@@ -5967,3 +5967,14 @@ body {
       -5px -5px 12px rgba(95, 66, 72, 0.18);
   }
 }
+
+/* Match the parking save action to the active task sub-tab. */
+.button--parking,
+.button--parking:hover:not(:disabled),
+[data-theme="dark"] .button--parking,
+[data-theme="dark"] .button--parking:hover:not(:disabled) {
+  border: 0;
+  background: color-mix(in srgb, var(--pink-soft) 46%, var(--surface));
+  box-shadow: var(--shadow-soft);
+  color: var(--green-dark);
+}
