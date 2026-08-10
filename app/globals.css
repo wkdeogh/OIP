@@ -10,6 +10,9 @@
   --green: #6f9483;
   --green-dark: #4d7062;
   --green-soft: #dce9df;
+  --pink: #a4515e;
+  --pink-dark: #843d49;
+  --pink-soft: #fae4e6;
   --blue: #3478f6;
   --blue-dark: #235fc7;
   --blue-soft: #eaf2ff;
@@ -53,6 +56,9 @@
   --green: #7fa99b;
   --green-dark: #b7d1c5;
   --green-soft: #2a4037;
+  --pink: #d98893;
+  --pink-dark: #f0b4bb;
+  --pink-soft: #3b2226;
   --blue: #558cfa;
   --blue-dark: #79a6ff;
   --blue-soft: #1e2c45;
@@ -95,6 +101,9 @@
     --green: #7fa99b;
     --green-dark: #b7d1c5;
     --green-soft: #2a4037;
+    --pink: #d98893;
+    --pink-dark: #f0b4bb;
+    --pink-soft: #3b2226;
     --blue: #558cfa;
     --blue-dark: #79a6ff;
     --blue-soft: #1e2c45;
@@ -988,6 +997,7 @@ p {
   align-items: center;
   justify-content: space-between;
   padding: 1px 12px;
+  background: #fafbfc;
 }
 
 .calendar-toolbar .icon-button {
@@ -4751,6 +4761,7 @@ p {
   color: #f0bac1;
 }
 
+[data-theme="dark"] .calendar-toolbar,
 [data-theme="dark"] .calendar-weekdays {
   background: var(--surface-soft);
 }
@@ -5399,6 +5410,10 @@ body {
   color: var(--ink);
 }
 
+.page-lead .eyebrow {
+  color: var(--pink);
+}
+
 :focus-visible {
   outline-color: rgba(111, 148, 131, 0.42);
 }
@@ -5549,7 +5564,7 @@ body {
 }
 
 .mobile-nav button.is-active {
-  background: color-mix(in srgb, var(--sanghee-soft) 58%, var(--surface));
+  background: color-mix(in srgb, var(--pink-soft) 58%, var(--surface));
   box-shadow: var(--shadow-inset);
   color: var(--green-dark);
 }
@@ -5582,7 +5597,7 @@ body {
 }
 
 .sub-tabs button.is-active {
-  background: color-mix(in srgb, var(--sanghee-soft) 46%, var(--surface));
+  background: color-mix(in srgb, var(--pink-soft) 46%, var(--surface));
   box-shadow: var(--shadow-soft);
   color: var(--green-dark);
 }
@@ -5621,8 +5636,35 @@ body {
 
 .parking-current-card {
   background:
-    radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.56) 0, transparent 16rem),
+    radial-gradient(circle at 86% 18%, rgba(233, 166, 173, 0.18) 0, transparent 16rem),
     var(--surface);
+}
+
+.parking-current-card::before {
+  border-color: rgba(164, 81, 94, 0.08);
+}
+
+.parking-current-card p,
+.parking-current-card h2 {
+  color: var(--pink);
+}
+
+.parking-mark {
+  border-color: rgba(164, 81, 94, 0.38);
+}
+
+.button--parking {
+  background: linear-gradient(145deg, #ad5865, #934954);
+  box-shadow:
+    7px 7px 15px rgba(164, 81, 94, 0.28),
+    -5px -5px 12px rgba(255, 255, 255, 0.48);
+}
+
+.button--parking:hover:not(:disabled) {
+  background: linear-gradient(145deg, #9d4b58, #7e3743);
+  box-shadow:
+    4px 4px 10px rgba(164, 81, 94, 0.26),
+    -3px -3px 8px rgba(255, 255, 255, 0.42);
 }
 
 .modal-backdrop,
@@ -5686,7 +5728,7 @@ body {
 }
 
 [data-theme="dark"] .mobile-nav button.is-active {
-  background: color-mix(in srgb, var(--sanghee-soft) 58%, var(--surface));
+  background: color-mix(in srgb, var(--pink-soft) 58%, var(--surface));
   box-shadow: var(--shadow-inset);
   color: #d7e6df;
 }
@@ -5698,7 +5740,6 @@ body {
 }
 
 [data-theme="dark"] .button--primary,
-[data-theme="dark"] .button--parking,
 [data-theme="dark"] .desktop-nav nav button.is-active {
   border-color: rgba(159, 190, 176, 0.16);
   background: linear-gradient(145deg, #779f8f, #55796b);
@@ -5738,8 +5779,29 @@ body {
 
 [data-theme="dark"] .parking-current-card {
   background:
-    radial-gradient(circle at 86% 18%, rgba(72, 98, 85, 0.12) 0, transparent 16rem),
+    radial-gradient(circle at 86% 18%, rgba(217, 136, 147, 0.14) 0, transparent 16rem),
     var(--surface);
+}
+
+[data-theme="dark"] .parking-current-card p,
+[data-theme="dark"] .parking-current-card h2 {
+  color: var(--pink);
+}
+
+[data-theme="dark"] .parking-mark {
+  border-color: rgba(217, 136, 147, 0.42);
+}
+
+[data-theme="dark"] .button--parking {
+  border-color: rgba(240, 180, 187, 0.18);
+  background: linear-gradient(145deg, #ad5865, #934954);
+  box-shadow:
+    7px 7px 15px rgba(3, 7, 12, 0.5),
+    -5px -5px 12px rgba(95, 66, 72, 0.18);
+}
+
+[data-theme="dark"] .button--parking:hover:not(:disabled) {
+  background: linear-gradient(145deg, #b7626e, #9d4b58);
 }
 
 [data-theme="dark"] .content--calendar {
