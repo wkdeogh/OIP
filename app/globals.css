@@ -5653,7 +5653,7 @@ body {
 }
 
 .parking-current-card p {
-  color: var(--pink);
+  color: #2f3f68;
 }
 
 .parking-current-card h2 {
@@ -5797,7 +5797,7 @@ body {
 }
 
 [data-theme="dark"] .parking-current-card p {
-  color: var(--pink);
+  color: #b9c6e5;
 }
 
 [data-theme="dark"] .parking-current-card h2 {
