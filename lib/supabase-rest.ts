@@ -229,6 +229,7 @@ export const resourceConfigs = {
       "floor",
       "pillar_letter",
       "pillar_number",
+      "custom_location",
       "author_id",
       "memo",
     ],

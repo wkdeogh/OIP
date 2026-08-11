@@ -234,6 +234,7 @@ export type ParkingRecord = {
   floor: "B4" | "B5" | "B6";
   pillar_letter: "A" | "B" | "C" | "D";
   pillar_number: 1 | 2 | 3 | 4;
+  custom_location?: string | null;
   author_id: UserCode;
   created_at: string;
 };

@@ -5751,18 +5751,27 @@ function ParkingView({
   const [number, setNumber] = useState<ParkingRecord["pillar_number"]>(
     record?.pillar_number ?? 4,
   );
+  const [customLocation, setCustomLocation] = useState(
+    record?.custom_location ?? "",
+  );
+  const [isCustomInputOpen, setIsCustomInputOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  async function save() {
+  async function save(customLocationOverride?: string) {
+    const normalizedCustomLocation = customLocationOverride?.trim() ?? "";
     setIsSaving(true);
     onSave({
       id: newId(),
       floor,
       pillar_letter: letter,
       pillar_number: number,
+      ...(normalizedCustomLocation
+        ? { custom_location: normalizedCustomLocation }
+        : {}),
       author_id: currentUser,
       created_at: new Date().toISOString(),
     });
+    if (normalizedCustomLocation) setIsCustomInputOpen(false);
     globalThis.setTimeout(() => setIsSaving(false), 350);
   }
 
@@ -5773,10 +5782,16 @@ function ParkingView({
           <p>현재 주차 위치</p>
           {record ? (
             <>
-              <h2>
-                {record.floor} <span>{record.pillar_letter}</span>
-                {record.pillar_number}
-              </h2>
+              {record.custom_location ? (
+                <h2 className="parking-custom-location">
+                  {record.custom_location}
+                </h2>
+              ) : (
+                <h2>
+                  {record.floor} <span>{record.pillar_letter}</span>
+                  {record.pillar_number}
+                </h2>
+              )}
               <div className="parking-meta">
                 <AuthorBadge user={record.author_id} />
                 <span>마지막 수정 {formatDateTime(record.created_at)}</span>
@@ -5848,13 +5863,40 @@ function ParkingView({
         <button
           className="button button--parking button--full"
           disabled={isSaving}
-          onClick={save}
+          onClick={() => save()}
           type="button"
         >
-          {isSaving
-            ? "저장 중…"
-            : `${floor} ${letter}${number} 저장하기`}
+          {isSaving ? "저장 중…" : `${floor} ${letter}${number} 저장하기`}
         </button>
+        <button
+          aria-expanded={isCustomInputOpen}
+          className="parking-custom-toggle"
+          onClick={() => setIsCustomInputOpen((value) => !value)}
+          type="button"
+        >
+          <span>위치 직접 입력</span>
+          <span aria-hidden="true">{isCustomInputOpen ? "⌃" : "⌄"}</span>
+        </button>
+        {isCustomInputOpen ? (
+          <div className="parking-custom-panel">
+            <input
+              aria-label="주차 위치 직접 입력"
+              autoFocus
+              maxLength={80}
+              onChange={(event) => setCustomLocation(event.target.value)}
+              placeholder="예: 지하 2층 전기차 충전구역 옆"
+              value={customLocation}
+            />
+            <button
+              className="button button--parking button--full parking-custom-save"
+              disabled={isSaving || !customLocation.trim()}
+              onClick={() => save(customLocation)}
+              type="button"
+            >
+              {isSaving ? "저장 중…" : "입력한 위치로 저장"}
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );

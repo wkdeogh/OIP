@@ -3866,6 +3866,14 @@ p {
   font-size: 1.6rem;
 }
 
+.parking-current-card h2.parking-custom-location {
+  max-width: min(62vw, 520px);
+  font-size: clamp(1.65rem, 7vw, 2.8rem);
+  letter-spacing: -0.045em;
+  line-height: 1.14;
+  overflow-wrap: anywhere;
+}
+
 .parking-meta {
   display: flex;
   flex-wrap: wrap;
@@ -3921,6 +3929,55 @@ p {
 .pillar-pickers {
   display: grid;
   gap: 8px;
+}
+
+.parking-custom-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 0 13px;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.parking-custom-toggle:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.parking-custom-panel {
+  display: grid;
+  gap: 10px;
+  padding-top: 6px;
+  animation: rise 160ms ease both;
+}
+
+.parking-custom-panel input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 15px;
+  border: 1px solid #dce2ea;
+  border-radius: 15px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.parking-custom-panel input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 16%, transparent);
+  outline: 0;
+}
+
+.button--parking.parking-custom-save {
+  margin-top: 0;
 }
 
 .choice-grid button {
@@ -4949,6 +5006,11 @@ p {
 [data-theme="dark"] .parking-current-card p,
 [data-theme="dark"] .parking-meta {
   color: #91a79d;
+}
+
+[data-theme="dark"] .parking-custom-panel input {
+  border-color: rgba(76, 82, 79, 0.42);
+  background: var(--surface);
 }
 
 [data-theme="dark"] .choice-grid button {

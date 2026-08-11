@@ -354,10 +354,14 @@ create table if not exists public.parking_records (
   floor text not null check (floor in ('B4', 'B5', 'B6')),
   pillar_letter text not null check (pillar_letter in ('A', 'B', 'C', 'D')),
   pillar_number integer not null check (pillar_number between 1 and 4),
+  custom_location text,
   author_id text not null references public.profiles(code),
   memo text,
   created_at timestamptz not null default now()
 );
+
+alter table public.parking_records
+  add column if not exists custom_location text;
 
 create index if not exists parking_records_created_idx
   on public.parking_records (created_at desc);
