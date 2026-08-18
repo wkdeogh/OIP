@@ -1222,6 +1222,10 @@ p {
 
 .calendar-day--today .day-number {
   background: var(--green);
+  bottom: 17px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
   color: white !important;
 }
 
