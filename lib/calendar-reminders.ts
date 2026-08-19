@@ -179,7 +179,7 @@ export function calendarReminderPayload(
   const visible = summaries.slice(0, 3);
   const remaining = summaries.length - visible.length;
   return {
-    title: `오늘 일정 ${events.length}개`,
+    title: "",
     body: `${visible.join(" · ")}${remaining > 0 ? ` · 외 ${remaining}개` : ""}`,
     date: dateKey,
     url: `/?date=${dateKey}`,
