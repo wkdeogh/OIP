@@ -701,6 +701,23 @@ function fitCalendarEventLabels(container: HTMLElement) {
     if (!chip) return;
 
     const style = window.getComputedStyle(chip);
+    const spanDays = Number.parseInt(label.dataset.spanDays ?? "1", 10);
+    if (spanDays > 1) {
+      const day = label.closest<HTMLElement>(".calendar-day");
+      if (day) {
+        const dayRect = day.getBoundingClientRect();
+        const labelRect = label.getBoundingClientRect();
+        const rightInset = Number.parseFloat(style.paddingRight) || 0;
+        label.style.width = `${Math.max(
+          0,
+          dayRect.width * spanDays -
+            (labelRect.left - dayRect.left) -
+            rightInset,
+        )}px`;
+      }
+    } else {
+      label.style.removeProperty("width");
+    }
     const labelStyle = window.getComputedStyle(label);
     const availableWidth = Math.max(
       0,
@@ -2344,6 +2361,12 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                   const showTitle = !isRange || isSegmentStart;
                   const showTimeIndicator = showTitle && !event.is_all_day;
                   const chipText = showTitle ? event.title : "\u00a0";
+                  const segmentSpanDays = isSegmentStart
+                    ? Math.min(
+                        7 - date.getDay(),
+                        dateKeysInRange({ start: key, end: range.end }).length,
+                      )
+                    : 1;
 
                   return (
                     <span
@@ -2373,6 +2396,11 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                       <span
                         className="event-chip-label"
                         data-full-text={showTitle ? chipText : undefined}
+                        data-span-days={
+                          showTitle && segmentSpanDays > 1
+                            ? segmentSpanDays
+                            : undefined
+                        }
                         title={showTitle ? chipText : undefined}
                       >
                         {chipText}
@@ -3169,20 +3197,30 @@ function CalendarView({
 
 function TodoView({
   todos,
-  currentUser,
   onCreate,
+  onUpdate,
   onToggle,
   onDelete,
 }: {
   todos: Todo[];
-  currentUser: UserCode;
   onCreate: (title: string, visibility: Visibility, dueAt?: string) => void;
+  onUpdate: (
+    item: Todo,
+    title: string,
+    visibility: Visibility,
+    dueAt?: string,
+  ) => void;
   onToggle: (item: Todo) => void;
   onDelete: (item: Todo) => void;
 }) {
   const [title, setTitle] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("shared");
   const [dueAt, setDueAt] = useState("");
+  const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editVisibility, setEditVisibility] =
+    useState<Visibility>("shared");
+  const [editDueAt, setEditDueAt] = useState("");
   const active = todos.filter((item) => !item.is_completed);
   const completed = todos.filter((item) => item.is_completed);
 
@@ -3194,6 +3232,145 @@ function TodoView({
     setDueAt("");
   }
 
+  function beginEdit(item: Todo) {
+    setEditingTodoId(item.id);
+    setEditTitle(item.title);
+    setEditVisibility(item.visibility);
+    setEditDueAt(item.due_at ? dateKeyInSeoul(item.due_at) : "");
+  }
+
+  function cancelEdit() {
+    setEditingTodoId(null);
+    setEditTitle("");
+    setEditDueAt("");
+  }
+
+  function submitEdit(event: FormEvent<HTMLFormElement>, item: Todo) {
+    event.preventDefault();
+    const nextTitle = editTitle.trim();
+    if (!nextTitle) return;
+    onUpdate(item, nextTitle, editVisibility, editDueAt || undefined);
+    cancelEdit();
+  }
+
+  function renderTodoRow(item: Todo, isCompleted = false) {
+    if (editingTodoId === item.id) {
+      return (
+        <form
+          className="todo-edit-form"
+          key={item.id}
+          onSubmit={(event) => submitEdit(event, item)}
+        >
+          <label className="field">
+            <span>할 일</span>
+            <input
+              autoFocus
+              maxLength={200}
+              onChange={(event) => setEditTitle(event.target.value)}
+              value={editTitle}
+            />
+          </label>
+          <div className="todo-edit-options">
+            <label className="mini-field">
+              <span>공개 범위</span>
+              <select
+                onChange={(event) =>
+                  setEditVisibility(event.target.value as Visibility)
+                }
+                value={editVisibility}
+              >
+                <option value="shared">공동</option>
+                <option value="private">개인</option>
+              </select>
+            </label>
+            <label className="mini-field">
+              <span>마감일</span>
+              <input
+                onChange={(event) => setEditDueAt(event.target.value)}
+                type="date"
+                value={editDueAt}
+              />
+            </label>
+          </div>
+          <div className="todo-edit-actions">
+            <button
+              className="button button--soft"
+              onClick={cancelEdit}
+              type="button"
+            >
+              취소
+            </button>
+            <button
+              className="button button--primary"
+              disabled={!editTitle.trim()}
+              type="submit"
+            >
+              저장
+            </button>
+          </div>
+        </form>
+      );
+    }
+
+    return (
+      <div
+        className={`check-row todo-check-row${
+          isCompleted ? " check-row--completed" : ""
+        }`}
+        key={item.id}
+      >
+        <button
+          aria-label={
+            isCompleted
+              ? `${item.title}, 완료 취소`
+              : `${item.title}, 완료로 표시`
+          }
+          className="todo-toggle"
+          onClick={() => onToggle(item)}
+          type="button"
+        >
+          <span className="round-check" aria-hidden="true">
+            {isCompleted ? "✓" : null}
+          </span>
+          <span className="check-copy">
+            <strong>{item.title}</strong>
+            <small>
+              {isCompleted ? (
+                "다시 열려면 눌러 주세요"
+              ) : (
+                <>
+                  {item.due_at
+                    ? `${formatKoreanDate(item.due_at)}까지 · `
+                    : ""}
+                  {item.visibility === "shared" ? "공동" : "개인"} ·{" "}
+                  {USER_META[item.author_id].name}
+                </>
+              )}
+            </small>
+          </span>
+        </button>
+        <span className="todo-row-actions">
+          <button
+            aria-label={`"${item.title}" 수정`}
+            className="row-edit"
+            onClick={() => beginEdit(item)}
+            type="button"
+          >
+            ✎
+          </button>
+          <button
+            aria-label={`"${item.title}" 삭제`}
+            className="row-delete"
+            onClick={() => onDelete(item)}
+            type="button"
+          >
+            ×
+          </button>
+        </span>
+      </div>
+    );
+  }
+
   return (
     <section className="feature-grid">
       <div className="card quick-form-card">
@@ -3201,6 +3378,8 @@ function TodoView({
           <label className="field field--grow">
             <span className="sr-only">할 일 제목</span>
             <input
+              maxLength={200}
+              name="todo-title"
               onChange={(event) => setTitle(event.target.value)}
               placeholder="할일 입력!"
               value={title}
@@ -3226,6 +3405,14 @@ function TodoView({
                 <option value="private">개인</option>
               </select>
             </label>
+            <label className="mini-field">
+              <span>마감일</span>
+              <input
+                onChange={(event) => setDueAt(event.target.value)}
+                type="date"
+                value={dueAt}
+              />
+            </label>
           </div>
         </form>
       </div>
@@ -3237,45 +3424,18 @@ function TodoView({
         </div>
         {active.length ? (
           <div className="check-list">
-            {active.map((item) => (
-              <button
-                className="check-row"
-                key={item.id}
-                onClick={() => onToggle(item)}
-                type="button"
-              >
-                <span className="round-check" aria-hidden="true" />
-                <span className="check-copy">
-                  <strong>{item.title}</strong>
-                  <small>
-                    {item.due_at
-                      ? `${formatKoreanDate(item.due_at)}까지 · `
-                      : ""}
-                    {item.visibility === "shared" ? "공동" : "개인"} ·{" "}
-                    {USER_META[item.author_id].name}
-                  </small>
-                </span>
-                <span
-                  aria-label="삭제"
-                  className="row-delete"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDelete(item);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  ×
-                </span>
-              </button>
-            ))}
+            {active.map((item) => renderTodoRow(item))}
           </div>
         ) : (
           <EmptyState
             action="위에서 추가하기"
             icon="✓"
             onAction={() =>
-              document.querySelector<HTMLInputElement>(".quick-form input")?.focus()
+              document
+                .querySelector<HTMLInputElement>(
+                  '.quick-form input[name="todo-title"]',
+                )
+                ?.focus()
             }
             title="아직 할 일이 없어요"
           />
@@ -3286,20 +3446,7 @@ function TodoView({
         <details className="card completed-card">
           <summary>완료한 일 {completed.length}개</summary>
           <div className="check-list">
-            {completed.map((item) => (
-              <button
-                className="check-row check-row--completed"
-                key={item.id}
-                onClick={() => onToggle(item)}
-                type="button"
-              >
-                <span className="round-check">✓</span>
-                <span className="check-copy">
-                  <strong>{item.title}</strong>
-                  <small>다시 열려면 눌러 주세요</small>
-                </span>
-              </button>
-            ))}
+            {completed.map((item) => renderTodoRow(item, true))}
           </div>
         </details>
       ) : null}
@@ -7564,6 +7711,39 @@ export function OipApp({
     });
   }
 
+  function updateTodo(
+    item: Todo,
+    title: string,
+    visibility: Visibility,
+    dueAt?: string,
+  ) {
+    const next: Todo = {
+      ...item,
+      title,
+      visibility,
+      due_at: dueAt ?? null,
+    };
+    setTodos((items) =>
+      items.map((entry) => (entry.id === item.id ? next : entry)),
+    );
+    void writeRecord(
+      "PATCH",
+      "todos",
+      {
+        title: next.title,
+        visibility: next.visibility,
+        due_at: next.due_at,
+      },
+      item.id,
+    ).then((saved) => {
+      if (!saved) {
+        setTodos((items) =>
+          items.map((entry) => (entry.id === item.id ? item : entry)),
+        );
+      }
+    });
+  }
+
   function deleteTodo(item: Todo) {
     if (!globalThis.confirm(`"${item.title}" 항목을 삭제할까요?`)) return;
     setTodos((items) => items.filter((entry) => entry.id !== item.id));
@@ -8222,10 +8402,10 @@ export function OipApp({
               </div>
               {taskTab === "todo" ? (
                 <TodoView
-                  currentUser={currentUser}
                   onCreate={createTodo}
                   onDelete={deleteTodo}
                   onToggle={toggleTodo}
+                  onUpdate={updateTodo}
                   todos={todos}
                 />
               ) : (
