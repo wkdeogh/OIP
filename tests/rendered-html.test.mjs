@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 async function render(path = "/") {
@@ -54,4 +55,20 @@ test("protects push subscription and reminder endpoints", async () => {
 
   const reminders = await render("/api/cron/calendar-reminders");
   assert.equal(reminders.status, 401);
+});
+
+test("keeps multi-day event width isolated from overlapping one-day events", async () => {
+  const css = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    css,
+    /\.day-events\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s,
+  );
+  assert.match(
+    css,
+    /\.event-chip\.event-chip--segment-span\s*\{[^}]*justify-self:\s*start/s,
+  );
 });

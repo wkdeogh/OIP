@@ -1263,6 +1263,7 @@ p {
 .day-events {
   display: grid;
   min-height: 41px;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: repeat(3, minmax(11px, auto)) auto;
   gap: 2px;
   overflow: visible;
@@ -1271,6 +1272,7 @@ p {
 .event-chip {
   position: relative;
   display: block;
+  min-width: 0;
   overflow: hidden;
   margin-inline: calc(1px - var(--calendar-day-inline-padding));
   padding: 3.5px 4px;
@@ -1321,6 +1323,7 @@ p {
 }
 
 .event-chip.event-chip--segment-span {
+  justify-self: start;
   overflow: hidden;
   border-radius: 4px;
   clip-path: inset(0 round 4px);

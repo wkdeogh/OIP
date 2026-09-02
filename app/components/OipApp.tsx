@@ -696,12 +696,16 @@ function fitCalendarEventLabels(container: HTMLElement) {
   if (!context) return;
 
   labels.forEach((label) => {
+    label.closest<HTMLElement>(".event-chip")?.style.removeProperty("width");
+    label.style.removeProperty("width");
+    label.textContent = label.dataset.fullText ?? "";
+  });
+
+  labels.forEach((label) => {
     const fullText = label.dataset.fullText ?? "";
     const chip = label.closest<HTMLElement>(".event-chip");
     if (!chip) return;
 
-    chip.style.removeProperty("width");
-    label.style.removeProperty("width");
     const spanEnd = label.dataset.spanEnd;
     if (spanEnd) {
       const endDay = container.querySelector<HTMLElement>(
