@@ -702,17 +702,17 @@ function fitCalendarEventLabels(container: HTMLElement) {
 
     chip.style.removeProperty("width");
     label.style.removeProperty("width");
-    const spanDays = Number.parseInt(label.dataset.spanDays ?? "1", 10);
-    if (spanDays > 1) {
-      const day = label.closest<HTMLElement>(".calendar-day");
-      if (day) {
-        const dayRect = day.getBoundingClientRect();
+    const spanEnd = label.dataset.spanEnd;
+    if (spanEnd) {
+      const endDay = container.querySelector<HTMLElement>(
+        `[data-calendar-date="${spanEnd}"]`,
+      );
+      if (endDay) {
+        const endDayRect = endDay.getBoundingClientRect();
         const chipRect = chip.getBoundingClientRect();
         chip.style.width = `${Math.max(
           0,
-          dayRect.width * spanDays -
-            (chipRect.left - dayRect.left) -
-            1,
+          endDayRect.right - chipRect.left - 2,
         )}px`;
       }
     }
@@ -2366,6 +2366,10 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                         dateKeysInRange({ start: key, end: range.end }).length,
                       )
                     : 1;
+                  const segmentEndKey =
+                    segmentSpanDays > 1
+                      ? toDateKey(panelDays[dayIndex + segmentSpanDays - 1])
+                      : undefined;
 
                   return (
                     <span
@@ -2401,11 +2405,7 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                       <span
                         className="event-chip-label"
                         data-full-text={showTitle ? chipText : undefined}
-                        data-span-days={
-                          showTitle && segmentSpanDays > 1
-                            ? segmentSpanDays
-                            : undefined
-                        }
+                        data-span-end={showTitle ? segmentEndKey : undefined}
                         title={showTitle ? chipText : undefined}
                       >
                         {chipText}

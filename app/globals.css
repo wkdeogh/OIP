@@ -1322,7 +1322,8 @@ p {
 
 .event-chip.event-chip--segment-span {
   overflow: hidden;
-  border-radius: 3px;
+  border-radius: 4px;
+  clip-path: inset(0 round 4px);
 }
 
 .event-chip.event-chip--segment-end {
