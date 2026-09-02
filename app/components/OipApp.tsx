@@ -700,24 +700,23 @@ function fitCalendarEventLabels(container: HTMLElement) {
     const chip = label.closest<HTMLElement>(".event-chip");
     if (!chip) return;
 
-    const style = window.getComputedStyle(chip);
+    chip.style.removeProperty("width");
+    label.style.removeProperty("width");
     const spanDays = Number.parseInt(label.dataset.spanDays ?? "1", 10);
     if (spanDays > 1) {
       const day = label.closest<HTMLElement>(".calendar-day");
       if (day) {
         const dayRect = day.getBoundingClientRect();
-        const labelRect = label.getBoundingClientRect();
-        const rightInset = Number.parseFloat(style.paddingRight) || 0;
-        label.style.width = `${Math.max(
+        const chipRect = chip.getBoundingClientRect();
+        chip.style.width = `${Math.max(
           0,
           dayRect.width * spanDays -
-            (labelRect.left - dayRect.left) -
-            rightInset,
+            (chipRect.left - dayRect.left) -
+            1,
         )}px`;
       }
-    } else {
-      label.style.removeProperty("width");
     }
+    const style = window.getComputedStyle(chip);
     const labelStyle = window.getComputedStyle(label);
     const availableWidth = Math.max(
       0,
@@ -2375,6 +2374,9 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                         `event-chip--${calendarEventColor(event)}`,
                         isRange ? "event-chip--range" : "",
                         isSegmentStart ? "event-chip--segment-start" : "",
+                        isSegmentStart && segmentSpanDays > 1
+                          ? "event-chip--segment-span"
+                          : "",
                         isSegmentEnd ? "event-chip--segment-end" : "",
                         showTimeIndicator ? "event-chip--timed" : "",
                       ]
@@ -2383,7 +2385,10 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                       key={event.id}
                       style={{
                         gridRow: lane + 1,
-                        backgroundColor: resolvedColor,
+                        backgroundColor:
+                          isRange && !isSegmentStart
+                            ? "transparent"
+                            : resolvedColor,
                         color: eventTextColor(resolvedColor),
                       }}
                     >
