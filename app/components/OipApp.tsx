@@ -17,7 +17,7 @@ import {
 import { createPortal, flushSync } from "react-dom";
 import { systemCalendarEventsForYear } from "@/lib/calendar-reminders";
 import {
-  expandCalendarEvents,
+  calendarEventsInRange,
   parseRecurrenceRule,
   recurrenceLabel,
   sourceEventId,
@@ -576,31 +576,6 @@ function eventDateRange(event: CalendarEvent): DateRange {
     dateKeyInSeoul(event.start_at),
     event.end_at ? dateKeyInSeoul(event.end_at) : dateKeyInSeoul(event.start_at),
   );
-}
-
-function eventCoversDate(event: CalendarEvent, date: string) {
-  const range = eventDateRange(event);
-  return date >= range.start && date <= range.end;
-}
-
-function mergeCalendarEventsWithSystemEvents(
-  events: CalendarEvent[],
-  systemEvents: CalendarEvent[],
-) {
-  const existing = new Set(
-    events.map(
-      (event) => `${eventDateRange(event).start}\u0000${event.title.trim()}`,
-    ),
-  );
-  return [
-    ...events,
-    ...systemEvents.filter(
-      (event) =>
-        !existing.has(
-          `${eventDateRange(event).start}\u0000${event.title.trim()}`,
-        ),
-    ),
-  ];
 }
 
 function calendarEventLaneKey(weekIndex: number, eventId: string) {
@@ -2171,8 +2146,13 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
     [year],
   );
   const panelEvents = useMemo(
-    () => mergeCalendarEventsWithSystemEvents(events, panelSystemEvents),
-    [events, panelSystemEvents],
+    () => calendarEventsInRange(
+      events,
+      toDateKey(panelDays[0]),
+      toDateKey(panelDays[panelDays.length - 1]),
+      panelSystemEvents,
+    ),
+    [events, panelDays, panelSystemEvents],
   );
   const panelEventLanes = useMemo(
     () => buildCalendarEventLanes(panelEvents, panelDays),
@@ -2558,32 +2538,10 @@ function CalendarView({
     timer: number | null;
   }>({ token: 0, timer: null });
 
-  const systemEvents = useMemo<CalendarEvent[]>(() => {
-    const year = visibleMonth.getFullYear();
-    return [year - 1, year, year + 1].flatMap(systemCalendarEventsForYear);
-  }, [visibleMonth]);
-
-  const allEvents = useMemo(
-    () => {
-      const months = calendarPanelMonths.map(
-        (date) => date.getFullYear() * 12 + date.getMonth(),
-      );
-      const firstMonth = Math.min(...months);
-      const lastMonth = Math.max(...months);
-      const firstDays = monthCalendarDays(
-        new Date(Math.floor(firstMonth / 12), firstMonth % 12, 1),
-      );
-      const lastDays = monthCalendarDays(
-        new Date(Math.floor(lastMonth / 12), lastMonth % 12, 1),
-      );
-      const from = toDateKey(firstDays[0]);
-      const to = toDateKey(lastDays[41]);
-      return mergeCalendarEventsWithSystemEvents(
-        expandCalendarEvents(events, from, to),
-        systemEvents,
-      );
-    },
-    [events, systemEvents, calendarPanelMonths],
+  const selectedYear = selected.getFullYear();
+  const systemEvents = useMemo(
+    () => systemCalendarEventsForYear(selectedYear),
+    [selectedYear],
   );
   const year = visibleMonth.getFullYear();
   const month = visibleMonth.getMonth();
@@ -2592,8 +2550,9 @@ function CalendarView({
     [backgrounds],
   );
 
-  const selectedEvents = allEvents.filter((event) =>
-    eventCoversDate(event, selectedDate),
+  const selectedEvents = useMemo(
+    () => calendarEventsInRange(events, selectedDate, selectedDate, systemEvents),
+    [events, selectedDate, systemEvents],
   );
   const selectedDaysOff = daysOff.filter((item) => item.date === selectedDate);
   const selectedHolidays = (

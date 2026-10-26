@@ -106,6 +106,27 @@ export function expandCalendarEvents<T extends RecurringEvent>(
   return result;
 }
 
+/** Shared projection for month cells and day details, including system events. */
+export function calendarEventsInRange(
+  events: readonly CalendarEvent[],
+  from: string,
+  to: string,
+  systemEvents: readonly CalendarEvent[] = [],
+) {
+  const occurrences = expandCalendarEvents(events, from, to);
+  const existing = new Set(occurrences.map(
+    (event) => `${calendarDateKey(event.start_at)}\u0000${event.title.trim()}`,
+  ));
+  return [
+    ...occurrences,
+    ...expandCalendarEvents(systemEvents, from, to).filter(
+      (event) => !existing.has(
+        `${calendarDateKey(event.start_at)}\u0000${event.title.trim()}`,
+      ),
+    ),
+  ];
+}
+
 export function recurrencePreview(start: string, rule: string | null) {
   if (!rule || !isCalendarDate(start)) return [];
   return expandCalendarEvents([
