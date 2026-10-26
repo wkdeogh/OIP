@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { UserCode } from "@/app/oip-types";
+import type { CalendarEvent, UserCode } from "@/app/oip-types";
 import {
   calendarReminderPayload,
   type CalendarReminderEvent,
@@ -9,6 +9,7 @@ import {
   visibleReminderEvents,
 } from "@/lib/calendar-reminders";
 import { supabaseTableRest } from "@/lib/supabase-rest";
+import { expandCalendarEvents } from "@/lib/calendar-recurrence";
 import {
   isExpiredPushSubscription,
   sendWebPush,
@@ -27,6 +28,7 @@ type PushSubscriptionRow = {
 };
 
 type DeliveryClaim = { id: string };
+type CalendarReminderSourceEvent = CalendarReminderEvent & Pick<CalendarEvent, "recurrence_rule">;
 
 async function responseJson<T>(response: Response) {
   const payload = await response.json().catch(() => null);
@@ -40,14 +42,14 @@ async function loadTodayEvents(dateKey: string) {
   const bounds = seoulDayBounds(dateKey);
   const search = new URLSearchParams({
     select:
-      "id,title,start_at,end_at,is_all_day,visibility,author_id,event_type",
+      "id,title,start_at,end_at,is_all_day,visibility,author_id,event_type,recurrence_rule",
     start_at: `lt.${bounds.end}`,
-    or: `(end_at.gte.${bounds.start},start_at.gte.${bounds.start})`,
+    or: `(recurrence_rule.not.is.null,end_at.gte.${bounds.start},start_at.gte.${bounds.start})`,
     order: "start_at.asc",
   });
   const response = await supabaseTableRest("calendar_events", search);
-  const events = await responseJson<CalendarReminderEvent[]>(response);
-  return [...events, ...systemAnniversariesForDate(dateKey)];
+  const events = await responseJson<CalendarReminderSourceEvent[]>(response);
+  return [...expandCalendarEvents(events, dateKey, dateKey), ...systemAnniversariesForDate(dateKey)];
 }
 
 async function loadSubscriptions() {

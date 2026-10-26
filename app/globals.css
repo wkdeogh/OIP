@@ -4218,6 +4218,160 @@ p {
   gap: 0;
 }
 
+.event-recurrence-section {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.event-recurrence-options {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.event-recurrence-options legend {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.event-recurrence-options legend > span {
+  margin-right: 6px;
+  color: var(--green-dark);
+  font-size: 1rem;
+}
+
+.event-recurrence-segments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.event-recurrence-segments label {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 44px;
+  place-items: center;
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.event-recurrence-segments label.is-selected {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--green-dark);
+  box-shadow: var(--shadow-soft);
+}
+
+.event-recurrence-segments label:has(input:focus-visible) {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.event-recurrence-segments input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.event-recurrence-details {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.event-recurrence-summary {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+.event-recurrence-summary small,
+.event-recurrence-until small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.event-recurrence-end {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.78rem;
+}
+
+.event-recurrence-end select {
+  width: auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.event-recurrence-preview {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.event-recurrence-preview > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.event-recurrence-preview > div > span {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.event-recurrence-edit-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 0.74rem;
+  line-height: 1.65;
+}
+
+.event-recurrence-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 0.65rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 .modal-card--event {
   padding: 18px 20px;
 }

@@ -28,6 +28,7 @@ export type CalendarEvent = {
   event_type: "normal" | "anniversary" | "holiday";
   color_mode?: "default" | "custom";
   custom_color?: string | null;
+  recurrence_rule?: string | null;
 };
 
 export type PublicHoliday = {

@@ -17,6 +17,13 @@ import {
 import { createPortal, flushSync } from "react-dom";
 import { systemCalendarEventsForYear } from "@/lib/calendar-reminders";
 import {
+  expandCalendarEvents,
+  parseRecurrenceRule,
+  recurrenceLabel,
+  sourceEventId,
+} from "@/lib/calendar-recurrence";
+import { EventRecurrenceFields } from "./EventRecurrenceFields";
+import {
   clearOipDataCache,
   readOipDataCache,
   readOipDataCacheSync,
@@ -1614,7 +1621,7 @@ function EventForm({
           </span>
           <span>
             <small>날짜</small>
-            <strong>{formatEventDateSummary(range)}</strong>
+            <strong>{range.start.slice(0, 4)}년 {formatEventDateSummary(range)}</strong>
           </span>
           <span className="event-setting-chevron" aria-hidden="true">
             ›
@@ -1695,6 +1702,16 @@ function EventForm({
             컬러
           </button>
         </div>
+
+        <EventRecurrenceFields
+          initialRule={initialEvent?.recurrence_rule}
+          start={range.start}
+        />
+        {parseRecurrenceRule(initialEvent?.recurrence_rule) ? (
+          <p className="event-recurrence-edit-note" role="note">
+            이 반복 일정 전체를 수정해요. 날짜는 첫 일정의 기준 날짜예요.
+          </p>
+        ) : null}
 
         <button
           className="button button--primary button--full event-submit"
@@ -1973,6 +1990,11 @@ function CalendarDaySheet({
                   )}
                   <div className="detail-row-copy">
                     <strong>{event.title}</strong>
+                    {parseRecurrenceRule(event.recurrence_rule) ? (
+                      <span className="event-recurrence-badge">
+                        ↻ {recurrenceLabel(event.recurrence_rule)}
+                      </span>
+                    ) : null}
                     <p>
                       {event.is_all_day
                         ? "종일"
@@ -2363,7 +2385,9 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                     isRange && (range.end === key || date.getDay() === 6);
                   const showTitle = !isRange || isSegmentStart;
                   const showTimeIndicator = showTitle && !event.is_all_day;
-                  const chipText = showTitle ? event.title : "\u00a0";
+                  const chipText = showTitle
+                    ? `${parseRecurrenceRule(event.recurrence_rule) ? "↻ " : ""}${event.title}`
+                    : "\u00a0";
                   const segmentSpanDays = isSegmentStart
                     ? Math.min(
                         7 - date.getDay(),
@@ -2540,8 +2564,26 @@ function CalendarView({
   }, [visibleMonth]);
 
   const allEvents = useMemo(
-    () => mergeCalendarEventsWithSystemEvents(events, systemEvents),
-    [events, systemEvents],
+    () => {
+      const months = calendarPanelMonths.map(
+        (date) => date.getFullYear() * 12 + date.getMonth(),
+      );
+      const firstMonth = Math.min(...months);
+      const lastMonth = Math.max(...months);
+      const firstDays = monthCalendarDays(
+        new Date(Math.floor(firstMonth / 12), firstMonth % 12, 1),
+      );
+      const lastDays = monthCalendarDays(
+        new Date(Math.floor(lastMonth / 12), lastMonth % 12, 1),
+      );
+      const from = toDateKey(firstDays[0]);
+      const to = toDateKey(lastDays[41]);
+      return mergeCalendarEventsWithSystemEvents(
+        expandCalendarEvents(events, from, to),
+        systemEvents,
+      );
+    },
+    [events, systemEvents, calendarPanelMonths],
   );
   const year = visibleMonth.getFullYear();
   const month = visibleMonth.getMonth();
@@ -7444,11 +7486,12 @@ export function OipApp({
   }
 
   function openEditEvent(item: CalendarEvent) {
-    const range = eventDateRange(item);
-    setEditingEvent(item);
+    const source = events.find((event) => event.id === sourceEventId(item));
+    if (!source) return;
+    const range = eventDateRange(source);
+    setEditingEvent(source);
     setEventRange(range);
-    setEventScope(calendarEventScope(item));
-    setSelectedDate(range.start);
+    setEventScope(calendarEventScope(source));
     setModal("event");
   }
 
@@ -7460,6 +7503,7 @@ export function OipApp({
     const endDate = String(form.get("end_date") ?? startDate);
     const startTime = String(form.get("start_time") ?? "");
     const endTime = String(form.get("end_time") ?? "");
+    const recurrence = String(form.get("recurrence_rule") ?? "") || null;
     const requestedColor = String(form.get("custom_color") ?? "");
     const customColor = /^#[0-9A-Fa-f]{6}$/.test(requestedColor)
       ? requestedColor
@@ -7468,6 +7512,21 @@ export function OipApp({
     const isPrivate = eventScope === "private";
     if (!title || !startDate || !endDate || endDate < startDate) return;
     const isAllDay = !startTime && !endTime;
+    if (
+      !isAllDay &&
+      (!startTime || !endTime || (startDate === endDate && endTime < startTime))
+    ) {
+      showToast("종료 시간을 시작 시간 이후로 설정해 주세요.");
+      return;
+    }
+    const parsedRecurrence = parseRecurrenceRule(recurrence);
+    if (
+      (recurrence && !parsedRecurrence) ||
+      (parsedRecurrence?.until && parsedRecurrence.until < startDate)
+    ) {
+      showToast("반복 종료일을 시작 날짜 이후로 설정해 주세요.");
+      return;
+    }
     const previous = editingEvent;
     const next: CalendarEvent = {
       ...(previous ?? {}),
@@ -7484,13 +7543,16 @@ export function OipApp({
       event_type: "normal",
       color_mode: !isPrivate && !isShared ? "custom" : "default",
       custom_color: customColor,
+      recurrence_rule: recurrence,
     };
     setEvents((items) =>
       previous
         ? items.map((item) => (item.id === previous.id ? next : item))
         : [...items, next],
     );
-    setSelectedDate(startDate);
+    if (!previous || !parseRecurrenceRule(previous.recurrence_rule)) {
+      setSelectedDate(startDate);
+    }
     setModal(null);
     setEditingEvent(null);
     void writeRecord(
@@ -7637,7 +7699,13 @@ export function OipApp({
   }
 
   function deleteEvent(item: CalendarEvent) {
-    if (!globalThis.confirm(`"${item.title}" 일정을 삭제할까요?`)) return;
+    const source = events.find((event) => event.id === sourceEventId(item));
+    if (!source) return;
+    item = source;
+    const message = parseRecurrenceRule(item.recurrence_rule)
+      ? `"${item.title}" 반복 일정 전체를 삭제할까요?\n모든 반복 날짜에서 이 일정이 삭제돼요.`
+      : `"${item.title}" 일정을 삭제할까요?`;
+    if (!globalThis.confirm(message)) return;
     setEvents((items) => items.filter((entry) => entry.id !== item.id));
     void writeRecord(
       "DELETE",

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
+import { calendarDateKey, parseRecurrenceRule } from "@/lib/calendar-recurrence";
 import {
   isResourceName,
   pickAllowedFields,
@@ -28,6 +29,17 @@ function configurationError(error: unknown) {
 function getResource(request: NextRequest): ResourceName | null {
   const resource = request.nextUrl.searchParams.get("resource") ?? "";
   return isResourceName(resource) ? resource : null;
+}
+
+function recurrenceError(resource: ResourceName, payload: Record<string, unknown>) {
+  if (resource !== "calendar_events" || payload.recurrence_rule == null || payload.recurrence_rule === "") return null;
+  const rule = typeof payload.recurrence_rule === "string"
+    ? parseRecurrenceRule(payload.recurrence_rule) : null;
+  if (!rule) return NextResponse.json({ error: "지원하지 않는 반복 설정입니다." }, { status: 400 });
+  if (rule.until && typeof payload.start_at === "string" && rule.until < calendarDateKey(payload.start_at)) {
+    return NextResponse.json({ error: "반복 종료일을 시작 날짜 이후로 설정해 주세요." }, { status: 400 });
+  }
+  return null;
 }
 
 function applyReadFilters(
@@ -107,6 +119,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const payload = pickAllowedFields(resource, body);
+    const invalidRecurrence = recurrenceError(resource, payload);
+    if (invalidRecurrence) return invalidRecurrence;
     if (Object.keys(payload).length === 0) {
       return NextResponse.json({ error: "저장할 값이 없습니다." }, { status: 400 });
     }
@@ -136,6 +150,8 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const payload = pickAllowedFields(resource, body);
+    const invalidRecurrence = recurrenceError(resource, payload);
+    if (invalidRecurrence) return invalidRecurrence;
     return proxyResponse(
       await supabaseRest(resource, new URLSearchParams({ id: `eq.${id}` }), {
         method: "PATCH",
