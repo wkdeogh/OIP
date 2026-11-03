@@ -72,3 +72,18 @@ test("keeps multi-day event width isolated from overlapping one-day events", asy
     /\.event-chip\.event-chip--segment-span\s*\{[^}]*justify-self:\s*start/s,
   );
 });
+
+test("fades outside-month content without hiding bars that cross into the current month", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const outsideRule = css.match(/^\.calendar-day--outside\s*\{([^}]+)\}/m)?.[1];
+  assert.ok(outsideRule);
+  assert.doesNotMatch(outsideRule, /opacity\s*:|filter\s*:|z-index\s*:/);
+  assert.match(
+    css,
+    /\.calendar-day--outside \.day-heading,[^{]+\.event-chip:not\(\.event-chip--range\)[^{]+\{\s*opacity:\s*0\.45/s,
+  );
+  assert.match(
+    css,
+    /\.calendar-day--split-day-off > \.day-events\s*\{\s*z-index:\s*auto/s,
+  );
+});

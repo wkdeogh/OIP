@@ -14,11 +14,10 @@ function segments(start, end) {
   return result;
 }
 
-test("continues February 24–March 3 in the March calendar", () => {
+test("continues February 24–March 3 without a break at the month boundary", () => {
   assert.deepEqual(segments("2027-02-24", "2027-03-03"), [
     ["2027-02-24", 4],
-    ["2027-02-28", 1],
-    ["2027-03-01", 3],
+    ["2027-02-28", 4],
   ]);
   assert.equal(
     calendarEventSegment(
@@ -29,24 +28,22 @@ test("continues February 24–March 3 in the March calendar", () => {
   );
 });
 
-test("ends the faded segment on the last day of the month", () => {
+test("keeps a single segment across a month boundary within the same week", () => {
   const range = { start: "2026-03-30", end: "2026-04-03" };
   assert.deepEqual(segments(range.start, range.end), [
-    ["2026-03-30", 2],
-    ["2026-04-01", 3],
+    ["2026-03-30", 5],
   ]);
-  assert.equal(calendarEventSegment(range, "2026-03-31").isSegmentEnd, true);
+  assert.equal(calendarEventSegment(range, "2026-03-31").isSegmentEnd, false);
+  assert.equal(calendarEventSegment(range, "2026-04-01").isSegmentStart, false);
 });
 
 test("handles leap-day and year boundaries", () => {
   assert.deepEqual(segments("2028-02-24", "2028-03-03"), [
     ["2028-02-24", 3],
-    ["2028-02-27", 3],
-    ["2028-03-01", 3],
+    ["2028-02-27", 6],
   ]);
   assert.deepEqual(segments("2026-12-30", "2027-01-03"), [
-    ["2026-12-30", 2],
-    ["2027-01-01", 2],
+    ["2026-12-30", 4],
     ["2027-01-03", 1],
   ]);
 });
@@ -65,7 +62,7 @@ test("preserves week breaks and single-day events", () => {
   );
 });
 
-test("covers every event day once without spanning across a month or week", () => {
+test("covers every event day once with breaks only between calendar weeks", () => {
   for (const [start, end] of [
     ["2027-02-24", "2027-03-03"],
     ["2028-02-24", "2028-03-03"],
@@ -74,9 +71,9 @@ test("covers every event day once without spanning across a month or week", () =
     const covered = [];
     for (const [segmentStart, spanDays] of segments(start, end)) {
       const date = new Date(`${segmentStart}T12:00:00Z`);
+      assert.ok(date.getUTCDay() + spanDays <= 7);
       for (let offset = 0; offset < spanDays; offset += 1) {
         const dateKey = date.toISOString().slice(0, 10);
-        assert.equal(dateKey.slice(0, 7), segmentStart.slice(0, 7));
         assert.ok(dateKey <= end);
         covered.push(dateKey);
         date.setUTCDate(date.getUTCDate() + 1);

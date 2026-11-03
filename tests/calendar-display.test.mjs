@@ -138,7 +138,7 @@ test("repeated multi-day bars cover all dates of the next occurrence", () => {
   }
 });
 
-test("multi-day bars restart visibly on March 1 in both adjacent calendars", () => {
+test("multi-day bars span the month boundary continuously in both adjacent calendars", () => {
   for (const rule of [null, "FREQ=YEARLY"]) {
     const source = event("2027-02-24", rule, {
       end_at: "2027-03-03T23:59:59+09:00",
@@ -148,10 +148,10 @@ test("multi-day bars restart visibly on March 1 in both adjacent calendars", () 
       const firstDayCells = dateCells(html, "2027-03-01");
       assert.ok(firstDayCells.length > 0);
       for (const cell of firstDayCells) {
-        assert.match(cell, /event-chip--segment-start/);
-        assert.match(cell, /background-color:#EBC44F/);
-        assert.match(cell, /data-span-end="2027-03-03"/);
-        assert.ok(cell.includes(source.title));
+        assert.match(cell, /일정 1개/);
+        assert.match(cell, /event-chip--range/);
+        assert.doesNotMatch(cell, /event-chip--segment-start|event-chip--segment-end/);
+        assert.doesNotMatch(cell, /data-span-end/);
       }
       for (const date of ["2027-03-02", "2027-03-03"]) {
         const cells = dateCells(html, date);
@@ -161,8 +161,14 @@ test("multi-day bars restart visibly on March 1 in both adjacent calendars", () 
           assert.match(cell, /event-chip--range/);
         }
       }
-      for (const cell of dateCells(html, "2027-02-28")) {
-        assert.match(cell, /event-chip--segment-end/);
+      const segmentStartCells = dateCells(html, "2027-02-28");
+      assert.ok(segmentStartCells.length > 0);
+      for (const cell of segmentStartCells) {
+        assert.match(cell, /event-chip--segment-start/);
+        assert.doesNotMatch(cell, /event-chip--segment-end/);
+        assert.match(cell, /background-color:#EBC44F/);
+        assert.match(cell, /data-span-end="2027-03-03"/);
+        assert.ok(cell.includes(source.title));
       }
       for (const cell of dateCells(html, "2027-03-04")) {
         assert.doesNotMatch(cell, /event-chip--range/);

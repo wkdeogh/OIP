@@ -1156,6 +1156,12 @@ p {
 .calendar-day--outside {
   color: #bbc2bc;
   background-color: #fafbfc;
+}
+
+.calendar-day--outside .day-heading,
+.calendar-day--outside .holiday-label,
+.calendar-day--outside .event-chip:not(.event-chip--range),
+.calendar-day--outside .more-events {
   opacity: 0.45;
 }
 
@@ -1180,6 +1186,10 @@ p {
 .calendar-day--split-day-off > * {
   position: relative;
   z-index: 1;
+}
+
+.calendar-day--split-day-off > .day-events {
+  z-index: auto;
 }
 
 .calendar-day--range-selected::after {
