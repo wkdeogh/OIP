@@ -16,6 +16,7 @@ import {
 } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { systemCalendarEventsForYear } from "@/lib/calendar-reminders";
+import { calendarEventSegment } from "@/lib/calendar-event-segment";
 import {
   calendarEventsInRange,
   parseRecurrenceRule,
@@ -2358,22 +2359,17 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                       event.author_id === "sanghee" ? "sanghee" : "daeho",
                       colorDefaults,
                     );
-                  const isRange = range.start !== range.end;
-                  const isSegmentStart =
-                    isRange && (range.start === key || date.getDay() === 0);
-                  const isSegmentEnd =
-                    isRange && (range.end === key || date.getDay() === 6);
+                  const {
+                    isRange,
+                    isSegmentStart,
+                    isSegmentEnd,
+                    spanDays: segmentSpanDays,
+                  } = calendarEventSegment(range, key);
                   const showTitle = !isRange || isSegmentStart;
                   const showTimeIndicator = showTitle && !event.is_all_day;
                   const chipText = showTitle
                     ? `${parseRecurrenceRule(event.recurrence_rule) ? "↻ " : ""}${event.title}`
                     : "\u00a0";
-                  const segmentSpanDays = isSegmentStart
-                    ? Math.min(
-                        7 - date.getDay(),
-                        dateKeysInRange({ start: key, end: range.end }).length,
-                      )
-                    : 1;
                   const segmentEndKey =
                     segmentSpanDays > 1
                       ? toDateKey(panelDays[dayIndex + segmentSpanDays - 1])

@@ -14,6 +14,7 @@ const replacements = {
   "react/jsx-runtime": import.meta.resolve("react/jsx-runtime"),
   "react-dom": import.meta.resolve("react-dom"),
   "@/lib/calendar-reminders": new URL("../lib/calendar-reminders.ts", import.meta.url).href,
+  "@/lib/calendar-event-segment": new URL("../lib/calendar-event-segment.ts", import.meta.url).href,
   "@/lib/calendar-recurrence": new URL("../lib/calendar-recurrence.ts", import.meta.url).href,
   "@/lib/client-data-cache": new URL("../lib/client-data-cache.ts", import.meta.url).href,
   "../../lib/travel-place-name": new URL("../lib/travel-place-name.ts", import.meta.url).href,
@@ -133,6 +134,39 @@ test("repeated multi-day bars cover all dates of the next occurrence", () => {
     for (const cell of cells) {
       assert.match(cell, /일정 1개/);
       assert.match(cell, /event-chip--range/);
+    }
+  }
+});
+
+test("multi-day bars restart visibly on March 1 in both adjacent calendars", () => {
+  for (const rule of [null, "FREQ=YEARLY"]) {
+    const source = event("2027-02-24", rule, {
+      end_at: "2027-03-03T23:59:59+09:00",
+    });
+    for (const selectedDate of ["2027-02-24", "2027-03-01"]) {
+      const html = calendar([source], selectedDate);
+      const firstDayCells = dateCells(html, "2027-03-01");
+      assert.ok(firstDayCells.length > 0);
+      for (const cell of firstDayCells) {
+        assert.match(cell, /event-chip--segment-start/);
+        assert.match(cell, /background-color:#EBC44F/);
+        assert.match(cell, /data-span-end="2027-03-03"/);
+        assert.ok(cell.includes(source.title));
+      }
+      for (const date of ["2027-03-02", "2027-03-03"]) {
+        const cells = dateCells(html, date);
+        assert.ok(cells.length > 0);
+        for (const cell of cells) {
+          assert.match(cell, /일정 1개/);
+          assert.match(cell, /event-chip--range/);
+        }
+      }
+      for (const cell of dateCells(html, "2027-02-28")) {
+        assert.match(cell, /event-chip--segment-end/);
+      }
+      for (const cell of dateCells(html, "2027-03-04")) {
+        assert.doesNotMatch(cell, /event-chip--range/);
+      }
     }
   }
 });
