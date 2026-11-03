@@ -1302,6 +1302,26 @@ p {
   white-space: nowrap;
 }
 
+.event-memo-icon {
+  display: block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+}
+
+.event-chip--has-memo .event-chip-label {
+  padding-right: 14px;
+}
+
+.event-chip-memo {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  font-size: 10px;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
 .event-chip--timed .event-chip-label {
   padding-left: 5px;
 }
@@ -1493,6 +1513,20 @@ p {
 
 .row-edit:hover {
   background: var(--green-soft);
+}
+
+.row-memo {
+  width: 44px;
+  height: 44px;
+  color: var(--muted);
+}
+
+.row-memo.has-memo {
+  color: var(--green);
+}
+
+.day-sheet .detail-row-copy {
+  overflow-wrap: anywhere;
 }
 
 .range-action-sheet {
@@ -4516,8 +4550,45 @@ p {
   display: flex;
   min-height: 46px;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding: 7px 2px 9px;
+}
+
+.event-memo-trigger {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.event-memo-trigger.has-memo {
+  color: var(--green-dark);
+}
+
+.event-memo-backdrop {
+  z-index: 200;
+}
+
+.event-memo-dialog .modal-head p {
+  overflow-wrap: anywhere;
+}
+
+.event-memo-dialog textarea {
+  min-height: 180px;
+  max-height: 50dvh;
+  resize: vertical;
+}
+
+.event-memo-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.8rem;
 }
 
 .event-color-trigger {

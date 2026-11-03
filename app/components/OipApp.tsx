@@ -9,6 +9,7 @@ import {
   startTransition,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -1485,6 +1486,168 @@ function EventColorPicker({
   );
 }
 
+function EventMemoIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="event-memo-icon"
+      fill="none"
+      focusable="false"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M14 3H5v18h14V8l-5-5Zm0 0v5h5M8 12h8M8 16h6"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function EventMemoEditor({
+  initialMemo,
+  eventTitle,
+  onClose,
+  onSave,
+}: {
+  initialMemo: string;
+  eventTitle?: string;
+  onClose: () => void;
+  onSave: (memo: string) => boolean | Promise<boolean>;
+}) {
+  const [draft, setDraft] = useState(initialMemo);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const titleId = useId();
+  const errorId = useId();
+
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.querySelector("textarea")?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus();
+      }
+    };
+  }, []);
+
+  const dialog = (
+    <div
+      className="modal-backdrop event-memo-backdrop"
+      onMouseDown={(event) => {
+        event.stopPropagation();
+        if (event.target === event.currentTarget && !isSaving) onClose();
+      }}
+      role="presentation"
+    >
+      <section
+        aria-busy={isSaving}
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="modal-card event-memo-dialog"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!isSaving) onClose();
+          }
+          if (event.key !== "Tab") return;
+          const controls = Array.from(
+            dialogRef.current?.querySelectorAll<HTMLElement>(
+              "button:not(:disabled), textarea:not(:disabled)",
+            ) ?? [],
+          );
+          const first = controls[0];
+          const last = controls[controls.length - 1];
+          if (!first) {
+            event.preventDefault();
+            return;
+          }
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }}
+        ref={dialogRef}
+        role="dialog"
+        tabIndex={-1}
+      >
+        <div className="modal-head">
+          <div>
+            <h2 id={titleId}>일정 메모</h2>
+            {eventTitle ? <p>{eventTitle}</p> : null}
+          </div>
+          <button
+            aria-label="메모 닫기"
+            className="icon-button"
+            disabled={isSaving}
+            onClick={onClose}
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+        <form
+          className="modal-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (isSaving) return;
+            dialogRef.current?.focus();
+            setIsSaving(true);
+            setError(null);
+            try {
+              if (await onSave(draft)) {
+                onClose();
+              } else {
+                setError("메모를 저장하지 못했어요. 다시 시도해 주세요.");
+              }
+            } catch {
+              setError("메모를 저장하지 못했어요. 다시 시도해 주세요.");
+            } finally {
+              setIsSaving(false);
+            }
+          }}
+        >
+          <label className="field">
+            <span>메모</span>
+            <textarea
+              aria-describedby={error ? errorId : undefined}
+              disabled={isSaving}
+              name="event_memo"
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="메모를 입력해 주세요"
+              rows={8}
+              value={draft}
+            />
+          </label>
+          {error ? (
+            <p className="event-memo-error" id={errorId} role="alert">{error}</p>
+          ) : null}
+          <button
+            className="button button--primary button--full"
+            disabled={isSaving}
+            type="submit"
+          >
+            {isSaving ? "저장 중…" : "메모 저장"}
+          </button>
+        </form>
+      </section>
+    </div>
+  );
+  return typeof document === "undefined"
+    ? dialog
+    : createPortal(dialog, document.body);
+}
+
 function EventForm({
   colorDefaults,
   currentUser,
@@ -1507,6 +1670,8 @@ function EventForm({
   );
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [isMemoEditorOpen, setIsMemoEditorOpen] = useState(false);
+  const [eventMemo, setEventMemo] = useState(initialEvent?.memo ?? "");
   const [hasTime, setHasTime] = useState(
     initialEvent ? !initialEvent.is_all_day : false,
   );
@@ -1550,6 +1715,7 @@ function EventForm({
       <form
         className="modal-form event-form"
         id="event-form"
+        inert={isMemoEditorOpen}
         onSubmit={onSubmit}
       >
         <label className="field event-title-field">
@@ -1565,6 +1731,7 @@ function EventForm({
 
         <input name="start_date" readOnly type="hidden" value={range.start} />
         <input name="end_date" readOnly type="hidden" value={range.end} />
+        <input name="memo" readOnly type="hidden" value={eventMemo} />
         <input
           name="start_time"
           readOnly
@@ -1663,6 +1830,17 @@ function EventForm({
 
         <div className="event-color-summary">
           <button
+            className={`event-memo-trigger${eventMemo.trim() ? " has-memo" : ""}`}
+            onClick={() => {
+              blurActiveInput();
+              setIsMemoEditorOpen(true);
+            }}
+            type="button"
+          >
+            <EventMemoIcon />
+            {eventMemo.trim() ? "메모 수정" : "메모 작성"}
+          </button>
+          <button
             aria-label={`컬러 선택, 현재 ${selectedColorName}`}
             className="event-color-trigger"
             onClick={() => {
@@ -1697,6 +1875,17 @@ function EventForm({
         </button>
       </form>
 
+      {isMemoEditorOpen ? (
+        <EventMemoEditor
+          eventTitle={initialEvent?.title}
+          initialMemo={eventMemo}
+          onClose={() => setIsMemoEditorOpen(false)}
+          onSave={(nextMemo) => {
+            setEventMemo(nextMemo);
+            return true;
+          }}
+        />
+      ) : null}
       {isDatePickerOpen ? (
         <EventDateRangePicker
           onApply={(nextRange) => {
@@ -1816,6 +2005,7 @@ function CalendarDaySheet({
   onDeleteDayOff,
   onDeleteEvent,
   onEditEvent,
+  onSaveEventMemo,
   onSetBackground,
 }: {
   colorDefaults: CalendarColorDefaults;
@@ -1829,8 +2019,11 @@ function CalendarDaySheet({
   onDeleteDayOff: (item: DayOff) => void;
   onDeleteEvent: (event: CalendarEvent) => void;
   onEditEvent: (event: CalendarEvent) => void;
+  onSaveEventMemo: (event: CalendarEvent, memo: string) => Promise<boolean>;
   onSetBackground: () => void;
 }) {
+  const [memoEvent, setMemoEvent] = useState<CalendarEvent | null>(null);
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -1854,8 +2047,9 @@ function CalendarDaySheet({
     >
       <section
         aria-labelledby="day-sheet-title"
-        aria-modal="true"
+        aria-modal={!memoEvent}
         className="day-sheet"
+        inert={Boolean(memoEvent)}
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -1994,6 +2188,14 @@ function CalendarDaySheet({
                   {event.author_id !== "system" ? (
                     <div className="detail-row-actions">
                       <button
+                        aria-label={`${event.title} 메모${event.memo?.trim() ? " 확인 및 편집" : " 작성"}`}
+                        className={`row-edit row-memo${event.memo?.trim() ? " has-memo" : ""}`}
+                        onClick={() => setMemoEvent(event)}
+                        type="button"
+                      >
+                        <EventMemoIcon />
+                      </button>
+                      <button
                         aria-label={`${event.title} 일정 수정`}
                         className="row-edit"
                         onClick={() => {
@@ -2027,6 +2229,15 @@ function CalendarDaySheet({
           ) : null}
         </div>
       </section>
+      {memoEvent ? (
+        <EventMemoEditor
+          eventTitle={memoEvent.title}
+          initialMemo={memoEvent.memo ?? ""}
+          key={memoEvent.id}
+          onClose={() => setMemoEvent(null)}
+          onSave={(memo) => onSaveEventMemo(memoEvent, memo)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -2379,6 +2590,9 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                     <span
                       className={[
                         "event-chip",
+                        showTitle && event.memo?.trim()
+                          ? "event-chip--has-memo"
+                          : "",
                         `event-chip--${calendarEventColor(event)}`,
                         isRange ? "event-chip--range" : "",
                         isSegmentStart ? "event-chip--segment-start" : "",
@@ -2414,6 +2628,15 @@ const CalendarMonthGrid = memo(function CalendarMonthGrid({
                       >
                         {chipText}
                       </span>
+                      {showTitle && event.memo?.trim() ? (
+                        <span
+                          aria-label="메모 있음"
+                          className="event-chip-memo"
+                          role="img"
+                        >
+                          <EventMemoIcon />
+                        </span>
+                      ) : null}
                     </span>
                   );
                 })}
@@ -2465,6 +2688,7 @@ function CalendarView({
   onDeleteDayOff,
   onVisibleYearChange,
   onEditEvent,
+  onSaveEventMemo,
   onSetBackground,
 }: {
   backgrounds: CalendarDayBackground[];
@@ -2480,6 +2704,7 @@ function CalendarView({
   onDeleteDayOff: (item: DayOff) => void;
   onVisibleYearChange: (year: number) => void;
   onEditEvent: (event: CalendarEvent) => void;
+  onSaveEventMemo: (event: CalendarEvent, memo: string) => Promise<boolean>;
   onSetBackground: (range: DateRange) => void;
 }) {
   const selected = parseDateKey(selectedDate);
@@ -3125,6 +3350,7 @@ function CalendarView({
           onDeleteDayOff={onDeleteDayOff}
           onDeleteEvent={onDeleteEvent}
           onEditEvent={onEditEvent}
+          onSaveEventMemo={onSaveEventMemo}
           onSetBackground={() =>
             onSetBackground({ start: selectedDate, end: selectedDate })
           }
@@ -7450,6 +7676,23 @@ export function OipApp({
     setModal("event");
   }
 
+  async function saveEventMemo(event: CalendarEvent, memo: string) {
+    const source = events.find((item) => item.id === sourceEventId(event));
+    if (!source) return false;
+    const nextMemo = memo.trim() || null;
+    const saved = await writeRecord(
+      "PATCH", "calendar_events", { memo: nextMemo }, source.id, true,
+    );
+    if (saved) {
+      setEvents((items) =>
+        items.map((item) =>
+          item.id === source.id ? { ...item, memo: nextMemo } : item,
+        ),
+      );
+    }
+    return saved;
+  }
+
   function saveEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -7487,6 +7730,7 @@ export function OipApp({
       ...(previous ?? {}),
       id: previous?.id ?? newId(),
       title,
+      memo: optionalFormValue(form, "memo"),
       start_at: `${startDate}T${startTime || (isAllDay ? "12:00" : "00:00")}:00+09:00`,
       end_at:
         endDate !== startDate || endTime
@@ -8392,6 +8636,7 @@ export function OipApp({
               onDeleteDayOff={deleteDayOff}
               onDeleteEvent={deleteEvent}
               onEditEvent={openEditEvent}
+              onSaveEventMemo={saveEventMemo}
               onSetBackground={openBackgroundModal}
               onVisibleYearChange={setHolidayYear}
               selectedDate={selectedDate}
