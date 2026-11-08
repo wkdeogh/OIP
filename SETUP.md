@@ -10,6 +10,9 @@
 전체를 SQL Editor에서 한 번 다시 실행합니다. 기존 데이터는 유지되고 새 테이블만
 추가됩니다.
 
+`가고 싶은 곳` 기능만 추가할 때는 SQL Editor에서
+[`supabase/travel-wishlist.sql`](./supabase/travel-wishlist.sql)을 실행하면 됩니다.
+
 ## 2. 비밀번호와 환경 변수
 
 프로젝트 루트에 `.env.local`을 만들고 `.env.example` 항목을 채웁니다.

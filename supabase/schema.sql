@@ -175,6 +175,20 @@ create table if not exists public.shopping_items (
 create index if not exists shopping_items_state_created_idx
   on public.shopping_items (is_purchased, created_at desc);
 
+create table if not exists public.travel_wishlist (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(btrim(name)) between 1 and 160),
+  is_completed boolean not null default false,
+  author_id text not null references public.profiles(code),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists travel_wishlist_state_created_idx
+  on public.travel_wishlist (is_completed, created_at desc, id);
+
+grant select, insert, update, delete on public.travel_wishlist to service_role;
+
 create table if not exists public.trips (
   id uuid primary key default gen_random_uuid(),
   title text not null check (char_length(title) between 1 and 160),
@@ -399,6 +413,7 @@ begin
     'push_subscriptions',
     'todos',
     'shopping_items',
+    'travel_wishlist',
     'trips',
     'trip_flights',
     'trip_accommodations',
@@ -434,6 +449,7 @@ begin
     'public_holidays',
     'todos',
     'shopping_items',
+    'travel_wishlist',
     'trips',
     'trip_flights',
     'trip_accommodations',

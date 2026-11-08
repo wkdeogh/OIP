@@ -14,6 +14,7 @@ import type {
   TripFood,
   TravelLinkPlace,
   TravelLinkSource,
+  TravelWishlistItem,
   TripPlace,
   TripTransportation,
   UserCode,
@@ -34,6 +35,7 @@ export type OipDataSnapshot = {
   todos: Todo[];
   shopping: ShoppingItem[];
   trips: Trip[];
+  travelWishlist?: TravelWishlistItem[];
   tripFlights: TripFlight[];
   tripAccommodations: TripAccommodation[];
   tripTransportations: TripTransportation[];

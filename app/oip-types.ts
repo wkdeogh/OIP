@@ -81,6 +81,14 @@ export type ShoppingItem = {
   created_at?: string;
 };
 
+export type TravelWishlistItem = {
+  id: string;
+  name: string;
+  is_completed: boolean;
+  author_id: UserCode;
+  created_at?: string;
+};
+
 export type Trip = {
   id: string;
   title: string;

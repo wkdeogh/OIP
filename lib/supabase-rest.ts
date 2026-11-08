@@ -81,6 +81,11 @@ export const resourceConfigs = {
     ],
     order: "is_purchased.asc,created_at.desc",
   },
+  travel_wishlist: {
+    table: "travel_wishlist",
+    fields: ["name", "is_completed", "author_id"],
+    order: "is_completed.asc,created_at.desc,id.asc",
+  },
   trips: {
     table: "trips",
     fields: [

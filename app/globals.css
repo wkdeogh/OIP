@@ -2127,7 +2127,7 @@ p {
   z-index: 9;
   top: 38px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 180px));
+  grid-template-columns: repeat(3, minmax(0, 180px));
   justify-content: center;
   gap: 3px;
   margin: -18px -14px 12px;
@@ -3684,6 +3684,36 @@ p {
 
 .trip-checklist-item.is-complete > strong {
   text-decoration: line-through;
+}
+
+.travel-wishlist-add input,
+.travel-wishlist-add .button {
+  min-height: 44px;
+}
+
+.travel-wishlist-item {
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 8px;
+}
+
+.travel-wishlist-item > strong {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.travel-wishlist-item .travel-check,
+.travel-wishlist-item .icon-button {
+  width: 44px;
+  height: 44px;
+  margin: 0;
+}
+
+.travel-wishlist-item.is-complete {
+  opacity: 1;
+}
+
+.travel-wishlist-item.is-complete > strong {
+  color: var(--muted);
 }
 
 .trip-notepad textarea {

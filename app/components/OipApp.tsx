@@ -51,6 +51,7 @@ import type {
   TravelLinkAnalysis,
   TravelLinkPlace,
   TravelLinkSource,
+  TravelWishlistItem,
   TripPlace,
   TripTransportation,
   UserCode,
@@ -70,7 +71,7 @@ type MainTab =
   | "parking";
 type TaskTab = "todo" | "shopping";
 type ThemeMode = "light" | "dark";
-type TravelTab = "list" | "map";
+type TravelTab = "wishlist" | "list" | "map";
 type PushStatus =
   | "checking"
   | "unsupported"
@@ -4543,6 +4544,119 @@ function CountryPicker({
   );
 }
 
+function TravelWishlistPanel({
+  items,
+  onCreate,
+  onToggle,
+  onDelete,
+}: {
+  items: TravelWishlistItem[];
+  onCreate: (name: string) => Promise<boolean>;
+  onToggle: (item: TravelWishlistItem) => Promise<boolean>;
+  onDelete: (item: TravelWishlistItem) => Promise<boolean>;
+}) {
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
+  const remaining = items.filter((item) => !item.is_completed);
+  const completed = items.filter((item) => item.is_completed);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = name.trim();
+    if (!value || saving) return;
+    setSaving(true);
+    try {
+      if (await onCreate(value)) setName("");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function update(item: TravelWishlistItem, action: typeof onToggle) {
+    if (pendingIds.includes(item.id)) return;
+    setPendingIds((current) => [...current, item.id]);
+    try {
+      await action(item);
+    } finally {
+      setPendingIds((current) => current.filter((id) => id !== item.id));
+    }
+  }
+
+  function renderItems(list: TravelWishlistItem[]) {
+    return (
+      <div className="trip-checklist-list">
+        {list.map((item) => (
+          <div
+            className={`trip-checklist-item travel-wishlist-item${item.is_completed ? " is-complete" : ""}`}
+            key={item.id}
+            aria-busy={pendingIds.includes(item.id)}
+          >
+            <button
+              aria-label={`${item.name} ${item.is_completed ? "완료 취소" : "완료"}`}
+              aria-pressed={item.is_completed}
+              className="travel-check"
+              disabled={pendingIds.includes(item.id)}
+              onClick={() => void update(item, onToggle)}
+              type="button"
+            >
+              {item.is_completed ? "✓" : ""}
+            </button>
+            <strong>{item.name}</strong>
+            <button
+              aria-label={`${item.name} 제거`}
+              className="icon-button icon-button--small"
+              disabled={pendingIds.includes(item.id)}
+              onClick={() => void update(item, onDelete)}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="trip-checklist-panel">
+      <form
+        className="trip-checklist-add travel-wishlist-add"
+        onSubmit={submit}
+        aria-busy={saving}
+      >
+        <input
+          aria-label="가고 싶은 곳"
+          disabled={saving}
+          maxLength={160}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="가고 싶은 곳 추가"
+          required
+          value={name}
+        />
+        <button
+          className="button button--primary"
+          disabled={saving || !name.trim()}
+          type="submit"
+        >
+          {saving ? "저장 중…" : "저장"}
+        </button>
+      </form>
+      {remaining.length ? (
+        renderItems(remaining)
+      ) : (
+        <p className="trip-empty-copy">가고 싶은 곳을 추가해 보세요.</p>
+      )}
+      {completed.length ? (
+        <details className="past-trips">
+          <summary>완료한 곳 {completed.length}</summary>
+          {renderItems(completed)}
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
 function TripChecklistPanel({
   items,
   onAdd,
@@ -4683,6 +4797,10 @@ function TravelView({
   places,
   travelLinkPlaces,
   travelLinkSources,
+  wishlist,
+  onCreateWishlistItem,
+  onToggleWishlistItem,
+  onDeleteWishlistItem,
   onAdd,
   onDeleteLinkSource,
   onSaveDetail,
@@ -4706,6 +4824,10 @@ function TravelView({
   places: TripPlace[];
   travelLinkPlaces: TravelLinkPlace[];
   travelLinkSources: TravelLinkSource[];
+  wishlist: TravelWishlistItem[];
+  onCreateWishlistItem: (name: string) => Promise<boolean>;
+  onToggleWishlistItem: (item: TravelWishlistItem) => Promise<boolean>;
+  onDeleteWishlistItem: (item: TravelWishlistItem) => Promise<boolean>;
   onAdd: () => void;
   onDeleteLinkSource: (source: TravelLinkSource) => boolean;
   onSaveLink: (analysis: TravelLinkAnalysis) => Promise<boolean>;
@@ -4730,7 +4852,7 @@ function TravelView({
   ) => void;
 }) {
   const today = toDateKey(new Date());
-  const [travelTab, setTravelTab] = useState<TravelTab>("list");
+  const [travelTab, setTravelTab] = useState<TravelTab>("wishlist");
   const [mapHasMounted, setMapHasMounted] = useState(false);
   const [mapFocusRequest, setMapFocusRequest] = useState<{
     placeId: string;
@@ -4979,6 +5101,15 @@ function TravelView({
     <section className="travel-view">
       <div className="travel-sub-tabs" role="tablist" aria-label="여행 메뉴">
         <button
+          aria-selected={travelTab === "wishlist"}
+          className={travelTab === "wishlist" ? "is-active" : ""}
+          onClick={() => setTravelTab("wishlist")}
+          role="tab"
+          type="button"
+        >
+          가고 싶은 곳
+        </button>
+        <button
           aria-selected={travelTab === "list"}
           className={travelTab === "list" ? "is-active" : ""}
           onClick={() => setTravelTab("list")}
@@ -4996,6 +5127,15 @@ function TravelView({
         >
           지도
         </button>
+      </div>
+
+      <div className="travel-list-layout" hidden={travelTab !== "wishlist"}>
+        <TravelWishlistPanel
+          items={wishlist}
+          onCreate={onCreateWishlistItem}
+          onToggle={onToggleWishlistItem}
+          onDelete={onDeleteWishlistItem}
+        />
       </div>
 
       <div className="travel-list-layout" hidden={travelTab !== "list"}>
@@ -6506,6 +6646,7 @@ export function OipApp({
   const [todos, setTodos] = useState<Todo[]>([]);
   const [shopping, setShopping] = useState<ShoppingItem[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [travelWishlist, setTravelWishlist] = useState<TravelWishlistItem[]>([]);
   const [tripFlights, setTripFlights] = useState<TripFlight[]>([]);
   const [tripAccommodations, setTripAccommodations] = useState<
     TripAccommodation[]
@@ -6549,6 +6690,7 @@ export function OipApp({
       tripTransportations,
       tripFoods,
       tripPlaces,
+      travelWishlist,
       travelLinkSources,
       travelLinkPlaces,
       fridge,
@@ -6568,6 +6710,7 @@ export function OipApp({
       tripTransportations,
       tripFoods,
       tripPlaces,
+      travelWishlist,
       travelLinkSources,
       travelLinkPlaces,
       fridge,
@@ -6766,6 +6909,9 @@ export function OipApp({
     );
     setTripPlaces((current) =>
       retainEquivalentValue(current, data.tripPlaces ?? []),
+    );
+    setTravelWishlist((current) =>
+      retainEquivalentValue(current, data.travelWishlist ?? []),
     );
     setTravelLinkSources((current) =>
       retainEquivalentValue(current, data.travelLinkSources ?? []),
@@ -7020,6 +7166,7 @@ export function OipApp({
       "calendar_days_off",
       "todos",
       "shopping_items",
+      "travel_wishlist",
       "trips",
       "trip_flights",
       "trip_accommodations",
@@ -7071,6 +7218,8 @@ export function OipApp({
               `/api/records?resource=${resource}&user=${currentUser}`,
             );
             if (!response.ok) {
+              // A pending wishlist schema update must not block existing data.
+              if (resource === "travel_wishlist") return [resource, null] as const;
               const error = (await response.json().catch(() => ({}))) as {
                 code?: string;
               };
@@ -7114,6 +7263,11 @@ export function OipApp({
           setTrips((current) =>
             retainEquivalentValue(current, (loaded.trips as Trip[]) ?? []),
           );
+          if (Array.isArray(loaded.travel_wishlist)) {
+            setTravelWishlist((current) =>
+              retainEquivalentValue(current, loaded.travel_wishlist as TravelWishlistItem[]),
+            );
+          }
           setTripFlights((current) =>
             retainEquivalentValue(
               current,
@@ -7167,6 +7321,7 @@ export function OipApp({
           setTodos([]);
           setShopping([]);
           setTrips([]);
+          setTravelWishlist([]);
           setTripFlights([]);
           setTripAccommodations([]);
           setTripTransportations([]);
@@ -7247,6 +7402,7 @@ export function OipApp({
       ],
       tasks: ["todos", "shopping_items"],
       travel: [
+        "travel_wishlist",
         "trips",
         "trip_flights",
         "trip_accommodations",
@@ -7304,6 +7460,11 @@ export function OipApp({
         case "shopping_items":
           setShopping((current) =>
             retainEquivalentValue(current, value as ShoppingItem[]),
+          );
+          return;
+        case "travel_wishlist":
+          setTravelWishlist((current) =>
+            retainEquivalentValue(current, value as TravelWishlistItem[]),
           );
           return;
         case "trips":
@@ -7390,7 +7551,10 @@ export function OipApp({
               `/api/records?resource=${resource}&user=${currentUser}`,
               { cache: "no-store", signal: controller.signal },
             );
-            if (!response.ok) throw new Error("LIVE_SYNC_FAILED");
+            if (!response.ok) {
+              if (resource === "travel_wishlist") return [resource, null] as const;
+              throw new Error("LIVE_SYNC_FAILED");
+            }
             return [resource, await response.json()] as const;
           }),
         );
@@ -7402,9 +7566,9 @@ export function OipApp({
           return;
         }
         startTransition(() => {
-          entries.forEach(([resource, value]) =>
-            applyLiveResource(resource, value),
-          );
+          entries.forEach(([resource, value]) => {
+            if (value !== null) applyLiveResource(resource, value);
+          });
         });
       } catch {
         // Keep the current screen usable and retry quietly on the next interval.
@@ -8098,6 +8262,42 @@ export function OipApp({
     });
   }
 
+  async function createWishlistItem(name: string) {
+    const value = name.trim();
+    if (!value || value.length > 160) return false;
+    const next: TravelWishlistItem = {
+      id: newId(),
+      name: value,
+      is_completed: false,
+      author_id: currentUser,
+      created_at: new Date().toISOString(),
+    };
+    if (!(await writeRecord("POST", "travel_wishlist", next))) return false;
+    setTravelWishlist((items) => [next, ...items]);
+    return true;
+  }
+
+  async function toggleWishlistItem(item: TravelWishlistItem) {
+    const isCompleted = !item.is_completed;
+    const saved = await writeRecord(
+      "PATCH", "travel_wishlist", { is_completed: isCompleted }, item.id,
+    );
+    if (!saved) return false;
+    setTravelWishlist((items) =>
+      items.map((current) =>
+        current.id === item.id ? { ...current, is_completed: isCompleted } : current,
+      ),
+    );
+    return true;
+  }
+
+  async function deleteWishlistItem(item: TravelWishlistItem) {
+    if (!window.confirm(`“${item.name}”을 가고 싶은 곳에서 제거할까요?`)) return false;
+    if (!(await writeRecord("DELETE", "travel_wishlist", undefined, item.id))) return false;
+    setTravelWishlist((items) => items.filter((current) => current.id !== item.id));
+    return true;
+  }
+
   function addTrip(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -8706,6 +8906,10 @@ export function OipApp({
               googleMapsApiKey={googleMapsApiKey}
               isActive={mainTab === "travel"}
               onAdd={() => setModal("trip")}
+              wishlist={travelWishlist}
+              onCreateWishlistItem={createWishlistItem}
+              onToggleWishlistItem={toggleWishlistItem}
+              onDeleteWishlistItem={deleteWishlistItem}
               onDeleteLinkSource={deleteTravelLinkSource}
               onDeleteDetail={deleteTripDetail}
               onDeleteTrip={deleteTrip}
