@@ -93,12 +93,21 @@ test("travel navigation places wishlist first and switches between all three exi
 
 test("wishlist separates completed places and provides named completion, undo and remove actions", () => {
   const completed = { ...fixture, id: "wish-2", name: "교토", is_completed: true };
-  const html = renderToStaticMarkup(panel([fixture, completed]).render());
+  const tree = panel([fixture, completed]).render();
+  const row = tree.props.children[1].props.children[0];
+  assert.equal(row.props.children[0].type, "span");
+  assert.equal(row.props.children[0].props["aria-hidden"], "true");
+  assert.equal(row.props.children[0].props.className, "travel-wishlist-icon");
+  assert.deepEqual(row.props.children[2].props.children.map(button => button.props.children), ["완료", "×"]);
+  const completedRow = tree.props.children[2].props.children[1].props.children[0];
+  assert.equal(completedRow.props.children[2].props.children[0].props.children, "완료 취소");
+  const html = renderToStaticMarkup(tree);
   assert.match(html, /aria-label="가고 싶은 곳"/);
   assert.match(html, /maxlength="160"/i);
   assert.match(html, /aria-label="아이슬란드 오로라 완료" aria-pressed="false"/);
   assert.match(html, /<details[^>]*>[\s\S]*완료한 곳 1[\s\S]*aria-label="교토 완료 취소" aria-pressed="true"/);
   assert.match(html, /aria-label="교토 제거"/);
+  assert.doesNotMatch(html, /class="travel-check"/);
   assert.doesNotMatch(html, /<details[^>]*\bopen/);
 });
 

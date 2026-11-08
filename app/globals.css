@@ -3692,8 +3692,23 @@ p {
 }
 
 .travel-wishlist-item {
-  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
   gap: 8px;
+}
+
+.travel-wishlist-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.travel-wishlist-icon svg {
+  width: 25px;
+  height: 25px;
 }
 
 .travel-wishlist-item > strong {
@@ -3701,10 +3716,33 @@ p {
   white-space: normal;
 }
 
-.travel-wishlist-item .travel-check,
+.travel-wishlist-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.travel-wishlist-complete {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background 150ms ease;
+}
+
+.travel-wishlist-complete:hover:not(:disabled) {
+  background: var(--line);
+}
+
 .travel-wishlist-item .icon-button {
   width: 44px;
   height: 44px;
+  flex-basis: 44px;
   margin: 0;
 }
 

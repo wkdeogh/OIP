@@ -4592,26 +4592,38 @@ function TravelWishlistPanel({
             key={item.id}
             aria-busy={pendingIds.includes(item.id)}
           >
-            <button
-              aria-label={`${item.name} ${item.is_completed ? "완료 취소" : "완료"}`}
-              aria-pressed={item.is_completed}
-              className="travel-check"
-              disabled={pendingIds.includes(item.id)}
-              onClick={() => void update(item, onToggle)}
-              type="button"
-            >
-              {item.is_completed ? "✓" : ""}
-            </button>
+            <span className="travel-wishlist-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 6V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V6" />
+                <rect x="5" y="6" width="14" height="14" rx="4" />
+                <path d="M8 20v1m8-1v1" />
+                <circle cx="9.5" cy="12" r=".8" fill="currentColor" stroke="none" />
+                <circle cx="14.5" cy="12" r=".8" fill="currentColor" stroke="none" />
+                <path d="M10 15c1 1 3 1 4 0" />
+              </svg>
+            </span>
             <strong>{item.name}</strong>
-            <button
-              aria-label={`${item.name} 제거`}
-              className="icon-button icon-button--small"
-              disabled={pendingIds.includes(item.id)}
-              onClick={() => void update(item, onDelete)}
-              type="button"
-            >
-              ×
-            </button>
+            <div className="travel-wishlist-actions">
+              <button
+                aria-label={`${item.name} ${item.is_completed ? "완료 취소" : "완료"}`}
+                aria-pressed={item.is_completed}
+                className="travel-wishlist-complete"
+                disabled={pendingIds.includes(item.id)}
+                onClick={() => void update(item, onToggle)}
+                type="button"
+              >
+                {item.is_completed ? "완료 취소" : "완료"}
+              </button>
+              <button
+                aria-label={`${item.name} 제거`}
+                className="icon-button icon-button--small"
+                disabled={pendingIds.includes(item.id)}
+                onClick={() => void update(item, onDelete)}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
           </div>
         ))}
       </div>
