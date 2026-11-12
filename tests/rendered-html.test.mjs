@@ -49,6 +49,17 @@ test("server-renders the direct parking route", async () => {
   assert.match(html, /parking/i);
 });
 
+test("server-renders the direct dashboard route behind the existing authentication flow", async () => {
+  const response = await render("/dashboard");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /불러오는 중/);
+  assert.match(html, /dashboard/);
+  const api = await render("/api/dashboard?user=daeho");
+  assert.equal(api.status, 401);
+  assert.match(api.headers.get("cache-control"), /no-store/);
+});
+
 test("protects push subscription and reminder endpoints", async () => {
   const subscription = await render("/api/push/subscription");
   assert.equal(subscription.status, 401);

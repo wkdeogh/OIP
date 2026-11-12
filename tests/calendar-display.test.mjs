@@ -19,6 +19,8 @@ const replacements = {
   "@/lib/client-data-cache": new URL("../lib/client-data-cache.ts", import.meta.url).href,
   "../../lib/travel-place-name": new URL("../lib/travel-place-name.ts", import.meta.url).href,
   "./TravelMap": "data:text/javascript,export function TravelMap(){return null}",
+  "./DashboardView": "data:text/javascript,export function DashboardView(){return null}",
+  "@/lib/dashboard-sync": new URL("../lib/dashboard-sync.ts", import.meta.url).href,
   "./EventRecurrenceFields": "data:text/javascript,export function EventRecurrenceFields(){return null}",
 };
 const compiled = ts.transpileModule(`${source}\nexport { CalendarView, CalendarDaySheet, EventForm, EventMemoEditor, optionalFormValue };`, {

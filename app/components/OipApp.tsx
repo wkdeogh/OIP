@@ -33,6 +33,8 @@ import {
   writeOipDataCache,
 } from "@/lib/client-data-cache";
 import { TravelMap } from "./TravelMap";
+import { DashboardView } from "./DashboardView";
+import { DASHBOARD_RESOURCES, type DashboardPayload, type DashboardSyncState } from "@/lib/dashboard-sync";
 import type {
   CalendarColorDefaults,
   CalendarColorSettings,
@@ -64,6 +66,7 @@ import {
 } from "../../lib/travel-place-name";
 
 type MainTab =
+  | "dashboard"
   | "schedule"
   | "tasks"
   | "travel"
@@ -6622,6 +6625,8 @@ export function OipApp({
   >("checking");
   const [currentUser, setCurrentUser] = useState<UserCode>("daeho");
   const [mainTab, setMainTab] = useState<MainTab>(initialMainTab);
+  const [dashboardSyncState, setDashboardSyncState] = useState<DashboardSyncState>("connecting");
+  const [dashboardLastSyncedAt, setDashboardLastSyncedAt] = useState<number | null>(null);
   const [calendarResetKey, setCalendarResetKey] = useState(0);
   const [taskTab, setTaskTab] = useState<TaskTab>("todo");
   const [modal, setModal] = useState<ModalName>(null);
@@ -6869,7 +6874,7 @@ export function OipApp({
   }, []);
 
   useEffect(() => {
-    const targetPath = mainTab === "parking" ? "/parking" : "/";
+    const targetPath = mainTab === "dashboard" ? "/dashboard" : mainTab === "parking" ? "/parking" : "/";
     if (window.location.pathname === targetPath) return;
     window.history.replaceState(
       { ...window.history.state, oipMainTab: mainTab },
@@ -7399,13 +7404,13 @@ export function OipApp({
   useEffect(() => {
     if (
       authState !== "ready" ||
-      cacheReadyUser !== currentUser ||
-      isDataLoading
+      (mainTab !== "dashboard" && (cacheReadyUser !== currentUser || isDataLoading))
     ) {
       return;
     }
 
     const resourcesByTab = {
+      dashboard: DASHBOARD_RESOURCES,
       schedule: [
         "calendar_color_settings",
         "calendar_events",
@@ -7556,12 +7561,39 @@ export function OipApp({
 
       syncing = true;
       const mutationVersion = localMutationVersionRef.current;
+      const requestController = new AbortController();
+      const timeout = window.setTimeout(() => requestController.abort(), 15_000);
+      const abortRequest = () => requestController.abort();
+      controller.signal.addEventListener("abort", abortRequest, { once: true });
       try {
-        const entries = await Promise.all(
+        let partialFailure = false;
+        let entries: Array<readonly [LiveResource, unknown]>;
+        if (mainTab === "dashboard") {
+          const response = await fetch(`/api/dashboard?user=${currentUser}`, {
+            cache: "no-store", signal: requestController.signal,
+          });
+          if (response.status === 401) {
+            authenticationRejectedRef.current = true;
+            restoredCacheUserRef.current = null;
+            void clearOipDataCache().catch(() => undefined);
+            if (active) setAuthState("locked");
+            return;
+          }
+          if (!response.ok) throw new Error("LIVE_SYNC_FAILED");
+          const payload = await response.json() as DashboardPayload;
+          if (!payload.records || !Array.isArray(payload.failedResources)) throw new Error("INVALID_DASHBOARD_DATA");
+          partialFailure = payload.failedResources.length > 0;
+          entries = DASHBOARD_RESOURCES.flatMap((resource) => {
+            const value = payload.records[resource];
+            return Array.isArray(value) ? [[resource, value] as const] : [];
+          });
+          partialFailure ||= entries.length !== DASHBOARD_RESOURCES.length;
+        } else {
+          entries = await Promise.all(
           resources.map(async (resource) => {
             const response = await fetch(
               `/api/records?resource=${resource}&user=${currentUser}`,
-              { cache: "no-store", signal: controller.signal },
+              { cache: "no-store", signal: requestController.signal },
             );
             if (!response.ok) {
               if (resource === "travel_wishlist") return [resource, null] as const;
@@ -7570,6 +7602,7 @@ export function OipApp({
             return [resource, await response.json()] as const;
           }),
         );
+        }
         if (
           !active ||
           pendingWritesRef.current > 0 ||
@@ -7581,10 +7614,22 @@ export function OipApp({
           entries.forEach(([resource, value]) => {
             if (value !== null) applyLiveResource(resource, value);
           });
+          if (mainTab === "dashboard") {
+            setDashboardSyncState(partialFailure ? "delayed" : "live");
+            if (!partialFailure) setDashboardLastSyncedAt(Date.now());
+            setCacheReadyUser(currentUser);
+            setIsDataLoading(false);
+          }
         });
       } catch {
+        if (active && mainTab === "dashboard") {
+          setDashboardSyncState("delayed");
+          setIsDataLoading(false);
+        }
         // Keep the current screen usable and retry quietly on the next interval.
       } finally {
+        window.clearTimeout(timeout);
+        controller.signal.removeEventListener("abort", abortRequest);
         syncing = false;
         scheduleNextSync();
       }
@@ -7599,6 +7644,7 @@ export function OipApp({
 
     window.addEventListener("focus", syncNow);
     window.addEventListener("online", syncNow);
+    window.addEventListener("pageshow", syncNow);
     document.addEventListener("visibilitychange", syncNow);
     void syncVisibleData();
 
@@ -7608,6 +7654,7 @@ export function OipApp({
       if (timer !== undefined) window.clearTimeout(timer);
       window.removeEventListener("focus", syncNow);
       window.removeEventListener("online", syncNow);
+      window.removeEventListener("pageshow", syncNow);
       document.removeEventListener("visibilitychange", syncNow);
     };
   }, [authState, cacheReadyUser, currentUser, isDataLoading, mainTab]);
@@ -7804,6 +7851,8 @@ export function OipApp({
   }
 
   function chooseUser(user: UserCode) {
+    setDashboardLastSyncedAt(null);
+    setDashboardSyncState("connecting");
     localStorage.setItem("oip.currentUser", user);
     authenticationRejectedRef.current = false;
     restoredCacheUserRef.current = null;
@@ -7815,6 +7864,13 @@ export function OipApp({
   }
 
   function selectMainTab(tab: MainTab) {
+    if (tab === "dashboard") {
+      setDashboardSyncState("connecting");
+      setDashboardLastSyncedAt(null);
+    }
+    if (tab === "schedule" && mainTab === "dashboard") {
+      setSelectedDate(toDateKey(new Date()));
+    }
     if (tab === "schedule" && mainTab === "schedule") {
       setSelectedDate(toDateKey(new Date()));
       setCalendarResetKey((current) => current + 1);
@@ -8757,6 +8813,21 @@ export function OipApp({
     );
   }
 
+  if (mainTab === "dashboard") {
+    return <DashboardView
+      currentUser={currentUser}
+      data={currentDataSnapshot}
+      isLoading={isDataLoading}
+      lastSyncedAt={dashboardLastSyncedAt}
+      onChangeUser={() => setAuthState("selecting")}
+      onOpen={selectMainTab}
+      onToggleTheme={toggleTheme}
+      onYearChange={setHolidayYear}
+      syncState={dashboardSyncState}
+      theme={theme}
+    />;
+  }
+
   const activeTab = MAIN_TABS.find((tab) => tab.id === mainTab) ?? MAIN_TABS[0];
 
   return (
@@ -8801,6 +8872,10 @@ export function OipApp({
             <h1>{activeTab.title}</h1>
           </div>
           <div className="header-actions">
+            <button className="dashboard-entry" onClick={() => selectMainTab("dashboard")} type="button">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="3" width="7" height="18" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+              대시보드 보기
+            </button>
             <button
               aria-label={`현재 사용자 ${USER_META[currentUser].name}, 사용자 변경`}
               className={`user-pill user-pill--${currentUser}`}

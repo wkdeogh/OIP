@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
+import "./dashboard.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();

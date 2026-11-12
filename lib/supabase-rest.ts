@@ -267,6 +267,35 @@ export function pickAllowedFields(
   );
 }
 
+export function recordReadFilters(
+  resource: ResourceName,
+  source: URLSearchParams,
+  currentUser: string,
+) {
+  const search = new URLSearchParams({ select: "*" });
+  const order = resourceConfigs[resource].order;
+  if (order) search.set("order", order);
+  if (resource === "calendar_events" || resource === "todos") {
+    if (currentUser !== "daeho" && currentUser !== "sanghee") {
+      throw new Error("INVALID_USER");
+    }
+    search.set("or", `(visibility.eq.shared,author_id.eq.${currentUser})`);
+  }
+  if (resource === "fridge_items") search.set("consumed_at", "is.null");
+  if (resource === "parking_records") search.set("limit", "1");
+  if (resource.startsWith("trip_")) {
+    const tripId = source.get("trip_id");
+    if (tripId) search.set("trip_id", `eq.${tripId}`);
+  }
+  if (resource === "travel_link_places") {
+    const sourceId = source.get("source_id");
+    if (sourceId) search.set("source_id", `eq.${sourceId}`);
+  }
+  const id = source.get("id");
+  if (id) search.set("id", `eq.${id}`);
+  return search;
+}
+
 export async function supabaseRest(
   resource: ResourceName,
   search: URLSearchParams,
